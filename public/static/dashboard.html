@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - F-AI bian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-orange': '#FF6B35',
+              'brand-blue': '#004E89'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <header class="bg-gradient-to-r from-brand-blue to-brand-orange text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <a href="/" class="text-white hover:text-gray-200">
+                            <i class="fas fa-arrow-left mr-2"></i> Back to Home
+                        </a>
+                        <h1 class="text-3xl font-bold mt-4">
+                            <i class="fas fa-th-large mr-3"></i>
+                            Patient Dashboard
+                        </h1>
+                    </div>
+                    <a href="/static/intake.html" class="px-4 py-2 bg-white text-brand-blue rounded-md hover:shadow-lg transition-shadow">
+                        <i class="fas fa-plus mr-2"></i>
+                        New Patient
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Stats -->
+            <div class="grid md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Patients</p>
+                            <p id="statPatients" class="text-3xl font-bold text-brand-blue">0</p>
+                        </div>
+                        <i class="fas fa-users text-4xl text-brand-blue opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Assessments</p>
+                            <p id="statAssessments" class="text-3xl font-bold text-brand-orange">0</p>
+                        </div>
+                        <i class="fas fa-clipboard-check text-4xl text-brand-orange opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Active Programs</p>
+                            <p id="statPrograms" class="text-3xl font-bold text-green-500">0</p>
+                        </div>
+                        <i class="fas fa-dumbbell text-4xl text-green-500 opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Exercises</p>
+                            <p id="statExercises" class="text-3xl font-bold text-purple-500">17</p>
+                        </div>
+                        <i class="fas fa-heartbeat text-4xl text-purple-500 opacity-20"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient List -->
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-list mr-2 text-brand-orange"></i>
+                    Patient List
+                </h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">DOB</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Last Assessment</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientTableBody">
+                            <tr>
+                                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                    Loading patients...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadDashboardData();
+        });
+
+        async function loadDashboardData() {
+            try {
+                // Load patients
+                const patientsResponse = await fetch('/api/patients');
+                const patientsResult = await patientsResponse.json();
+                
+                if (patientsResult.success) {
+                    displayPatients(patientsResult.data);
+                    document.getElementById('statPatients').textContent = patientsResult.data.length;
+                }
+
+                // Load exercises count
+                const exercisesResponse = await fetch('/api/exercises');
+                const exercisesResult = await exercisesResponse.json();
+                if (exercisesResult.success) {
+                    document.getElementById('statExercises').textContent = exercisesResult.data.length;
+                }
+
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+            }
+        }
+
+        function displayPatients(patients) {
+            const tbody = document.getElementById('patientTableBody');
+            
+            if (patients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                            <p>No patients yet. <a href="/static/intake.html" class="text-brand-blue hover:underline">Add your first patient</a></p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = patients.map(patient => `
+                <tr class="border-t hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <div class="font-semibold text-gray-800">${patient.first_name} ${patient.last_name}</div>
+                        <div class="text-sm text-gray-500">${patient.email || 'No email'}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${patient.date_of_birth}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${formatDate(patient.created_at)}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Active</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <a href="/static/assessment.html?patient_id=${patient.id}" class="text-brand-blue hover:text-brand-orange mr-3" title="Start Assessment">
+                            <i class="fas fa-video"></i>
+                        </a>
+                        <a href="#" onclick="viewPatient(${patient.id}); return false;" class="text-gray-600 hover:text-gray-800" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString();
+        }
+
+        async function viewPatient(patientId) {
+            alert(`Patient details view coming soon! Patient ID: ${patientId}`);
+        }
+    </script>
+</body>
+</html>
