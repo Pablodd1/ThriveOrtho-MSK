@@ -240,7 +240,7 @@ app.post('/api/patients', async (c) => {
       patient.first_name,
       patient.last_name,
       patient.date_of_birth,
-      patient.gender || null,
+      patient.gender?.toLowerCase() || null,
       patient.email || null,
       patient.phone || null,
       patient.address_line1 || null,
