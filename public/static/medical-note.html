@@ -158,6 +158,17 @@
                 </div>
             </div>
 
+            <!-- Detailed Movement Analysis -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
+                    <i class="fas fa-chart-line mr-2 text-brand-orange"></i>
+                    Detailed Biomechanical Analysis
+                </h2>
+                <div id="detailedAnalysis" class="space-y-6">
+                    <div>Loading detailed analysis...</div>
+                </div>
+            </div>
+            
             <!-- Movement Analysis Summary -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
@@ -243,6 +254,7 @@
             }
 
             await loadData();
+            displayDetailedAnalysis();
             generateMedicalNote();
         });
 
@@ -280,32 +292,61 @@
         function displayPatientDemographics() {
             const patient = STATE.patientData;
             const age = calculateAge(patient.date_of_birth);
+            const bmi = calculateBMI(patient.height_cm, patient.weight_kg);
+            const bmiCategory = getBMICategory(bmi);
             
             document.getElementById('patientDemographics').innerHTML = `
-                <div>
-                    <p class="text-sm text-gray-600">Name</p>
-                    <p class="font-bold">${patient.first_name} ${patient.last_name}</p>
+                <div class="col-span-3 bg-gradient-to-r from-brand-blue to-brand-orange text-white p-4 rounded-lg mb-4">
+                    <h3 class="text-2xl font-bold">${patient.first_name} ${patient.last_name}</h3>
+                    <p class="text-sm opacity-90">Patient ID: ${patient.id} | Assessment Date: ${new Date().toLocaleDateString()}</p>
                 </div>
-                <div>
-                    <p class="text-sm text-gray-600">DOB / Age</p>
-                    <p class="font-bold">${patient.date_of_birth} (${age} years)</p>
+                
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 uppercase">Date of Birth</p>
+                    <p class="font-bold text-lg">${patient.date_of_birth}</p>
+                    <p class="text-sm text-brand-blue">Age: ${age} years</p>
                 </div>
-                <div>
-                    <p class="text-sm text-gray-600">Gender</p>
-                    <p class="font-bold">${patient.gender}</p>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 uppercase">Gender</p>
+                    <p class="font-bold text-lg">${patient.gender}</p>
                 </div>
-                <div>
-                    <p class="text-sm text-gray-600">Contact</p>
-                    <p class="font-bold">${patient.phone}</p>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 uppercase">Contact Phone</p>
+                    <p class="font-bold text-lg">${patient.phone}</p>
+                    ${patient.email ? `<p class="text-sm text-gray-600 mt-1">${patient.email}</p>` : ''}
                 </div>
-                <div>
-                    <p class="text-sm text-gray-600">Email</p>
-                    <p class="font-bold">${patient.email || 'N/A'}</p>
+                
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 uppercase">Height</p>
+                    <p class="font-bold text-lg">${patient.height_cm} cm</p>
+                    <p class="text-sm text-gray-600">${(patient.height_cm / 2.54 / 12).toFixed(1)} ft</p>
                 </div>
-                <div>
-                    <p class="text-sm text-gray-600">Emergency Contact</p>
-                    <p class="font-bold">${patient.emergency_contact_name} (${patient.emergency_contact_relationship})</p>
-                    <p class="text-sm">${patient.emergency_contact_phone}</p>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 uppercase">Weight</p>
+                    <p class="font-bold text-lg">${patient.weight_kg} kg</p>
+                    <p class="text-sm text-gray-600">${(patient.weight_kg * 2.205).toFixed(1)} lbs</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 uppercase">BMI</p>
+                    <p class="font-bold text-lg ${getBMIColorClass(bmiCategory)}">${bmi.toFixed(1)}</p>
+                    <p class="text-sm ${getBMIColorClass(bmiCategory)}">${bmiCategory}</p>
+                </div>
+                
+                <div class="bg-indigo-50 p-4 rounded-lg col-span-3">
+                    <p class="text-xs text-gray-600 uppercase">Chief Complaint</p>
+                    <p class="font-bold text-lg text-gray-800">${patient.chief_complaint}</p>
+                    <p class="text-sm text-gray-600 mt-1">Pain Level: ${patient.pain_scale}/10 | Activity: ${patient.activity_level}</p>
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg col-span-3">
+                    <p class="text-xs text-gray-600 uppercase mb-2">Emergency Contact</p>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold">${patient.emergency_contact_name}</p>
+                            <p class="text-sm text-gray-600">${patient.emergency_contact_relationship}</p>
+                        </div>
+                        <p class="font-bold text-brand-blue">${patient.emergency_contact_phone}</p>
+                    </div>
                 </div>
             `;
         }
@@ -352,6 +393,286 @@
                     </ul>
                 </div>
             `;
+        }
+
+        function displayDetailedAnalysis() {
+            const tests = STATE.assessmentData.tests || [];
+            
+            if (tests.length === 0) {
+                document.getElementById('detailedAnalysis').innerHTML = '<p class="text-gray-600">No movement tests completed yet.</p>';
+                return;
+            }
+            
+            const analysisHTML = tests.map((test, idx) => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                const analysis = data.analysis || {};
+                const angles = data.angles || [];
+                
+                // Calculate average angles for each joint
+                const avgAngles = calculateAverageAngles(angles);
+                
+                // Get clinical ROM standards for this exercise
+                const romStandards = getClinicalROMStandards(test.test_name);
+                
+                return `
+                    <div class="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">
+                                    <i class="fas fa-dumbbell mr-2 text-brand-orange"></i>
+                                    Exercise ${idx + 1}: ${test.test_name}
+                                </h3>
+                                <p class="text-sm text-gray-600">Reps Completed: ${test.reps_completed} | Duration: ${test.duration_seconds}s</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600">Overall Quality</p>
+                                <p class="text-3xl font-bold ${getQualityColor(analysis.form_quality || 0)}">${(analysis.form_quality || 0).toFixed(0)}%</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Performance Metrics -->
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="bg-white p-3 rounded border-l-4 ${getROMBorderColor(analysis.rom_score)}">
+                                <p class="text-xs text-gray-600 uppercase">Range of Motion</p>
+                                <p class="text-2xl font-bold ${getScoreColor(analysis.rom_score || 0)}">${(analysis.rom_score || 0).toFixed(1)}%</p>
+                                <p class="text-xs ${getScoreColor(analysis.rom_score || 0)}">${getScoreLabel(analysis.rom_score || 0)}</p>
+                            </div>
+                            <div class="bg-white p-3 rounded border-l-4 ${getROMBorderColor(analysis.form_quality)}">
+                                <p class="text-xs text-gray-600 uppercase">Form Quality</p>
+                                <p class="text-2xl font-bold ${getScoreColor(analysis.form_quality || 0)}">${(analysis.form_quality || 0).toFixed(1)}%</p>
+                                <p class="text-xs ${getScoreColor(analysis.form_quality || 0)}">${getScoreLabel(analysis.form_quality || 0)}</p>
+                            </div>
+                            <div class="bg-white p-3 rounded border-l-4 ${getROMBorderColor(analysis.balance_score)}">
+                                <p class="text-xs text-gray-600 uppercase">Balance/Stability</p>
+                                <p class="text-2xl font-bold ${getScoreColor(analysis.balance_score || 0)}">${(analysis.balance_score || 0).toFixed(1)}%</p>
+                                <p class="text-xs ${getScoreColor(analysis.balance_score || 0)}">${getScoreLabel(analysis.balance_score || 0)}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Joint Angle Measurements -->
+                        <div class="bg-white rounded-lg p-4 mb-4">
+                            <h4 class="font-bold text-gray-800 mb-3">
+                                <i class="fas fa-ruler-combined mr-2"></i>
+                                Joint Angle Measurements (Degrees)
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b-2 border-gray-300">
+                                            <th class="text-left py-2 px-2">Joint</th>
+                                            <th class="text-center py-2 px-2">Measured</th>
+                                            <th class="text-center py-2 px-2">Normal Range</th>
+                                            <th class="text-center py-2 px-2">% of Normal</th>
+                                            <th class="text-left py-2 px-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${generateAngleRows(avgAngles, romStandards)}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Deficiencies -->
+                        ${analysis.deficiencies && analysis.deficiencies.length > 0 ? `
+                            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                                <h4 class="font-bold text-red-800 mb-2">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    Identified Deficiencies
+                                </h4>
+                                <ul class="space-y-2">
+                                    ${analysis.deficiencies.map(d => `
+                                        <li class="text-sm">
+                                            <span class="font-semibold ${getSeverityColor(d.severity)}">[${d.severity.toUpperCase()}]</span>
+                                            <span class="text-gray-800"> ${d.area}:</span> ${d.description}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : `
+                            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                                <p class="text-green-800 font-semibold">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    No significant deficiencies detected - Movement pattern within normal limits
+                                </p>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('detailedAnalysis').innerHTML = analysisHTML;
+        }
+        
+        function calculateAverageAngles(angles) {
+            if (!angles || angles.length === 0) return {};
+            
+            const avgAngles = {};
+            const angleTypes = Object.keys(angles[0] || {});
+            
+            angleTypes.forEach(type => {
+                const values = angles.map(a => a[type]).filter(v => v !== undefined && v !== null);
+                if (values.length > 0) {
+                    avgAngles[type] = {
+                        avg: values.reduce((sum, v) => sum + v, 0) / values.length,
+                        min: Math.min(...values),
+                        max: Math.max(...values),
+                        range: Math.max(...values) - Math.min(...values)
+                    };
+                }
+            });
+            
+            return avgAngles;
+        }
+        
+        function getClinicalROMStandards(exerciseName) {
+            // Clinical ROM standards based on exercise type
+            const standards = {
+                'Hip Flexor Stretch': {
+                    hip_left: { min: 0, max: 125, optimal: 110 },
+                    hip_right: { min: 0, max: 125, optimal: 110 }
+                },
+                'Bodyweight Squat': {
+                    knee_left: { min: 0, max: 135, optimal: 90 },
+                    knee_right: { min: 0, max: 135, optimal: 90 },
+                    hip_left: { min: 0, max: 125, optimal: 90 },
+                    hip_right: { min: 0, max: 125, optimal: 90 }
+                },
+                'Single Leg Balance': {
+                    hip_left: { min: 170, max: 180, optimal: 175 },
+                    hip_right: { min: 170, max: 180, optimal: 175 },
+                    knee_left: { min: 170, max: 180, optimal: 175 },
+                    knee_right: { min: 170, max: 180, optimal: 175 }
+                },
+                'Shoulder Flexion Test': {
+                    shoulder_left: { min: 0, max: 180, optimal: 160 },
+                    shoulder_right: { min: 0, max: 180, optimal: 160 }
+                },
+                'Sit to Stand': {
+                    knee_left: { min: 0, max: 135, optimal: 90 },
+                    knee_right: { min: 0, max: 135, optimal: 90 },
+                    hip_left: { min: 0, max: 125, optimal: 90 },
+                    hip_right: { min: 0, max: 125, optimal: 90 }
+                }
+            };
+            
+            // Default standards for unlisted exercises
+            const defaults = {
+                hip_left: { min: 0, max: 125, optimal: 110 },
+                hip_right: { min: 0, max: 125, optimal: 110 },
+                knee_left: { min: 0, max: 135, optimal: 90 },
+                knee_right: { min: 0, max: 135, optimal: 90 },
+                shoulder_left: { min: 0, max: 180, optimal: 160 },
+                shoulder_right: { min: 0, max: 180, optimal: 160 }
+            };
+            
+            return standards[exerciseName] || defaults;
+        }
+        
+        function generateAngleRows(avgAngles, romStandards) {
+            const rows = [];
+            
+            for (const [joint, data] of Object.entries(avgAngles)) {
+                const standard = romStandards[joint];
+                if (!standard) continue;
+                
+                const measured = data.range; // Use ROM (max - min)
+                const normalRange = standard.max - standard.min;
+                const percentage = (measured / normalRange) * 100;
+                
+                const jointLabel = joint.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+                
+                const status = getAngleStatus(percentage);
+                
+                rows.push(`
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="py-3 px-2 font-semibold">${jointLabel}</td>
+                        <td class="py-3 px-2 text-center font-bold ${getAngleColor(percentage)}">${measured.toFixed(1)}°</td>
+                        <td class="py-3 px-2 text-center text-gray-600">${standard.min}° - ${standard.max}°</td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="px-3 py-1 rounded-full font-bold ${getPercentageBadgeColor(percentage)}">
+                                ${percentage.toFixed(0)}%
+                            </span>
+                        </td>
+                        <td class="py-3 px-2">
+                            <span class="text-sm font-semibold ${status.color}">
+                                <i class="${status.icon} mr-1"></i>
+                                ${status.label}
+                            </span>
+                        </td>
+                    </tr>
+                `);
+            }
+            
+            return rows.join('') || '<tr><td colspan="5" class="text-center py-4 text-gray-500">No angle data available</td></tr>';
+        }
+        
+        function getAngleStatus(percentage) {
+            if (percentage >= 80) {
+                return { label: 'Normal ROM', color: 'text-green-600', icon: 'fas fa-check-circle' };
+            } else if (percentage >= 60) {
+                return { label: 'Limited ROM', color: 'text-yellow-600', icon: 'fas fa-exclamation-circle' };
+            } else if (percentage >= 40) {
+                return { label: 'Restricted ROM', color: 'text-orange-600', icon: 'fas fa-exclamation-triangle' };
+            } else {
+                return { label: 'Severe Restriction', color: 'text-red-600', icon: 'fas fa-times-circle' };
+            }
+        }
+        
+        function getAngleColor(percentage) {
+            if (percentage >= 80) return 'text-green-600';
+            if (percentage >= 60) return 'text-yellow-600';
+            if (percentage >= 40) return 'text-orange-600';
+            return 'text-red-600';
+        }
+        
+        function getPercentageBadgeColor(percentage) {
+            if (percentage >= 80) return 'bg-green-100 text-green-800';
+            if (percentage >= 60) return 'bg-yellow-100 text-yellow-800';
+            if (percentage >= 40) return 'bg-orange-100 text-orange-800';
+            return 'bg-red-100 text-red-800';
+        }
+        
+        function getScoreColor(score) {
+            if (score >= 80) return 'text-green-600';
+            if (score >= 60) return 'text-yellow-600';
+            if (score >= 40) return 'text-orange-600';
+            return 'text-red-600';
+        }
+        
+        function getScoreLabel(score) {
+            if (score >= 80) return 'Excellent';
+            if (score >= 60) return 'Good';
+            if (score >= 40) return 'Fair';
+            return 'Poor';
+        }
+        
+        function getQualityColor(score) {
+            if (score >= 80) return 'text-green-600';
+            if (score >= 60) return 'text-yellow-600';
+            return 'text-red-600';
+        }
+        
+        function getROMBorderColor(score) {
+            if (score >= 80) return 'border-green-500';
+            if (score >= 60) return 'border-yellow-500';
+            if (score >= 40) return 'border-orange-500';
+            return 'border-red-500';
+        }
+        
+        function getSeverityColor(severity) {
+            if (severity === 'high') return 'text-red-600';
+            if (severity === 'moderate') return 'text-orange-600';
+            return 'text-yellow-600';
+        }
+        
+        function getBMIColorClass(category) {
+            if (category === 'Obese') return 'text-red-600';
+            if (category === 'Overweight') return 'text-orange-600';
+            if (category === 'Underweight') return 'text-blue-600';
+            return 'text-green-600';
         }
 
         function displayMovementSummary() {
@@ -451,14 +772,41 @@
                             <p><strong>Functional Movement Assessment:</strong> Completed ${tests.length} standardized movement tests using AI-powered biomechanical analysis</p>
                             
                             <div class="mt-2">
-                                <p class="font-semibold">Test Results:</p>
-                                <ul class="list-disc ml-6 mt-1">
+                                <p class="font-semibold">Test Results with Biomechanical Measurements:</p>
+                                <div class="ml-4 mt-2 space-y-2">
                                     ${tests.map((test, idx) => {
                                         const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
                                         const analysis = data.analysis || {};
-                                        return `<li>${test.test_name}: ROM ${(analysis.rom_score || 0).toFixed(0)}%, Form Quality ${(analysis.form_quality || 0).toFixed(0)}%, Balance ${(analysis.balance_score || 0).toFixed(0)}%</li>`;
+                                        const angles = data.angles || [];
+                                        const avgAngles = calculateAverageAngles(angles);
+                                        const romStandards = getClinicalROMStandards(test.test_name);
+                                        
+                                        let anglesSummary = '';
+                                        for (const [joint, angleData] of Object.entries(avgAngles)) {
+                                            const standard = romStandards[joint];
+                                            if (standard) {
+                                                const measured = angleData.range;
+                                                const normalRange = standard.max - standard.min;
+                                                const percentage = (measured / normalRange) * 100;
+                                                const status = getAngleStatus(percentage);
+                                                const color = percentage >= 80 ? 'green' : percentage >= 60 ? 'orange' : 'red';
+                                                anglesSummary += `<span style="color: ${color === 'green' ? '#059669' : color === 'orange' ? '#F97316' : '#DC2626'};">${joint.replace('_', ' ')}: ${measured.toFixed(0)}° (${percentage.toFixed(0)}%)</span>, `;
+                                            }
+                                        }
+                                        
+                                        return `
+                                            <div class="border-l-2 ${(analysis.rom_score >= 80 ? 'border-green-500' : analysis.rom_score >= 60 ? 'border-yellow-500' : 'border-red-500')} pl-3 py-1">
+                                                <p class="font-semibold text-gray-800">${idx + 1}. ${test.test_name}</p>
+                                                <p class="text-sm">
+                                                    ROM: <strong class="${getScoreColor(analysis.rom_score || 0)}">${(analysis.rom_score || 0).toFixed(0)}%</strong>, 
+                                                    Form: <strong class="${getScoreColor(analysis.form_quality || 0)}">${(analysis.form_quality || 0).toFixed(0)}%</strong>, 
+                                                    Balance: <strong class="${getScoreColor(analysis.balance_score || 0)}">${(analysis.balance_score || 0).toFixed(0)}%</strong>
+                                                </p>
+                                                ${anglesSummary ? `<p class="text-xs mt-1">Joint Angles: ${anglesSummary.slice(0, -2)}</p>` : ''}
+                                            </div>
+                                        `;
                                     }).join('')}
-                                </ul>
+                                </div>
                             </div>
                             
                             ${allDeficiencies.length > 0 ? `
