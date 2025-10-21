@@ -59,7 +59,7 @@ app.get('/', (c) => {
                 <!-- Quick Actions -->
                 <div class="grid md:grid-cols-3 gap-6 mb-12">
                     <!-- Patient Intake -->
-                    <a href="/static/intake" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-brand-orange">
+                    <a href="/static/intake.html" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-brand-orange">
                         <div class="flex items-center mb-4">
                             <div class="bg-brand-orange text-white w-12 h-12 rounded-full flex items-center justify-center text-xl">
                                 <i class="fas fa-user-plus"></i>
@@ -73,7 +73,7 @@ app.get('/', (c) => {
                     </a>
 
                     <!-- Assessment -->
-                    <a href="/static/dashboard" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-brand-blue">
+                    <a href="/static/dashboard.html" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-brand-blue">
                         <div class="flex items-center mb-4">
                             <div class="bg-brand-blue text-white w-12 h-12 rounded-full flex items-center justify-center text-xl">
                                 <i class="fas fa-video"></i>
@@ -87,7 +87,7 @@ app.get('/', (c) => {
                     </a>
 
                     <!-- Reports -->
-                    <a href="/static/dashboard" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-green-500">
+                    <a href="/static/dashboard.html" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-green-500">
                         <div class="flex items-center mb-4">
                             <div class="bg-green-500 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl">
                                 <i class="fas fa-chart-line"></i>
@@ -240,29 +240,29 @@ app.post('/api/patients', async (c) => {
       patient.first_name,
       patient.last_name,
       patient.date_of_birth,
-      patient.gender,
-      patient.email,
-      patient.phone,
-      patient.address_line1,
+      patient.gender || null,
+      patient.email || null,
+      patient.phone || null,
+      patient.address_line1 || null,
       patient.address_line2 || null,
-      patient.city,
-      patient.state,
-      patient.zip_code,
-      patient.emergency_contact_name,
-      patient.emergency_contact_phone,
-      patient.emergency_contact_relationship,
-      patient.primary_physician,
-      patient.insurance_provider,
-      patient.insurance_policy_number,
+      patient.city || null,
+      patient.state || null,
+      patient.zip_code || null,
+      patient.emergency_contact_name || null,
+      patient.emergency_contact_phone || null,
+      patient.emergency_contact_relationship || null,
+      patient.primary_physician || null,
+      patient.insurance_provider || null,
+      patient.insurance_policy_number || null,
       JSON.stringify(patient.medical_history || {}),
       JSON.stringify(patient.current_medications || []),
       JSON.stringify(patient.allergies || []),
-      patient.assessment_reason,
-      patient.chief_complaint,
-      patient.pain_scale,
-      patient.activity_level,
-      patient.height_cm,
-      patient.weight_kg
+      patient.assessment_reason || null,
+      patient.chief_complaint || null,
+      patient.pain_scale || null,
+      patient.activity_level || null,
+      patient.height_cm || null,
+      patient.weight_kg || null
     ).run()
     
     return c.json({ 
