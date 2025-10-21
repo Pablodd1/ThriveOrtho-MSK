@@ -279,7 +279,7 @@
                 if (result.success) {
                     showStatus('✅ Patient created successfully! Redirecting to assessment...', 'success');
                     setTimeout(() => {
-                        window.location.href = `/static/assessment.html?patient_id=${result.data.id}`;
+                        window.location.href = `/static/assessment-enhanced.html?patient_id=${result.data.id}`;
                     }, 1500);
                 } else {
                     showStatus('❌ Error: ' + result.error, 'error');

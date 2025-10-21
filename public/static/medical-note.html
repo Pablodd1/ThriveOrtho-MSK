@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Note - F-AI bian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-orange': '#FF6B35',
+              'brand-blue': '#004E89'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .body-map { position: relative; max-width: 300px; margin: 0 auto; }
+        .pain-marker { position: absolute; width: 20px; height: 20px; background: red; border-radius: 50%; 
+                       border: 2px solid white; cursor: pointer; transform: translate(-50%, -50%); 
+                       animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); } 
+                          50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } }
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-brand-blue to-brand-orange text-white p-4 no-print">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold">
+                    <i class="fas fa-file-medical mr-2"></i>
+                    Medical Assessment Note
+                </h1>
+                <div class="space-x-2">
+                    <button onclick="window.print()" class="px-4 py-2 bg-white text-brand-blue rounded-md hover:shadow-lg">
+                        <i class="fas fa-print mr-2"></i>Print
+                    </button>
+                    <button onclick="downloadPDF()" class="px-4 py-2 bg-white text-brand-orange rounded-md hover:shadow-lg">
+                        <i class="fas fa-file-pdf mr-2"></i>PDF
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto p-4 md:p-8">
+            <!-- Patient Demographics Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
+                    Patient Information
+                </h2>
+                <div class="grid md:grid-cols-3 gap-4" id="patientDemographics">
+                    <div><strong>Loading patient data...</strong></div>
+                </div>
+            </div>
+
+            <!-- Pain Location Map -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-map-marked-alt mr-2 text-brand-orange"></i>
+                    Pain Location Assessment
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">Click on the body diagram to mark pain locations. Size indicates severity (1-10).</p>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Front View -->
+                    <div>
+                        <h3 class="text-center font-bold mb-2">Front View</h3>
+                        <div class="body-map" id="bodyMapFront">
+                            <svg viewBox="0 0 200 400" class="w-full border-2 border-gray-300 rounded cursor-crosshair" onclick="addPainMarker(event, 'front')">
+                                <!-- Simple body outline -->
+                                <ellipse cx="100" cy="40" rx="25" ry="30" fill="#f0f0f0" stroke="#666" stroke-width="2"/>
+                                <rect x="85" y="70" width="30" height="60" fill="#f0f0f0" stroke="#666" stroke-width="2"/>
+                                <line x1="85" y1="80" x2="50" y2="110" stroke="#666" stroke-width="2"/>
+                                <line x1="50" y1="110" x2="45" y2="150" stroke="#666" stroke-width="2"/>
+                                <line x1="115" y1="80" x2="150" y2="110" stroke="#666" stroke-width="2"/>
+                                <line x1="150" y1="110" x2="155" y2="150" stroke="#666" stroke-width="2"/>
+                                <line x1="90" y1="130" x2="85" y2="230" stroke="#666" stroke-width="2"/>
+                                <line x1="85" y1="230" x2="80" y2="330" stroke="#666" stroke-width="2"/>
+                                <line x1="110" y1="130" x2="115" y2="230" stroke="#666" stroke-width="2"/>
+                                <line x1="115" y1="230" x2="120" y2="330" stroke="#666" stroke-width="2"/>
+                                
+                                <!-- Labels -->
+                                <text x="100" y="20" text-anchor="middle" font-size="10">Head</text>
+                                <text x="30" y="130" text-anchor="middle" font-size="10">L Arm</text>
+                                <text x="170" y="130" text-anchor="middle" font-size="10">R Arm</text>
+                                <text x="100" y="100" text-anchor="middle" font-size="10">Chest</text>
+                                <text x="70" y="280" text-anchor="middle" font-size="10">L Leg</text>
+                                <text x="130" y="280" text-anchor="middle" font-size="10">R Leg</text>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- Back View -->
+                    <div>
+                        <h3 class="text-center font-bold mb-2">Back View</h3>
+                        <div class="body-map" id="bodyMapBack">
+                            <svg viewBox="0 0 200 400" class="w-full border-2 border-gray-300 rounded cursor-crosshair" onclick="addPainMarker(event, 'back')">
+                                <ellipse cx="100" cy="40" rx="25" ry="30" fill="#f0f0f0" stroke="#666" stroke-width="2"/>
+                                <rect x="85" y="70" width="30" height="60" fill="#f0f0f0" stroke="#666" stroke-width="2"/>
+                                <line x1="85" y1="80" x2="50" y2="110" stroke="#666" stroke-width="2"/>
+                                <line x1="50" y1="110" x2="45" y2="150" stroke="#666" stroke-width="2"/>
+                                <line x1="115" y1="80" x2="150" y2="110" stroke="#666" stroke-width="2"/>
+                                <line x1="150" y1="110" x2="155" y2="150" stroke="#666" stroke-width="2"/>
+                                <line x1="90" y1="130" x2="85" y2="230" stroke="#666" stroke-width="2"/>
+                                <line x1="85" y1="230" x2="80" y2="330" stroke="#666" stroke-width="2"/>
+                                <line x1="110" y1="130" x2="115" y2="230" stroke="#666" stroke-width="2"/>
+                                <line x1="115" y1="230" x2="120" y2="330" stroke="#666" stroke-width="2"/>
+                                
+                                <text x="100" y="20" text-anchor="middle" font-size="10">Head</text>
+                                <text x="100" y="100" text-anchor="middle" font-size="10">Back</text>
+                                <text x="100" y="180" text-anchor="middle" font-size="10">Lower Back</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pain Severity Legend -->
+                <div class="mt-4 flex items-center justify-center space-x-4 text-sm">
+                    <span>Pain Severity:</span>
+                    <div class="flex items-center space-x-1">
+                        <div class="w-4 h-4 rounded-full bg-yellow-400"></div>
+                        <span>Mild (1-3)</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <div class="w-4 h-4 rounded-full bg-orange-500"></div>
+                        <span>Moderate (4-6)</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <div class="w-4 h-4 rounded-full bg-red-600"></div>
+                        <span>Severe (7-10)</span>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <input type="range" id="painSeverity" min="1" max="10" value="5" class="w-full">
+                    <p class="text-center text-sm mt-2">Current severity: <span id="painValue" class="font-bold">5</span>/10</p>
+                </div>
+            </div>
+
+            <!-- BMI Analysis Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
+                    <i class="fas fa-weight mr-2 text-brand-blue"></i>
+                    BMI & Lifestyle Assessment
+                </h2>
+                <div id="bmiAnalysis" class="space-y-4">
+                    <div>Loading BMI analysis...</div>
+                </div>
+            </div>
+
+            <!-- Movement Analysis Summary -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
+                    <i class="fas fa-chart-bar mr-2 text-brand-orange"></i>
+                    Movement Analysis Summary
+                </h2>
+                <div id="movementSummary" class="space-y-4">
+                    <div>Loading movement data...</div>
+                </div>
+            </div>
+
+            <!-- SOAP Note -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
+                    <i class="fas fa-notes-medical mr-2 text-brand-blue"></i>
+                    SOAP Note
+                </h2>
+                <div id="soapNote" class="space-y-6">
+                    <div>Generating comprehensive medical note...</div>
+                </div>
+            </div>
+
+            <!-- Additional Medical Records (Dormant) -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-folder-plus mr-2 text-brand-orange"></i>
+                    Additional Medical Records
+                </h2>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <button onclick="alert('Lab results module coming soon')" 
+                        class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-brand-blue hover:bg-blue-50 transition-all">
+                        <i class="fas fa-flask text-3xl text-gray-400 mb-2"></i>
+                        <h3 class="font-bold text-gray-700">Lab Results</h3>
+                        <p class="text-xs text-gray-500 mt-1">Blood work, urinalysis</p>
+                    </button>
+                    
+                    <button onclick="alert('Clinical notes module coming soon')" 
+                        class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-brand-orange hover:bg-orange-50 transition-all">
+                        <i class="fas fa-file-medical-alt text-3xl text-gray-400 mb-2"></i>
+                        <h3 class="font-bold text-gray-700">Clinical Notes</h3>
+                        <p class="text-xs text-gray-500 mt-1">Previous visits, history</p>
+                    </button>
+                    
+                    <button onclick="alert('DNA/Genetic testing module coming soon')" 
+                        class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all">
+                        <i class="fas fa-dna text-3xl text-gray-400 mb-2"></i>
+                        <h3 class="font-bold text-gray-700">DNA Test</h3>
+                        <p class="text-xs text-gray-500 mt-1">Genetic markers, predispositions</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col md:flex-row gap-4 mb-8 no-print">
+                <button onclick="createPrescription()" 
+                    class="flex-1 px-6 py-4 bg-gradient-to-r from-brand-orange to-brand-blue text-white rounded-lg hover:shadow-xl transition-shadow text-lg font-semibold">
+                    <i class="fas fa-dumbbell mr-2"></i>
+                    Create Exercise Prescription
+                </button>
+                <button onclick="window.location.href='/static/dashboard.html'" 
+                    class="flex-1 px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-lg font-semibold">
+                    <i class="fas fa-home mr-2"></i>
+                    Back to Dashboard
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const STATE = {
+            assessmentId: new URLSearchParams(window.location.search).get('assessment_id'),
+            patientId: new URLSearchParams(window.location.search).get('patient_id'),
+            patientData: null,
+            assessmentData: null,
+            painMarkers: []
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (!STATE.assessmentId || !STATE.patientId) {
+                alert('Missing assessment or patient ID');
+                window.location.href = '/static/dashboard.html';
+                return;
+            }
+
+            await loadData();
+            generateMedicalNote();
+        });
+
+        // Update pain severity display
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('painSeverity');
+            const display = document.getElementById('painValue');
+            if (slider && display) {
+                slider.addEventListener('input', (e) => {
+                    display.textContent = e.target.value;
+                });
+            }
+        });
+
+        async function loadData() {
+            try {
+                // Load patient data
+                const patientResponse = await fetch(`/api/patients/${STATE.patientId}`);
+                const patientResult = await patientResponse.json();
+                STATE.patientData = patientResult.data;
+
+                // Load assessment data
+                const assessmentResponse = await fetch(`/api/assessments/${STATE.assessmentId}`);
+                const assessmentResult = await assessmentResponse.json();
+                STATE.assessmentData = assessmentResult.data;
+
+                displayPatientDemographics();
+                displayBMIAnalysis();
+                displayMovementSummary();
+            } catch (error) {
+                console.error('Failed to load data:', error);
+            }
+        }
+
+        function displayPatientDemographics() {
+            const patient = STATE.patientData;
+            const age = calculateAge(patient.date_of_birth);
+            
+            document.getElementById('patientDemographics').innerHTML = `
+                <div>
+                    <p class="text-sm text-gray-600">Name</p>
+                    <p class="font-bold">${patient.first_name} ${patient.last_name}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">DOB / Age</p>
+                    <p class="font-bold">${patient.date_of_birth} (${age} years)</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Gender</p>
+                    <p class="font-bold">${patient.gender}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Contact</p>
+                    <p class="font-bold">${patient.phone}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Email</p>
+                    <p class="font-bold">${patient.email || 'N/A'}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Emergency Contact</p>
+                    <p class="font-bold">${patient.emergency_contact_name} (${patient.emergency_contact_relationship})</p>
+                    <p class="text-sm">${patient.emergency_contact_phone}</p>
+                </div>
+            `;
+        }
+
+        function displayBMIAnalysis() {
+            const patient = STATE.patientData;
+            const bmi = calculateBMI(patient.height_cm, patient.weight_kg);
+            const category = getBMICategory(bmi);
+            const recommendations = getLifestyleRecommendations(bmi, category);
+            
+            const categoryColors = {
+                'Underweight': 'text-blue-600',
+                'Normal weight': 'text-green-600',
+                'Overweight': 'text-yellow-600',
+                'Obese': 'text-red-600'
+            };
+            
+            document.getElementById('bmiAnalysis').innerHTML = `
+                <div class="grid md:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-blue-50 p-4 rounded-lg text-center">
+                        <p class="text-sm text-gray-600">Height</p>
+                        <p class="text-2xl font-bold text-brand-blue">${patient.height_cm} cm</p>
+                        <p class="text-xs text-gray-500">${(patient.height_cm / 2.54 / 12).toFixed(1)} ft</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg text-center">
+                        <p class="text-sm text-gray-600">Weight</p>
+                        <p class="text-2xl font-bold text-green-600">${patient.weight_kg} kg</p>
+                        <p class="text-xs text-gray-500">${(patient.weight_kg * 2.205).toFixed(1)} lbs</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg text-center">
+                        <p class="text-sm text-gray-600">BMI</p>
+                        <p class="text-2xl font-bold ${categoryColors[category]}">${bmi.toFixed(1)}</p>
+                        <p class="text-xs font-semibold ${categoryColors[category]}">${category}</p>
+                    </div>
+                </div>
+                
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                    <h3 class="font-bold text-gray-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2 text-yellow-600"></i>
+                        Lifestyle Modification Recommendations
+                    </h3>
+                    <ul class="space-y-2 text-sm">
+                        ${recommendations.map(r => `<li><i class="fas fa-check text-green-600 mr-2"></i>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function displayMovementSummary() {
+            const tests = STATE.assessmentData.tests || [];
+            
+            if (tests.length === 0) {
+                document.getElementById('movementSummary').innerHTML = '<p class="text-gray-600">No movement tests completed yet.</p>';
+                return;
+            }
+            
+            let totalDeficiencies = 0;
+            let avgQuality = 0;
+            
+            const testsHTML = tests.map((test, idx) => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                const analysis = data.analysis || {};
+                totalDeficiencies += (analysis.deficiencies || []).length;
+                avgQuality += (analysis.form_quality || 0);
+                
+                return `
+                    <div class="border-l-4 border-brand-orange p-4 bg-gray-50 rounded">
+                        <h3 class="font-bold text-gray-800">${idx + 1}. ${test.test_name}</h3>
+                        <div class="grid grid-cols-3 gap-2 mt-2 text-sm">
+                            <div><span class="text-gray-600">ROM:</span> <strong>${(analysis.rom_score || 0).toFixed(0)}%</strong></div>
+                            <div><span class="text-gray-600">Form:</span> <strong>${(analysis.form_quality || 0).toFixed(0)}%</strong></div>
+                            <div><span class="text-gray-600">Balance:</span> <strong>${(analysis.balance_score || 0).toFixed(0)}%</strong></div>
+                        </div>
+                        ${analysis.deficiencies && analysis.deficiencies.length > 0 ? `
+                            <div class="mt-2 text-xs text-red-600">
+                                <strong>Issues:</strong> ${analysis.deficiencies.map(d => d.area).join(', ')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            avgQuality = tests.length > 0 ? avgQuality / tests.length : 0;
+            
+            document.getElementById('movementSummary').innerHTML = `
+                <div class="grid md:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-blue-50 p-3 rounded text-center">
+                        <p class="text-sm text-gray-600">Tests Completed</p>
+                        <p class="text-3xl font-bold text-brand-blue">${tests.length}</p>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded text-center">
+                        <p class="text-sm text-gray-600">Avg Quality</p>
+                        <p class="text-3xl font-bold text-green-600">${avgQuality.toFixed(0)}%</p>
+                    </div>
+                    <div class="bg-red-50 p-3 rounded text-center">
+                        <p class="text-sm text-gray-600">Total Issues</p>
+                        <p class="text-3xl font-bold text-red-600">${totalDeficiencies}</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    ${testsHTML}
+                </div>
+            `;
+        }
+
+        function generateMedicalNote() {
+            const patient = STATE.patientData;
+            const tests = STATE.assessmentData.tests || [];
+            const age = calculateAge(patient.date_of_birth);
+            const bmi = calculateBMI(patient.height_cm, patient.weight_kg);
+            const bmiCategory = getBMICategory(bmi);
+            
+            // Aggregate all deficiencies
+            const allDeficiencies = [];
+            tests.forEach(test => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                if (data.analysis && data.analysis.deficiencies) {
+                    allDeficiencies.push(...data.analysis.deficiencies);
+                }
+            });
+            
+            const soapNote = `
+                <div class="space-y-6">
+                    <!-- Subjective -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-blue mb-2">SUBJECTIVE</h3>
+                        <div class="pl-4 space-y-2 text-sm">
+                            <p><strong>Chief Complaint:</strong> ${patient.chief_complaint}</p>
+                            <p><strong>Pain Scale:</strong> ${patient.pain_scale}/10</p>
+                            <p><strong>Activity Level:</strong> ${patient.activity_level}</p>
+                            <p><strong>Assessment Reason:</strong> ${patient.assessment_reason}</p>
+                            ${patient.medical_history ? `<p><strong>Medical History:</strong> ${typeof patient.medical_history === 'string' ? patient.medical_history : 'See records'}</p>` : ''}
+                            ${patient.current_medications ? `<p><strong>Current Medications:</strong> ${typeof patient.current_medications === 'string' ? patient.current_medications : 'See records'}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Objective -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-orange mb-2">OBJECTIVE</h3>
+                        <div class="pl-4 space-y-2 text-sm">
+                            <p><strong>Patient Demographics:</strong> ${age}-year-old ${patient.gender} presenting for ${patient.assessment_reason}</p>
+                            <p><strong>Vital Measurements:</strong> Height ${patient.height_cm}cm, Weight ${patient.weight_kg}kg, BMI ${bmi.toFixed(1)} (${bmiCategory})</p>
+                            <p><strong>Functional Movement Assessment:</strong> Completed ${tests.length} standardized movement tests using AI-powered biomechanical analysis</p>
+                            
+                            <div class="mt-2">
+                                <p class="font-semibold">Test Results:</p>
+                                <ul class="list-disc ml-6 mt-1">
+                                    ${tests.map((test, idx) => {
+                                        const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                                        const analysis = data.analysis || {};
+                                        return `<li>${test.test_name}: ROM ${(analysis.rom_score || 0).toFixed(0)}%, Form Quality ${(analysis.form_quality || 0).toFixed(0)}%, Balance ${(analysis.balance_score || 0).toFixed(0)}%</li>`;
+                                    }).join('')}
+                                </ul>
+                            </div>
+                            
+                            ${allDeficiencies.length > 0 ? `
+                                <div class="mt-2">
+                                    <p class="font-semibold text-red-600">Identified Deficiencies:</p>
+                                    <ul class="list-disc ml-6 mt-1 text-red-800">
+                                        ${allDeficiencies.map(d => `<li>${d.area} (${d.severity}): ${d.description}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : '<p class="text-green-600 font-semibold mt-2">✓ No significant biomechanical deficiencies detected</p>'}
+                        </div>
+                    </div>
+                    
+                    <!-- Assessment -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-blue mb-2">ASSESSMENT</h3>
+                        <div class="pl-4 space-y-2 text-sm">
+                            <p><strong>Primary Diagnosis:</strong> ${getPrimaryDiagnosis(allDeficiencies, patient)}</p>
+                            <p><strong>Functional Status:</strong> ${getFunctionalStatus(tests)}</p>
+                            <p><strong>Fall Risk:</strong> ${getFallRisk(tests, age)}</p>
+                            <p><strong>BMI Status:</strong> ${bmiCategory} - ${getBMIRecommendation(bmiCategory)}</p>
+                            <p><strong>Prognosis:</strong> ${getPrognosis(allDeficiencies, age, bmi)}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Plan -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-orange mb-2">PLAN</h3>
+                        <div class="pl-4 space-y-2 text-sm">
+                            <p><strong>Treatment Plan:</strong></p>
+                            <ol class="list-decimal ml-6 space-y-1">
+                                <li>Initiate personalized therapeutic exercise program targeting identified deficiencies</li>
+                                <li>Home exercise program 5x/week, 30 minutes per session</li>
+                                <li>Progressive strengthening and mobility exercises</li>
+                                <li>Balance training to reduce fall risk</li>
+                                <li>Remote Patient Monitoring (RPM) via mobile application</li>
+                            </ol>
+                            
+                            <p class="mt-3"><strong>Lifestyle Modifications:</strong></p>
+                            <ul class="list-disc ml-6 space-y-1">
+                                ${getLifestyleRecommendations(bmi, bmiCategory).map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                            
+                            <p class="mt-3"><strong>Follow-up:</strong></p>
+                            <ul class="list-disc ml-6">
+                                <li>Re-assessment in 4 weeks</li>
+                                <li>Weekly compliance monitoring via RPM</li>
+                                <li>Contact clinic if pain exceeds 7/10 or new symptoms develop</li>
+                            </ul>
+                            
+                            <p class="mt-3"><strong>CPT Codes:</strong> 97161 (PT Eval), 99453 (RPM Setup), 99454 (RPM Device)</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Provider Signature -->
+                    <div class="border-t-2 border-gray-300 pt-4 mt-6">
+                        <p class="text-sm">
+                            <strong>Evaluated by:</strong> Demo Clinician, PT, DPT<br>
+                            <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
+                            <strong>Signature:</strong> ________________
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('soapNote').innerHTML = soapNote;
+        }
+
+        // Pain marker functions
+        function addPainMarker(event, view) {
+            const svg = event.currentTarget;
+            const rect = svg.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 100;
+            const y = ((event.clientY - rect.top) / rect.height) * 100;
+            const severity = document.getElementById('painSeverity').value;
+            
+            const marker = document.createElement('div');
+            marker.className = 'pain-marker';
+            marker.style.left = `${x}%`;
+            marker.style.top = `${y}%`;
+            marker.style.width = `${10 + severity * 2}px`;
+            marker.style.height = `${10 + severity * 2}px`;
+            
+            const color = severity <= 3 ? '#FCD34D' : severity <= 6 ? '#F97316' : '#DC2626';
+            marker.style.background = color;
+            marker.title = `Pain severity: ${severity}/10`;
+            
+            marker.onclick = function(e) {
+                e.stopPropagation();
+                if (confirm('Remove this pain marker?')) {
+                    marker.remove();
+                    STATE.painMarkers = STATE.painMarkers.filter(m => m.element !== marker);
+                }
+            };
+            
+            const container = view === 'front' ? document.getElementById('bodyMapFront') : document.getElementById('bodyMapBack');
+            container.appendChild(marker);
+            
+            STATE.painMarkers.push({
+                view, x, y, severity,
+                element: marker,
+                location: getBodyLocation(x, y, view)
+            });
+        }
+
+        function getBodyLocation(x, y, view) {
+            // Simple location mapping based on body diagram coordinates
+            if (y < 20) return view === 'front' ? 'Head/Face' : 'Head/Neck (back)';
+            if (y < 35) return view === 'front' ? 'Neck/Shoulders' : 'Upper Back/Shoulders';
+            if (y < 55) return view === 'front' ? 'Chest/Upper Torso' : 'Mid Back';
+            if (y < 70) return view === 'front' ? 'Abdomen/Lower Torso' : 'Lower Back';
+            if (x < 50) return view === 'front' ? 'Left Leg' : 'Left Leg (back)';
+            return view === 'front' ? 'Right Leg' : 'Right Leg (back)';
+        }
+
+        // Utility functions
+        function calculateAge(dob) {
+            const today = new Date();
+            const birthDate = new Date(dob);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+            return age;
+        }
+
+        function calculateBMI(heightCm, weightKg) {
+            const heightM = heightCm / 100;
+            return weightKg / (heightM * heightM);
+        }
+
+        function getBMICategory(bmi) {
+            if (bmi < 18.5) return 'Underweight';
+            if (bmi < 25) return 'Normal weight';
+            if (bmi < 30) return 'Overweight';
+            return 'Obese';
+        }
+
+        function getLifestyleRecommendations(bmi, category) {
+            const recs = [];
+            
+            if (category === 'Underweight') {
+                recs.push('Increase caloric intake with nutrient-dense foods');
+                recs.push('Strength training to build muscle mass');
+                recs.push('Consult with nutritionist for meal planning');
+            } else if (category === 'Overweight' || category === 'Obese') {
+                recs.push('Gradual weight reduction (1-2 lbs per week) through calorie deficit');
+                recs.push('Increase physical activity to 150+ minutes moderate exercise per week');
+                recs.push('Focus on whole foods, reduce processed foods and added sugars');
+                recs.push('Portion control and mindful eating practices');
+            } else {
+                recs.push('Maintain current weight through balanced diet');
+                recs.push('Continue regular physical activity (150 min/week minimum)');
+                recs.push('Focus on strength training to maintain muscle mass');
+            }
+            
+            recs.push('Stay hydrated (8-10 glasses water daily)');
+            recs.push('Adequate sleep (7-9 hours nightly)');
+            recs.push('Stress management techniques (meditation, yoga)');
+            
+            return recs;
+        }
+
+        function getPrimaryDiagnosis(deficiencies, patient) {
+            if (deficiencies.length === 0) return 'Age-related functional decline, prophylactic exercise program';
+            
+            const areas = deficiencies.map(d => d.area);
+            if (areas.includes('Range of Motion')) return 'Restricted mobility with functional limitations';
+            if (areas.includes('Balance & Stability')) return 'Balance impairment with increased fall risk';
+            return 'Functional movement disorder requiring therapeutic intervention';
+        }
+
+        function getFunctionalStatus(tests) {
+            if (tests.length === 0) return 'Not assessed';
+            
+            const avgQuality = tests.reduce((sum, test) => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                return sum + ((data.analysis || {}).form_quality || 0);
+            }, 0) / tests.length;
+            
+            if (avgQuality >= 80) return 'Independent with all ADLs';
+            if (avgQuality >= 60) return 'Modified independent, requires assistance for some activities';
+            return 'Dependent, requires significant assistance';
+        }
+
+        function getFallRisk(tests, age) {
+            let risk = 'Low';
+            
+            if (age > 75) risk = 'Moderate';
+            if (age > 85) risk = 'High';
+            
+            tests.forEach(test => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                const analysis = data.analysis || {};
+                if (analysis.balance_score < 50) risk = 'High';
+                else if (analysis.balance_score < 70 && risk !== 'High') risk = 'Moderate';
+            });
+            
+            return risk;
+        }
+
+        function getBMIRecommendation(category) {
+            if (category === 'Obese') return 'Weight loss strongly recommended to reduce health risks';
+            if (category === 'Overweight') return 'Weight management recommended';
+            if (category === 'Underweight') return 'Weight gain recommended';
+            return 'Maintain current healthy weight';
+        }
+
+        function getPrognosis(deficiencies, age, bmi) {
+            if (deficiencies.length === 0 && bmi >= 18.5 && bmi < 25 && age < 65) {
+                return 'Excellent - minimal functional limitations, good response to exercise expected';
+            }
+            if (deficiencies.length <= 2 && age < 75) {
+                return 'Good - functional improvements expected with consistent exercise program adherence';
+            }
+            return 'Fair to Good - progressive improvement expected with sustained therapeutic intervention';
+        }
+
+        function createPrescription() {
+            window.location.href = `/static/prescription.html?assessment_id=${STATE.assessmentId}`;
+        }
+
+        function downloadPDF() {
+            alert('PDF download functionality will use browser print-to-PDF. Click OK then use Print button and select "Save as PDF"');
+            setTimeout(() => window.print(), 100);
+        }
+    </script>
+</body>
+</html>

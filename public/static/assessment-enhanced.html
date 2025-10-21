@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Medical Assessment - F-AI bian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-orange': '#FF6B35',
+              'brand-blue': '#004E89'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- MediaPipe Pose -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        body { overflow-x: hidden; }
+        .camera-container { position: relative; width: 100%; height: 100%; }
+        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+        #canvasElement { position: absolute; width: 100%; height: 100%; }
+        .rep-counter { font-size: 5rem; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .pain-point { cursor: crosshair; transition: all 0.2s; }
+        .pain-point:hover { transform: scale(1.1); }
+        @media (max-width: 768px) {
+            .rep-counter { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Step 1: Camera Selection -->
+    <div id="cameraSelection" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-4xl w-full">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">
+                <i class="fas fa-camera mr-2 text-brand-orange"></i>
+                Select Camera Type
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onclick="initCamera('phone')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-brand-orange hover:shadow-lg transition-all">
+                    <i class="fas fa-mobile-alt text-3xl md:text-4xl text-brand-orange mb-2 md:mb-3"></i>
+                    <h3 class="font-bold text-gray-800 text-sm md:text-base">Phone</h3>
+                </button>
+                <button onclick="initCamera('webcam')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-brand-blue hover:shadow-lg transition-all">
+                    <i class="fas fa-laptop text-3xl md:text-4xl text-brand-blue mb-2 md:mb-3"></i>
+                    <h3 class="font-bold text-gray-800 text-sm md:text-base">Laptop</h3>
+                </button>
+                <button onclick="initCamera('external')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-green-500 hover:shadow-lg transition-all">
+                    <i class="fas fa-camera text-3xl md:text-4xl text-green-500 mb-2 md:mb-3"></i>
+                    <h3 class="font-bold text-gray-800 text-sm md:text-base">External</h3>
+                </button>
+                <button onclick="initCamera('femto_mega')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-purple-500 hover:shadow-lg transition-all">
+                    <i class="fas fa-cube text-3xl md:text-4xl text-purple-500 mb-2 md:mb-3"></i>
+                    <h3 class="font-bold text-gray-800 text-sm md:text-base">Pro</h3>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Assessment View -->
+    <div id="assessmentView" class="hidden min-h-screen">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-brand-blue to-brand-orange text-white p-3 md:p-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-lg md:text-2xl font-bold">Exercise <span id="currentExerciseCount">1</span> of 5</h1>
+                    <p id="patientInfo" class="text-xs md:text-sm opacity-90"></p>
+                </div>
+                <div id="statusBadge" class="px-3 py-1 md:px-4 md:py-2 bg-white/20 rounded-full text-xs md:text-sm font-semibold">
+                    Ready
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Assessment Area -->
+        <div class="flex flex-col md:flex-row h-[calc(100vh-120px)]">
+            <!-- Left: Camera Feed (60% on desktop, 100% on mobile) -->
+            <div class="w-full md:w-3/5 h-64 md:h-full bg-black relative">
+                <div class="camera-container">
+                    <video id="videoElement" autoplay playsinline></video>
+                    <canvas id="canvasElement"></canvas>
+                    
+                    <!-- Real-time Metrics Overlay -->
+                    <div class="absolute top-4 left-4 bg-black/70 text-white p-3 md:p-4 rounded-lg">
+                        <div class="text-xs md:text-sm space-y-1">
+                            <div><i class="fas fa-circle text-green-400 mr-2"></i>Joints: <span id="liveJoints">0</span>/33</div>
+                            <div><i class="fas fa-heartbeat text-red-400 mr-2"></i>FPS: <span id="liveFPS">0</span></div>
+                            <div><i class="fas fa-chart-line text-blue-400 mr-2"></i>Quality: <span id="liveQuality">0</span>%</div>
+                        </div>
+                    </div>
+
+                    <!-- Rep Counter (Large Center Display) -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div id="repCounter" class="rep-counter text-white opacity-80" style="display:none;">0</div>
+                    </div>
+
+                    <!-- Angle Display (Bottom Right) -->
+                    <div id="angleDisplay" class="absolute bottom-4 right-4 bg-black/70 text-white p-2 md:p-3 rounded-lg text-xs md:text-sm" style="display:none;">
+                        <div><strong>Hip:</strong> <span id="angleHip">0</span>°</div>
+                        <div><strong>Knee:</strong> <span id="angleKnee">0</span>°</div>
+                        <div><strong>Shoulder:</strong> <span id="angleShoulder">0</span>°</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Instructions & Controls (40% on desktop, below camera on mobile) -->
+            <div class="w-full md:w-2/5 bg-white p-4 md:p-6 overflow-y-auto">
+                <!-- Exercise Instructions -->
+                <div class="mb-6">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3">
+                        <i class="fas fa-clipboard-list mr-2 text-brand-orange"></i>
+                        <span id="exerciseName">Exercise Instructions</span>
+                    </h3>
+                    <div class="bg-blue-50 border-l-4 border-brand-blue p-3 md:p-4 rounded mb-4">
+                        <p id="exerciseInstructions" class="text-sm md:text-base text-gray-700"></p>
+                    </div>
+                    
+                    <!-- Target Metrics -->
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="bg-green-50 p-2 md:p-3 rounded text-center">
+                            <div class="text-xs md:text-sm text-gray-600">Target Reps</div>
+                            <div class="text-xl md:text-2xl font-bold text-green-600" id="targetReps">10</div>
+                        </div>
+                        <div class="bg-purple-50 p-2 md:p-3 rounded text-center">
+                            <div class="text-xs md:text-sm text-gray-600">Completed</div>
+                            <div class="text-xl md:text-2xl font-bold text-purple-600" id="completedReps">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recording Controls -->
+                <div class="space-y-3 mb-6">
+                    <button id="recordBtn" onclick="toggleRecording()" 
+                        class="w-full px-6 py-3 md:py-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-base md:text-lg font-semibold disabled:opacity-50" 
+                        disabled>
+                        <i class="fas fa-circle mr-2"></i>
+                        <span id="recordBtnText">Start Recording</span>
+                    </button>
+                    
+                    <button id="nextExerciseBtn" onclick="nextExercise()" 
+                        class="hidden w-full px-6 py-3 md:py-4 bg-brand-blue text-white rounded-lg hover:shadow-lg transition-shadow text-base md:text-lg font-semibold">
+                        <span id="nextBtnText">Next Exercise</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    
+                    <button id="completeBtn" onclick="completeAssessment()" 
+                        class="hidden w-full px-6 py-3 md:py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-base md:text-lg font-semibold">
+                        <i class="fas fa-check mr-2"></i>
+                        Complete Assessment
+                    </button>
+                </div>
+
+                <!-- Real-time Analysis Results -->
+                <div id="analysisResults" class="hidden">
+                    <h4 class="font-bold text-gray-800 mb-2">Analysis Results</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>Range of Motion:</span>
+                            <span id="romScore" class="font-bold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Form Quality:</span>
+                            <span id="formScore" class="font-bold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Balance:</span>
+                            <span id="balanceScore" class="font-bold">-</span>
+                        </div>
+                        <div id="deficienciesList" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMessage" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg max-w-md w-full mx-4 z-50"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        const STATE = {
+            patientId: null,
+            patientData: null,
+            assessmentId: null,
+            testId: null,
+            currentExercise: 1,
+            totalExercises: 5,
+            isRecording: false,
+            recordingStartTime: null,
+            skeletonFrames: [],
+            cameraType: null,
+            pose: null,
+            camera: null,
+            
+            // Real-time tracking
+            repCount: 0,
+            lastRepTime: 0,
+            exerciseState: 'ready',
+            previousAngles: {},
+            qualityScore: 0,
+            
+            // Exercise definitions with medical parameters
+            exercises: [
+                {
+                    name: 'Deep Squat Assessment',
+                    category: 'mobility',
+                    instructions: 'Stand with feet shoulder-width apart. Lower your body by bending knees and hips. Keep chest up, back straight. Go as low as comfortable. Return to standing. Perform 5 reps slowly.',
+                    targetReps: 5,
+                    targetAngle: { hip: 90, knee: 90 },
+                    detectionType: 'squat',
+                    medicalMetrics: ['hip_flexion', 'knee_flexion', 'ankle_dorsiflexion', 'spinal_alignment']
+                },
+                {
+                    name: 'Single Leg Balance',
+                    category: 'balance',
+                    instructions: 'Stand on one leg. Hold for 10 seconds. Keep standing leg slightly bent. Arms out for balance. Repeat other leg. Watch for wobbling or foot placement.',
+                    targetReps: 2,
+                    targetAngle: { knee: 160 },
+                    detectionType: 'balance',
+                    medicalMetrics: ['postural_stability', 'hip_abduction', 'ankle_stability']
+                },
+                {
+                    name: 'Shoulder Flexion Range',
+                    category: 'mobility',
+                    instructions: 'Stand upright. Raise both arms forward and up overhead. Keep arms straight. Lower slowly. Perform 5 reps. Note any pain or restriction.',
+                    targetReps: 5,
+                    targetAngle: { shoulder: 170 },
+                    detectionType: 'shoulder',
+                    medicalMetrics: ['shoulder_flexion', 'scapular_mobility', 'thoracic_extension']
+                },
+                {
+                    name: 'Gait Analysis',
+                    category: 'functional',
+                    instructions: 'Walk naturally forward 10 steps. Turn around. Walk back. Maintain normal pace. Arms swing naturally. Watch for limping or asymmetry.',
+                    targetReps: 1,
+                    targetAngle: { hip: 30, knee: 60 },
+                    detectionType: 'gait',
+                    medicalMetrics: ['gait_symmetry', 'step_length', 'arm_swing', 'trunk_stability']
+                },
+                {
+                    name: 'Sit-to-Stand Test',
+                    category: 'strength',
+                    instructions: 'Sit in chair, feet flat. Stand up without using hands if possible. Stand fully upright. Sit back down with control. Perform 5 reps. Note difficulty level.',
+                    targetReps: 5,
+                    targetAngle: { hip: 90, knee: 90 },
+                    detectionType: 'sit_stand',
+                    medicalMetrics: ['lower_limb_strength', 'balance', 'functional_mobility']
+                }
+            ]
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            STATE.patientId = urlParams.get('patient_id');
+            
+            if (!STATE.patientId) {
+                showStatus('Error: No patient ID provided', 'error');
+                setTimeout(() => window.location.href = '/static/dashboard.html', 2000);
+                return;
+            }
+
+            loadPatientInfo();
+        });
+
+        async function loadPatientInfo() {
+            try {
+                const response = await fetch(`/api/patients/${STATE.patientId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    STATE.patientData = result.data;
+                    const age = calculateAge(result.data.date_of_birth);
+                    const bmi = calculateBMI(result.data.height_cm, result.data.weight_kg);
+                    document.getElementById('patientInfo').textContent = 
+                        `${result.data.first_name} ${result.data.last_name} | Age: ${age} | BMI: ${bmi.toFixed(1)}`;
+                }
+            } catch (error) {
+                console.error('Failed to load patient info:', error);
+            }
+        }
+
+        function calculateAge(dateOfBirth) {
+            const today = new Date();
+            const birthDate = new Date(dateOfBirth);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        function calculateBMI(heightCm, weightKg) {
+            if (!heightCm || !weightKg) return 0;
+            const heightM = heightCm / 100;
+            return weightKg / (heightM * heightM);
+        }
+
+        // ============================================
+        // CAMERA INITIALIZATION
+        // ============================================
+        async function initCamera(type) {
+            STATE.cameraType = type;
+            
+            document.getElementById('cameraSelection').classList.add('hidden');
+            document.getElementById('assessmentView').classList.remove('hidden');
+            
+            showStatus('Initializing camera...', 'info');
+            
+            try {
+                if (type === 'femto_mega') {
+                    throw new Error('Femto Mega requires Python bridge server. Using webcam instead.');
+                }
+                
+                await initWebCamera();
+                await createAssessment();
+                
+                showStatus('Camera ready! You can start recording.', 'success');
+                document.getElementById('recordBtn').disabled = false;
+                updateStatusBadge('Ready', 'green');
+                
+                // Display first exercise
+                displayExerciseInfo();
+                
+            } catch (error) {
+                showStatus(`Camera initialization failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function initWebCamera() {
+            const video = document.getElementById('videoElement');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: STATE.cameraType === 'phone' ? 'environment' : 'user'
+                    },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                await video.play();
+                
+                // Initialize MediaPipe Pose
+                STATE.pose = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+                });
+                
+                STATE.pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                STATE.pose.onResults(onPoseResults);
+                
+                // Start camera processing
+                STATE.camera = new Camera(video, {
+                    onFrame: async () => {
+                        await STATE.pose.send({ image: video });
+                    },
+                    width: 1280,
+                    height: 720
+                });
+                
+                STATE.camera.start();
+                
+            } catch (error) {
+                throw new Error(`Camera access denied: ${error.message}`);
+            }
+        }
+
+        // ============================================
+        // REAL-TIME POSE ANALYSIS
+        // ============================================
+        function onPoseResults(results) {
+            const canvas = document.getElementById('canvasElement');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = results.image.width;
+            canvas.height = results.image.height;
+            
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (results.poseLandmarks) {
+                // Draw skeleton
+                drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, 
+                    {color: '#00FF00', lineWidth: 4});
+                drawLandmarks(ctx, results.poseLandmarks, 
+                    {color: '#FF0000', lineWidth: 2, radius: 6});
+                
+                // Update live metrics
+                document.getElementById('liveJoints').textContent = results.poseLandmarks.length;
+                
+                // Calculate angles and quality
+                const angles = calculateAngles(results.poseLandmarks);
+                const quality = calculatePoseQuality(results.poseLandmarks);
+                
+                document.getElementById('liveQuality').textContent = quality.toFixed(0);
+                STATE.qualityScore = quality;
+                
+                // Show angles for current exercise
+                if (STATE.isRecording) {
+                    updateAngleDisplay(angles);
+                    
+                    // Detect reps for current exercise
+                    detectReps(angles);
+                    
+                    // Record frame
+                    STATE.skeletonFrames.push({
+                        timestamp: Date.now() - STATE.recordingStartTime,
+                        landmarks: results.poseLandmarks,
+                        angles: angles,
+                        quality: quality
+                    });
+                }
+            }
+            
+            ctx.restore();
+            
+            // Update FPS
+            if (STATE.isRecording) {
+                const duration = (Date.now() - STATE.recordingStartTime) / 1000;
+                const fps = STATE.skeletonFrames.length / duration;
+                document.getElementById('liveFPS').textContent = fps.toFixed(0);
+            }
+        }
+
+        // ============================================
+        // BIOMECHANICAL CALCULATIONS
+        // ============================================
+        function calculateAngles(landmarks) {
+            const angles = {};
+            
+            // Hip angles (left and right)
+            angles.hip_left = calculateAngle(
+                landmarks[23], // Left hip
+                landmarks[25], // Left knee
+                landmarks[11]  // Left shoulder
+            );
+            angles.hip_right = calculateAngle(
+                landmarks[24], landmarks[26], landmarks[12]
+            );
+            
+            // Knee angles
+            angles.knee_left = calculateAngle(
+                landmarks[23], // Hip
+                landmarks[25], // Knee
+                landmarks[27]  // Ankle
+            );
+            angles.knee_right = calculateAngle(
+                landmarks[24], landmarks[26], landmarks[28]
+            );
+            
+            // Shoulder angles
+            angles.shoulder_left = calculateAngle(
+                landmarks[11], // Shoulder
+                landmarks[13], // Elbow
+                landmarks[23]  // Hip
+            );
+            angles.shoulder_right = calculateAngle(
+                landmarks[12], landmarks[14], landmarks[24]
+            );
+            
+            // Ankle angles
+            angles.ankle_left = calculateAngle(
+                landmarks[25], // Knee
+                landmarks[27], // Ankle
+                landmarks[31]  // Foot
+            );
+            angles.ankle_right = calculateAngle(
+                landmarks[26], landmarks[28], landmarks[32]
+            );
+            
+            // Elbow angles
+            angles.elbow_left = calculateAngle(
+                landmarks[11], landmarks[13], landmarks[15]
+            );
+            angles.elbow_right = calculateAngle(
+                landmarks[12], landmarks[14], landmarks[16]
+            );
+            
+            return angles;
+        }
+
+        function calculateAngle(pointA, pointB, pointC) {
+            const radians = Math.atan2(pointC.y - pointB.y, pointC.x - pointB.x) - 
+                            Math.atan2(pointA.y - pointB.y, pointA.x - pointB.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            if (angle > 180.0) angle = 360 - angle;
+            return angle;
+        }
+
+        function calculatePoseQuality(landmarks) {
+            let quality = 100;
+            
+            // Penalize for low visibility
+            const visibilitySum = landmarks.reduce((sum, lm) => sum + (lm.visibility || 0), 0);
+            const avgVisibility = visibilitySum / landmarks.length;
+            quality *= avgVisibility;
+            
+            // Penalize for asymmetry (left vs right side)
+            const leftHip = landmarks[23];
+            const rightHip = landmarks[24];
+            const hipSymmetry = 1 - Math.abs(leftHip.y - rightHip.y);
+            quality *= hipSymmetry;
+            
+            return Math.max(0, Math.min(100, quality * 100));
+        }
+
+        function updateAngleDisplay(angles) {
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            const display = document.getElementById('angleDisplay');
+            
+            if (exercise.detectionType === 'squat') {
+                document.getElementById('angleHip').textContent = Math.round(angles.hip_left);
+                document.getElementById('angleKnee').textContent = Math.round(angles.knee_left);
+                document.getElementById('angleShoulder').textContent = '-';
+                display.style.display = 'block';
+            } else if (exercise.detectionType === 'shoulder') {
+                document.getElementById('angleHip').textContent = '-';
+                document.getElementById('angleKnee').textContent = '-';
+                document.getElementById('angleShoulder').textContent = Math.round(angles.shoulder_left);
+                display.style.display = 'block';
+            } else {
+                display.style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // REP DETECTION
+        // ============================================
+        function detectReps(angles) {
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            const now = Date.now();
+            
+            // Debounce: minimum 1 second between reps
+            if (now - STATE.lastRepTime < 1000) return;
+            
+            let repDetected = false;
+            
+            switch (exercise.detectionType) {
+                case 'squat':
+                    repDetected = detectSquatRep(angles);
+                    break;
+                case 'balance':
+                    repDetected = detectBalanceRep(angles);
+                    break;
+                case 'shoulder':
+                    repDetected = detectShoulderRep(angles);
+                    break;
+                case 'sit_stand':
+                    repDetected = detectSitStandRep(angles);
+                    break;
+            }
+            
+            if (repDetected) {
+                STATE.repCount++;
+                STATE.lastRepTime = now;
+                updateRepCounter();
+                
+                // Check if target reps reached
+                if (STATE.repCount >= exercise.targetReps) {
+                    setTimeout(() => {
+                        stopRecording();
+                    }, 500);
+                }
+            }
+        }
+
+        function detectSquatRep(angles) {
+            // Squat: detect down phase (hip < 100°) and up phase (hip > 150°)
+            const avgKnee = (angles.knee_left + angles.knee_right) / 2;
+            
+            if (STATE.exerciseState === 'ready' && avgKnee < 100) {
+                STATE.exerciseState = 'down';
+            } else if (STATE.exerciseState === 'down' && avgKnee > 150) {
+                STATE.exerciseState = 'ready';
+                return true;
+            }
+            return false;
+        }
+
+        function detectBalanceRep(angles) {
+            // Balance: hold for duration (auto-increment after 10 seconds)
+            if (STATE.exerciseState === 'ready') {
+                STATE.exerciseState = 'holding';
+                setTimeout(() => {
+                    if (STATE.isRecording) {
+                        STATE.repCount++;
+                        updateRepCounter();
+                    }
+                }, 10000);
+            }
+            return false;
+        }
+
+        function detectShoulderRep(angles) {
+            // Shoulder: arms up (>150°) and down (<50°)
+            const avgShoulder = (angles.shoulder_left + angles.shoulder_right) / 2;
+            
+            if (STATE.exerciseState === 'ready' && avgShoulder > 150) {
+                STATE.exerciseState = 'up';
+            } else if (STATE.exerciseState === 'up' && avgShoulder < 50) {
+                STATE.exerciseState = 'ready';
+                return true;
+            }
+            return false;
+        }
+
+        function detectSitStandRep(angles) {
+            // Sit-to-stand: similar to squat detection
+            return detectSquatRep(angles);
+        }
+
+        function updateRepCounter() {
+            const counter = document.getElementById('repCounter');
+            const completed = document.getElementById('completedReps');
+            
+            counter.textContent = STATE.repCount;
+            completed.textContent = STATE.repCount;
+            
+            // Flash animation
+            counter.style.display = 'block';
+            counter.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                counter.style.transform = 'scale(1)';
+            }, 200);
+        }
+
+        // ============================================
+        // RECORDING CONTROLS
+        // ============================================
+        function displayExerciseInfo() {
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            document.getElementById('exerciseName').textContent = exercise.name;
+            document.getElementById('exerciseInstructions').textContent = exercise.instructions;
+            document.getElementById('targetReps').textContent = exercise.targetReps;
+            document.getElementById('completedReps').textContent = '0';
+            document.getElementById('currentExerciseCount').textContent = STATE.currentExercise;
+        }
+
+        function toggleRecording() {
+            if (STATE.isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            STATE.isRecording = true;
+            STATE.recordingStartTime = Date.now();
+            STATE.skeletonFrames = [];
+            STATE.repCount = 0;
+            STATE.exerciseState = 'ready';
+            
+            document.getElementById('recordBtnText').textContent = 'Stop Recording';
+            document.getElementById('recordBtn').classList.remove('bg-red-500', 'hover:bg-red-600');
+            document.getElementById('recordBtn').classList.add('bg-gray-700', 'hover:bg-gray-800');
+            updateStatusBadge('Recording...', 'red');
+            
+            document.getElementById('repCounter').style.display = 'block';
+            document.getElementById('completedReps').textContent = '0';
+            
+            await createMovementTest();
+        }
+
+        async function stopRecording() {
+            STATE.isRecording = false;
+            
+            document.getElementById('recordBtnText').textContent = 'Start Recording';
+            document.getElementById('recordBtn').classList.remove('bg-gray-700', 'hover:bg-gray-800');
+            document.getElementById('recordBtn').classList.add('bg-red-500', 'hover:bg-red-600');
+            updateStatusBadge('Processing...', 'yellow');
+            
+            const duration = (Date.now() - STATE.recordingStartTime) / 1000;
+            showStatus(`✅ Recorded ${duration.toFixed(1)}s with ${STATE.skeletonFrames.length} frames. Analyzing...`, 'success');
+            
+            // Analyze movement
+            const analysis = analyzeMovement();
+            
+            // Save data
+            await saveSkeletonData(analysis);
+            
+            // Display results
+            displayAnalysisResults(analysis);
+            
+            // Show next button
+            if (STATE.currentExercise < STATE.totalExercises) {
+                document.getElementById('nextExerciseBtn').classList.remove('hidden');
+                document.getElementById('recordBtn').disabled = true;
+            } else {
+                document.getElementById('completeBtn').classList.remove('hidden');
+                document.getElementById('recordBtn').disabled = true;
+            }
+            
+            updateStatusBadge('Completed', 'green');
+        }
+
+        // ============================================
+        // MOVEMENT ANALYSIS
+        // ============================================
+        function analyzeMovement() {
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            const frames = STATE.skeletonFrames;
+            
+            if (frames.length === 0) {
+                return {
+                    rom_score: 0,
+                    form_quality: 0,
+                    balance_score: 0,
+                    deficiencies: ['No movement data captured']
+                };
+            }
+            
+            // Calculate ROM (Range of Motion)
+            const angles = frames.map(f => f.angles);
+            const romScore = calculateROMScore(angles, exercise);
+            
+            // Calculate Form Quality
+            const formQuality = frames.reduce((sum, f) => sum + f.quality, 0) / frames.length;
+            
+            // Calculate Balance
+            const balanceScore = calculateBalanceScore(frames);
+            
+            // Detect deficiencies
+            const deficiencies = detectDeficiencies(angles, exercise, romScore, formQuality, balanceScore);
+            
+            return {
+                rom_score: romScore,
+                form_quality: formQuality,
+                balance_score: balanceScore,
+                deficiencies: deficiencies,
+                reps_completed: STATE.repCount,
+                target_reps: exercise.targetReps,
+                duration: (frames[frames.length - 1].timestamp) / 1000
+            };
+        }
+
+        function calculateROMScore(angles, exercise) {
+            if (angles.length === 0) return 0;
+            
+            let maxAngles = {};
+            let minAngles = {};
+            
+            // Find max and min for each angle
+            for (let angleType in angles[0]) {
+                maxAngles[angleType] = Math.max(...angles.map(a => a[angleType]));
+                minAngles[angleType] = Math.min(...angles.map(a => a[angleType]));
+            }
+            
+            // Calculate ROM based on exercise type
+            let score = 100;
+            
+            if (exercise.detectionType === 'squat') {
+                const kneeROM = maxAngles.knee_left - minAngles.knee_left;
+                score = Math.min(100, (kneeROM / 90) * 100); // Target: 90° ROM
+            } else if (exercise.detectionType === 'shoulder') {
+                const shoulderROM = maxAngles.shoulder_left - minAngles.shoulder_left;
+                score = Math.min(100, (shoulderROM / 170) * 100); // Target: 170° ROM
+            }
+            
+            return score;
+        }
+
+        function calculateBalanceScore(frames) {
+            // Calculate center of mass stability
+            let totalMovement = 0;
+            
+            for (let i = 1; i < frames.length; i++) {
+                const prev = frames[i-1].landmarks;
+                const curr = frames[i].landmarks;
+                
+                // Compare hip positions (center of mass proxy)
+                const prevHip = {
+                    x: (prev[23].x + prev[24].x) / 2,
+                    y: (prev[23].y + prev[24].y) / 2
+                };
+                const currHip = {
+                    x: (curr[23].x + curr[24].x) / 2,
+                    y: (curr[23].y + curr[24].y) / 2
+                };
+                
+                const movement = Math.sqrt(
+                    Math.pow(currHip.x - prevHip.x, 2) + 
+                    Math.pow(currHip.y - prevHip.y, 2)
+                );
+                
+                totalMovement += movement;
+            }
+            
+            const avgMovement = totalMovement / frames.length;
+            const score = Math.max(0, 100 - (avgMovement * 1000)); // Lower movement = better balance
+            
+            return score;
+        }
+
+        function detectDeficiencies(angles, exercise, romScore, formQuality, balanceScore) {
+            const deficiencies = [];
+            
+            // ROM deficiencies
+            if (romScore < 70) {
+                deficiencies.push({
+                    area: 'Range of Motion',
+                    severity: romScore < 50 ? 'severe' : 'moderate',
+                    description: `Limited ROM detected (${romScore.toFixed(0)}%). Target areas need stretching and mobility work.`,
+                    recommendation: 'Daily stretching routine for affected joints'
+                });
+            }
+            
+            // Form deficiencies
+            if (formQuality < 70) {
+                deficiencies.push({
+                    area: 'Movement Form',
+                    severity: formQuality < 50 ? 'severe' : 'moderate',
+                    description: `Poor form quality (${formQuality.toFixed(0)}%). May indicate weakness or compensation patterns.`,
+                    recommendation: 'Focus on controlled movements with proper technique'
+                });
+            }
+            
+            // Balance deficiencies
+            if (balanceScore < 70) {
+                deficiencies.push({
+                    area: 'Balance & Stability',
+                    severity: balanceScore < 50 ? 'severe' : 'moderate',
+                    description: `Reduced stability (${balanceScore.toFixed(0)}%). Fall risk assessment recommended.`,
+                    recommendation: 'Balance training exercises and proprioceptive work'
+                });
+            }
+            
+            // Rep completion check
+            if (STATE.repCount < exercise.targetReps) {
+                deficiencies.push({
+                    area: 'Exercise Completion',
+                    severity: 'moderate',
+                    description: `Only completed ${STATE.repCount}/${exercise.targetReps} reps. May indicate fatigue or difficulty.`,
+                    recommendation: 'Build endurance gradually, monitor for pain'
+                });
+            }
+            
+            return deficiencies;
+        }
+
+        function displayAnalysisResults(analysis) {
+            document.getElementById('analysisResults').classList.remove('hidden');
+            document.getElementById('romScore').textContent = `${analysis.rom_score.toFixed(0)}%`;
+            document.getElementById('formScore').textContent = `${analysis.form_quality.toFixed(0)}%`;
+            document.getElementById('balanceScore').textContent = `${analysis.balance_score.toFixed(0)}%`;
+            
+            const list = document.getElementById('deficienciesList');
+            if (analysis.deficiencies.length > 0) {
+                list.innerHTML = '<div class="font-bold text-red-600 mb-2">⚠️ Concerns Identified:</div>' +
+                    analysis.deficiencies.map(d => `
+                        <div class="text-xs bg-red-50 p-2 rounded mb-1">
+                            <strong>${d.area}</strong> (${d.severity}): ${d.description}
+                        </div>
+                    `).join('');
+            } else {
+                list.innerHTML = '<div class="text-green-600 font-bold">✅ No significant issues detected</div>';
+            }
+        }
+
+        // ============================================
+        // API CALLS
+        // ============================================
+        async function createAssessment() {
+            try {
+                const response = await fetch('/api/assessments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: STATE.patientId,
+                        assessment_type: 'initial',
+                        clinician_id: 1
+                    })
+                });
+                
+                const result = await response.json();
+                STATE.assessmentId = result.data.id;
+                
+            } catch (error) {
+                throw new Error(`Failed to create assessment: ${error.message}`);
+            }
+        }
+
+        async function createMovementTest() {
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            
+            try {
+                const response = await fetch(`/api/assessments/${STATE.assessmentId}/tests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        test_name: exercise.name,
+                        test_category: exercise.category,
+                        test_order: STATE.currentExercise,
+                        instructions: exercise.instructions
+                    })
+                });
+                
+                const result = await response.json();
+                STATE.testId = result.data.id;
+                
+            } catch (error) {
+                console.error('Failed to create movement test:', error);
+            }
+        }
+
+        async function saveSkeletonData(analysis) {
+            try {
+                await fetch(`/api/tests/${STATE.testId}/analyze`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        skeleton_data: {
+                            frames: STATE.skeletonFrames,
+                            duration: analysis.duration,
+                            frame_rate: STATE.skeletonFrames.length / analysis.duration,
+                            analysis: analysis
+                        },
+                        camera_type: STATE.cameraType
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to save skeleton data:', error);
+            }
+        }
+
+        async function nextExercise() {
+            STATE.currentExercise++;
+            STATE.repCount = 0;
+            
+            document.getElementById('nextExerciseBtn').classList.add('hidden');
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('analysisResults').classList.add('hidden');
+            document.getElementById('repCounter').style.display = 'none';
+            updateStatusBadge('Ready', 'green');
+            
+            displayExerciseInfo();
+        }
+
+        async function completeAssessment() {
+            showStatus('🎉 Assessment complete! Generating medical note...', 'success');
+            
+            await fetch(`/api/assessments/${STATE.assessmentId}/complete`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    overall_score: 75,
+                    clinical_notes: '5 exercises completed successfully',
+                    recommendations: ['Continue with prescribed exercises', 'Monitor progress weekly']
+                })
+            });
+            
+            setTimeout(() => {
+                window.location.href = `/static/medical-note.html?assessment_id=${STATE.assessmentId}&patient_id=${STATE.patientId}`;
+            }, 2000);
+        }
+
+        function updateStatusBadge(text, color) {
+            const badge = document.getElementById('statusBadge');
+            badge.textContent = text;
+            badge.className = `px-3 py-1 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold ${
+                color === 'green' ? 'bg-green-500 text-white' :
+                color === 'red' ? 'bg-red-500 text-white' :
+                color === 'yellow' ? 'bg-yellow-500 text-white' :
+                'bg-white/20 text-white'
+            }`;
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg max-w-md w-full mx-4 z-50 ${
+                type === 'success' ? 'bg-green-100 text-green-700' :
+                type === 'error' ? 'bg-red-100 text-red-700' :
+                'bg-blue-100 text-blue-700'
+            }`;
+            statusDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
