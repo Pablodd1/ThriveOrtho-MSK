@@ -46,68 +46,68 @@ app.get('/', (c) => {
         <div class="min-h-screen relative z-10">
             <!-- Header -->
             <header class="glass-header text-white shadow-lg">
-                <div class="max-w-7xl mx-auto px-4 py-8">
-                    <h1 class="text-5xl font-bold fade-in-up">
-                        <i class="fas fa-heartbeat mr-3 text-brand-orange"></i>
+                <div class="max-w-7xl mx-auto px-4 py-4 md:py-8">
+                    <h1 class="text-2xl md:text-5xl font-bold fade-in-up">
+                        <i class="fas fa-heartbeat mr-2 md:mr-3 text-brand-orange"></i>
                         F-AI bian Assessment System
                     </h1>
-                    <p class="mt-3 text-xl text-white/90 fade-in-up" style="animation-delay: 0.2s">Elderly Home Rehabilitation Monitoring & Remote Patient Monitoring</p>
+                    <p class="mt-2 md:mt-3 text-sm md:text-xl text-white/90 fade-in-up" style="animation-delay: 0.2s">Elderly Home Rehabilitation Monitoring & Remote Patient Monitoring</p>
                 </div>
             </header>
 
             <!-- Main Content -->
-            <main class="max-w-7xl mx-auto px-4 py-16">
+            <main class="max-w-7xl mx-auto px-4 py-8 md:py-16">
                 <!-- Quick Actions -->
-                <div class="grid md:grid-cols-3 gap-8 mb-16">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-8 md:mb-16">
                     <!-- Patient Intake -->
                     <a href="/static/intake.html" class="block feature-card text-white group fade-in-up">
-                        <div class="flex items-center mb-6">
-                            <div class="bg-brand-orange/30 backdrop-blur-sm w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        <div class="flex items-center mb-4 md:mb-6">
+                            <div class="bg-brand-orange/30 backdrop-blur-sm w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform">
                                 <i class="fas fa-user-plus text-white drop-shadow-lg"></i>
                             </div>
-                            <h2 class="ml-4 text-3xl font-bold drop-shadow-md">New Patient</h2>
+                            <h2 class="ml-3 md:ml-4 text-xl md:text-3xl font-bold drop-shadow-md">New Patient</h2>
                         </div>
-                        <p class="text-white/90 text-lg mb-4">Start patient intake and demographic information collection</p>
-                        <div class="mt-6 text-white font-semibold flex items-center group-hover:translate-x-2 transition-transform">
+                        <p class="text-white/90 text-sm md:text-lg mb-3 md:mb-4">Start patient intake and demographic information collection</p>
+                        <div class="mt-4 md:mt-6 text-white text-sm md:text-base font-semibold flex items-center group-hover:translate-x-2 transition-transform">
                             Get Started <i class="fas fa-arrow-right ml-2"></i>
                         </div>
                     </a>
 
                     <!-- Assessment -->
                     <a href="/static/dashboard.html" class="block feature-card text-white group fade-in-up" style="animation-delay: 0.1s">
-                        <div class="flex items-center mb-6">
-                            <div class="bg-brand-blue/30 backdrop-blur-sm w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        <div class="flex items-center mb-4 md:mb-6">
+                            <div class="bg-brand-blue/30 backdrop-blur-sm w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform">
                                 <i class="fas fa-video text-white drop-shadow-lg"></i>
                             </div>
-                            <h2 class="ml-4 text-3xl font-bold drop-shadow-md">Dashboard</h2>
+                            <h2 class="ml-3 md:ml-4 text-xl md:text-3xl font-bold drop-shadow-md">Dashboard</h2>
                         </div>
-                        <p class="text-white/90 text-lg mb-4">View all patients and manage assessments</p>
-                        <div class="mt-6 text-white font-semibold flex items-center group-hover:translate-x-2 transition-transform">
+                        <p class="text-white/90 text-sm md:text-lg mb-3 md:mb-4">View all patients and manage assessments</p>
+                        <div class="mt-4 md:mt-6 text-white text-sm md:text-base font-semibold flex items-center group-hover:translate-x-2 transition-transform">
                             View Dashboard <i class="fas fa-arrow-right ml-2"></i>
                         </div>
                     </a>
 
                     <!-- Reports -->
                     <a href="/static/dashboard.html" class="block feature-card text-white group fade-in-up" style="animation-delay: 0.2s">
-                        <div class="flex items-center mb-6">
-                            <div class="bg-green-500/30 backdrop-blur-sm w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        <div class="flex items-center mb-4 md:mb-6">
+                            <div class="bg-green-500/30 backdrop-blur-sm w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform">
                                 <i class="fas fa-chart-line text-white drop-shadow-lg"></i>
                             </div>
-                            <h2 class="ml-4 text-3xl font-bold drop-shadow-md">RPM Monitoring</h2>
+                            <h2 class="ml-3 md:ml-4 text-xl md:text-3xl font-bold drop-shadow-md">RPM Monitoring</h2>
                         </div>
-                        <p class="text-white/90 text-lg mb-4">Track remote patient monitoring and billing</p>
-                        <div class="mt-6 text-white font-semibold flex items-center group-hover:translate-x-2 transition-transform">
+                        <p class="text-white/90 text-sm md:text-lg mb-3 md:mb-4">Track remote patient monitoring and billing</p>
+                        <div class="mt-4 md:mt-6 text-white text-sm md:text-base font-semibold flex items-center group-hover:translate-x-2 transition-transform">
                             View Reports <i class="fas fa-arrow-right ml-2"></i>
                         </div>
                     </a>
                 </div>
 
                 <!-- Features -->
-                <div class="glass-card-solid p-10 mb-16 fade-in-up" style="animation-delay: 0.3s">
-                    <h3 class="text-3xl font-bold text-gray-800 mb-8">
+                <div class="glass-card-solid p-6 md:p-10 mb-8 md:mb-16 fade-in-up" style="animation-delay: 0.3s">
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8">
                         <span class="text-gradient">System Features</span>
                     </h3>
-                    <div class="grid md:grid-cols-2 gap-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                         <div class="flex items-start group">
                             <div class="bg-gradient-to-br from-brand-orange to-red-500 w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform flex-shrink-0">
                                 <i class="fas fa-camera"></i>

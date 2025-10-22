@@ -98,13 +98,20 @@ body {
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 28px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 2.5rem;
+  padding: 1.5rem;
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.18);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .feature-card {
+    padding: 2.5rem;
+    border-radius: 28px;
+  }
 }
 
 .feature-card::before {
@@ -418,12 +425,8 @@ body {
    =============================================== */
 
 @media (max-width: 768px) {
-  .feature-card {
-    padding: 2rem;
-  }
-  
   .glass-header {
-    padding: 1.5rem 1rem !important;
+    padding: 1rem !important;
   }
   
   .rep-counter {
@@ -431,8 +434,17 @@ body {
   }
   
   .btn-gradient, .btn-glass {
-    padding: 0.875rem 2rem;
-    font-size: 1rem;
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+  
+  .glass-card-solid {
+    padding: 1.5rem !important;
+  }
+  
+  /* Improve touch targets for mobile */
+  button, a {
+    min-height: 44px;
   }
 }
 

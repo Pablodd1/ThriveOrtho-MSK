@@ -24,28 +24,28 @@
     <div class="min-h-screen">
         <!-- Header -->
         <header class="glass-header text-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4 py-6">
-                <a href="/" class="text-white hover:text-gray-200">
+            <div class="max-w-7xl mx-auto px-4 py-4 md:py-6">
+                <a href="/" class="text-white hover:text-gray-200 text-sm md:text-base">
                     <i class="fas fa-arrow-left mr-2"></i> Back to Home
                 </a>
-                <h1 class="text-3xl font-bold mt-4">
-                    <i class="fas fa-user-plus mr-3"></i>
+                <h1 class="text-xl md:text-3xl font-bold mt-3 md:mt-4">
+                    <i class="fas fa-user-plus mr-2 md:mr-3"></i>
                     Patient Intake Form
                 </h1>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="max-w-4xl mx-auto px-4 py-8">
-            <div class="glass-card-solid p-10 fade-in-up">
+        <main class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+            <div class="glass-card-solid p-6 md:p-10 fade-in-up">
                 <form id="intakeForm">
                     <!-- Demographics -->
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-orange pb-2">
                             <i class="fas fa-user mr-2 text-brand-orange"></i>
                             Demographics
                         </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                                 <input type="text" name="first_name" required class="glass-input w-full">
@@ -80,12 +80,12 @@
                     </div>
 
                     <!-- Address -->
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
                             <i class="fas fa-home mr-2 text-brand-blue"></i>
                             Address
                         </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
                                 <input type="text" name="address_line1" required class="glass-input w-full">
@@ -110,8 +110,8 @@
                     </div>
 
                     <!-- Emergency Contact -->
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-orange pb-2">
                             <i class="fas fa-phone-alt mr-2 text-brand-orange"></i>
                             Emergency Contact
                         </h2>
@@ -132,12 +132,12 @@
                     </div>
 
                     <!-- Medical Information -->
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
                             <i class="fas fa-notes-medical mr-2 text-brand-blue"></i>
                             Medical Information
                         </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Primary Physician</label>
                                 <input type="text" name="primary_physician" class="glass-input w-full">
@@ -154,12 +154,12 @@
                     </div>
 
                     <!-- Assessment Context -->
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-orange pb-2">
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-orange pb-2">
                             <i class="fas fa-clipboard-list mr-2 text-brand-orange"></i>
                             Assessment Context
                         </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Assessment Reason *</label>
                                 <select name="assessment_reason" required class="glass-select w-full">
@@ -195,12 +195,12 @@
                     </div>
 
                     <!-- Height & Weight -->
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
                             <i class="fas fa-weight mr-2 text-brand-blue"></i>
                             Physical Measurements
                         </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Height (cm) *</label>
                                 <input type="number" name="height_cm" required min="100" max="250" step="0.1" class="glass-input w-full">
