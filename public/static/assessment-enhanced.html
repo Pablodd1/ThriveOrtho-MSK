@@ -306,7 +306,36 @@
             }
 
             loadPatientInfo();
+            
+            // Wait for MediaPipe libraries to load
+            waitForMediaPipe();
         });
+        
+        function waitForMediaPipe() {
+            let attempts = 0;
+            const maxAttempts = 20; // 10 seconds max
+            
+            const checkInterval = setInterval(() => {
+                attempts++;
+                
+                if (typeof window.Pose !== 'undefined' && 
+                    typeof window.Camera !== 'undefined' && 
+                    typeof window.drawConnectors !== 'undefined' &&
+                    typeof window.drawLandmarks !== 'undefined' &&
+                    typeof window.POSE_CONNECTIONS !== 'undefined') {
+                    
+                    clearInterval(checkInterval);
+                    console.log('✅ MediaPipe libraries loaded successfully');
+                    return;
+                }
+                
+                if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    console.error('❌ MediaPipe libraries failed to load');
+                    showStatus('MediaPipe libraries failed to load. Please refresh the page.', 'error');
+                }
+            }, 500);
+        }
 
         async function loadPatientInfo() {
             try {
@@ -378,6 +407,15 @@
             const video = document.getElementById('videoElement');
             
             try {
+                // Check if MediaPipe libraries are loaded
+                if (typeof window.Pose === 'undefined') {
+                    throw new Error('MediaPipe Pose library not loaded. Please refresh the page.');
+                }
+                if (typeof window.Camera === 'undefined') {
+                    throw new Error('MediaPipe Camera library not loaded. Please refresh the page.');
+                }
+                
+                // Request camera access
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 1280 },
@@ -390,8 +428,8 @@
                 video.srcObject = stream;
                 await video.play();
                 
-                // Initialize MediaPipe Pose
-                STATE.pose = new Pose({
+                // Initialize MediaPipe Pose with proper global scope
+                STATE.pose = new window.Pose({
                     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
                 });
                 
@@ -404,10 +442,15 @@
                 
                 STATE.pose.onResults(onPoseResults);
                 
-                // Start camera processing
-                STATE.camera = new Camera(video, {
+                // Wait for pose model to initialize
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Start camera processing with proper global scope
+                STATE.camera = new window.Camera(video, {
                     onFrame: async () => {
-                        await STATE.pose.send({ image: video });
+                        if (STATE.pose) {
+                            await STATE.pose.send({ image: video });
+                        }
                     },
                     width: 1280,
                     height: 720
@@ -416,6 +459,7 @@
                 STATE.camera.start();
                 
             } catch (error) {
+                console.error('Camera initialization error:', error);
                 throw new Error(`Camera access denied: ${error.message}`);
             }
         }
@@ -434,11 +478,15 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             if (results.poseLandmarks) {
-                // Draw skeleton
-                drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, 
-                    {color: '#00FF00', lineWidth: 4});
-                drawLandmarks(ctx, results.poseLandmarks, 
-                    {color: '#FF0000', lineWidth: 2, radius: 6});
+                // Draw skeleton with proper global scope
+                if (typeof window.drawConnectors !== 'undefined') {
+                    window.drawConnectors(ctx, results.poseLandmarks, window.POSE_CONNECTIONS, 
+                        {color: '#00FF00', lineWidth: 4});
+                }
+                if (typeof window.drawLandmarks !== 'undefined') {
+                    window.drawLandmarks(ctx, results.poseLandmarks, 
+                        {color: '#FF0000', lineWidth: 2, radius: 6});
+                }
                 
                 // Update live metrics
                 document.getElementById('liveJoints').textContent = results.poseLandmarks.length;
