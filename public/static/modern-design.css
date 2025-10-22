@@ -203,7 +203,8 @@
 }
 
 /* === INPUTS === */
-.input-modern {
+.input-modern,
+.input-glass {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(0, 0, 0, 0.1);
@@ -211,9 +212,11 @@
     padding: 0.875rem 1.25rem;
     transition: all 0.3s ease;
     font-size: 1rem;
+    color: #1f2937;
 }
 
-.input-modern:focus {
+.input-modern:focus,
+.input-glass:focus {
     outline: none;
     background: rgba(255, 255, 255, 1);
     border: 2px solid #667eea;
@@ -221,8 +224,27 @@
     transform: translateY(-2px);
 }
 
-.input-modern::placeholder {
+.input-modern::placeholder,
+.input-glass::placeholder {
     color: rgba(0, 0, 0, 0.4);
+}
+
+/* Select dropdowns */
+select.input-glass,
+select.input-modern {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23667eea'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+}
+
+/* Textarea */
+textarea.input-glass,
+textarea.input-modern {
+    min-height: 100px;
+    resize: vertical;
 }
 
 /* === SHADOWS === */
