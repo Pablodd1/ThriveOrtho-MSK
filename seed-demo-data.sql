@@ -1,304 +1,315 @@
 -- ============================================
--- DEMO/DUMMY DATA FOR MVP DEMONSTRATION
--- Medical-Grade PT Assessment System
+-- DEMO DATA SEED SCRIPT
+-- F-AI bian Assessment System
 -- ============================================
--- This file contains 5 complete patient profiles with:
--- - Diverse demographics (age, gender, conditions)
--- - Complete assessments with movement tests
--- - Realistic BMI and medical histories
--- - Various injury types and activity levels
--- ============================================
-
--- Clear existing demo data (keep schema)
-DELETE FROM movement_tests;
-DELETE FROM assessments;
-DELETE FROM patients WHERE id >= 10; -- Keep existing test patients
+-- This script creates realistic demo/dummy data for demonstration purposes
+-- Includes: 5 diverse patients, assessments, movement tests, and medical records
 
 -- ============================================
--- DEMO PATIENT 1: Post-Surgical Knee Recovery
+-- DEMO PATIENTS
 -- ============================================
-INSERT INTO patients (
+
+-- Patient 1: Post-Surgery Elderly Male
+INSERT OR IGNORE INTO patients (
     id, first_name, last_name, date_of_birth, gender, email, phone,
-    address_line1, city, state, zip_code,
+    address_line1, address_line2, city, state, zip_code,
     emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+    primary_physician, insurance_provider, insurance_policy_number,
+    medical_history, current_medications, allergies,
+    assessment_reason, chief_complaint, pain_scale, activity_level,
     height_cm, weight_kg,
-    chief_complaint, pain_scale, activity_level, assessment_reason,
-    medical_history, current_medications, allergies
+    created_at, updated_at
 ) VALUES (
-    10,
-    'Michael',
-    'Rodriguez',
-    '1975-03-15',
-    'male',
-    'michael.rodriguez@example.com',
-    '(555) 123-4567',
-    '456 Oak Avenue',
-    'San Diego',
-    'CA',
-    '92101',
-    'Maria Rodriguez',
-    '(555) 123-4568',
-    'Spouse',
-    178.0,  -- 5'10"
-    82.5,   -- 182 lbs, BMI: 26.0 (slightly overweight)
-    'Right knee pain and stiffness following ACL reconstruction surgery 8 weeks ago',
-    6,
-    'limited',
-    'post_surgical_rehab',
-    '{"conditions":["ACL reconstruction (8 weeks post-op)","Mild hypertension","Previous left ankle sprain (2019)"],"surgeries":["ACL reconstruction - right knee (2 months ago)","Appendectomy (2005)"]}',
-    '["Ibuprofen 400mg PRN","Lisinopril 10mg daily"]',
-    '["Penicillin - rash"]'
+    100, 'Robert', 'Thompson', '1950-03-15', 'male', 'robert.thompson@email.com', '555-0101',
+    '123 Oak Street', 'Apt 4B', 'Miami', 'FL', '33101',
+    'Mary Thompson', '555-0102', 'Wife',
+    'Dr. Sarah Johnson', 'Medicare Part A & B', 'MED-12345678',
+    '{"conditions": ["Hypertension", "Type 2 Diabetes", "Hip Replacement Surgery (Right, 6 weeks ago)"]}',
+    '["Metformin 500mg", "Lisinopril 10mg", "Aspirin 81mg"]',
+    '["Penicillin", "Sulfa drugs"]',
+    'post_surgery', 'Right hip pain and stiffness post hip replacement surgery. Limited mobility and difficulty with daily activities.',
+    6, 'sedentary',
+    175.0, 85.5,
+    datetime('now', '-30 days'), datetime('now', '-30 days')
 );
 
--- Assessment for Patient 1
-INSERT INTO assessments (id, patient_id, assessment_type, status, assessment_date, clinical_notes)
-VALUES (
-    10,
-    10,
-    'initial_evaluation',
-    'completed',
-    '2025-10-20 10:30:00',
-    'Initial post-surgical assessment. Patient demonstrates limited knee flexion ROM (0-95°, normal 0-135°). Quad strength 3/5. Gait antalgic with decreased stance phase on right. Reports increased pain with stairs and prolonged sitting. Good surgical healing, no signs of infection.'
-);
-
--- Movement tests for Patient 1
-INSERT INTO movement_tests (assessment_id, test_name, test_category, skeleton_data)
-VALUES
-(10, 'Bodyweight Squat', 'squat', '{"analysis":{"rom_score":65.3,"form_quality":72.1,"balance_score":68.4,"duration_seconds":45,"reps_completed":8},"angles":[{"knee_left":128,"knee_right":95,"hip_left":105,"hip_right":88},{"knee_left":130,"knee_right":97,"hip_left":107,"hip_right":90},{"knee_left":132,"knee_right":99,"hip_left":109,"hip_right":92},{"knee_left":129,"knee_right":96,"hip_left":106,"hip_right":89},{"knee_left":131,"knee_right":98,"hip_left":108,"hip_right":91},{"knee_left":127,"knee_right":94,"hip_left":104,"hip_right":87},{"knee_left":133,"knee_right":100,"hip_left":110,"hip_right":93},{"knee_left":130,"knee_right":97,"hip_left":107,"hip_right":90}],"maxAngles":{"knee_left":133,"knee_right":100,"hip_left":110,"hip_right":93},"minAngles":{"knee_left":127,"knee_right":94,"hip_left":104,"hip_right":87}}'),
-(10, 'Single Leg Balance - Left', 'balance', '{"analysis":{"balance_score":78.5,"stability_score":82.3,"form_quality":75.2,"duration_seconds":30},"angles":[{"hip_left":172,"knee_left":178,"ankle_left":88}],"avgAngles":{"hip_left":172,"knee_left":178,"ankle_left":88}}'),
-(10, 'Single Leg Balance - Right', 'balance', '{"analysis":{"balance_score":52.1,"stability_score":48.7,"form_quality":55.3,"duration_seconds":15},"angles":[{"hip_right":165,"knee_right":155,"ankle_right":82}],"avgAngles":{"hip_right":165,"knee_right":155,"ankle_right":82}}'),
-(10, 'Hip Flexor Stretch - Left', 'flexibility', '{"analysis":{"rom_score":88.2,"form_quality":85.6,"duration_seconds":30,"reps_completed":3},"angles":[{"hip_left":118,"knee_left":135}],"maxAngles":{"hip_left":118,"knee_left":135}}'),
-(10, 'Hip Flexor Stretch - Right', 'flexibility', '{"analysis":{"rom_score":71.5,"form_quality":73.2,"duration_seconds":30,"reps_completed":3},"angles":[{"hip_right":95,"knee_right":110}],"maxAngles":{"hip_right":95,"knee_right":110}}');
-
--- ============================================
--- DEMO PATIENT 2: Chronic Low Back Pain (Sedentary Worker)
--- ============================================
-INSERT INTO patients (
+-- Patient 2: Fall Risk Elderly Female
+INSERT OR IGNORE INTO patients (
     id, first_name, last_name, date_of_birth, gender, email, phone,
-    address_line1, city, state, zip_code,
+    address_line1, address_line2, city, state, zip_code,
     emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+    primary_physician, insurance_provider, insurance_policy_number,
+    medical_history, current_medications, allergies,
+    assessment_reason, chief_complaint, pain_scale, activity_level,
     height_cm, weight_kg,
-    chief_complaint, pain_scale, activity_level, assessment_reason,
-    medical_history, current_medications, allergies
+    created_at, updated_at
 ) VALUES (
-    11,
-    'Jennifer',
-    'Chen',
-    '1988-07-22',
-    'female',
-    'jennifer.chen@example.com',
-    '(555) 234-5678',
-    '789 Maple Street, Apt 3B',
-    'Austin',
-    'TX',
-    '78701',
-    'David Chen',
-    '(555) 234-5679',
-    'Spouse',
-    165.0,  -- 5'5"
-    68.0,   -- 150 lbs, BMI: 25.0 (upper normal)
-    'Chronic lower back pain, worse with prolonged sitting and standing',
-    7,
-    'sedentary',
-    'chronic_pain_management',
-    '{"conditions":["Chronic non-specific low back pain (3 years)","Mild scoliosis","Computer-related neck strain"],"surgeries":[]}',
-    '["Acetaminophen 500mg PRN","Meloxicam 7.5mg daily"]',
-    '[]'
+    101, 'Margaret', 'Chen', '1945-08-22', 'female', 'margaret.chen@email.com', '555-0201',
+    '456 Maple Avenue', NULL, 'Fort Lauderdale', 'FL', '33301',
+    'David Chen', '555-0202', 'Son',
+    'Dr. Michael Rodriguez', 'United Healthcare', 'UHC-87654321',
+    '{"conditions": ["Osteoporosis", "Balance Disorder", "Mild Cognitive Impairment"]}',
+    '["Alendronate 70mg weekly", "Vitamin D 2000IU", "Calcium 600mg"]',
+    '[]',
+    'fall_prevention', 'Multiple near-falls in past 3 months. Difficulty maintaining balance during daily activities. Fear of falling affecting confidence.',
+    3, 'light',
+    162.0, 58.3,
+    datetime('now', '-25 days'), datetime('now', '-25 days')
 );
 
-INSERT INTO assessments (id, patient_id, assessment_type, status, assessment_date, clinical_notes)
-VALUES (
-    11,
-    11,
-    'initial_evaluation',
-    'completed',
-    '2025-10-19 14:15:00',
-    'Desk worker with 3-year history of LBP. Forward head posture noted. Limited lumbar flexion and extension. Tight hip flexors bilaterally. Core strength 2+/5. Reports pain increases after 30 min sitting. No radicular symptoms. Negative SLR bilaterally.'
-);
-
-INSERT INTO movement_tests (assessment_id, test_name, test_category, skeleton_data)
-VALUES
-(11, 'Bodyweight Squat', 'squat', 40, 10, '{"analysis":{"rom_score":71.8,"form_quality":68.2,"balance_score":75.5},"angles":[{"knee_left":120,"knee_right":118,"hip_left":98,"hip_right":95},{"knee_left":122,"knee_right":120,"hip_left":100,"hip_right":97},{"knee_left":119,"knee_right":117,"hip_left":97,"hip_right":94},{"knee_left":121,"knee_right":119,"hip_left":99,"hip_right":96},{"knee_left":123,"knee_right":121,"hip_left":101,"hip_right":98},{"knee_left":120,"knee_right":118,"hip_left":98,"hip_right":95},{"knee_left":122,"knee_right":120,"hip_left":100,"hip_right":97},{"knee_left":118,"knee_right":116,"hip_left":96,"hip_right":93},{"knee_left":121,"knee_right":119,"hip_left":99,"hip_right":96},{"knee_left":120,"knee_right":118,"hip_left":98,"hip_right":95}],"maxAngles":{"knee_left":123,"knee_right":121,"hip_left":101,"hip_right":98},"minAngles":{"knee_left":118,"knee_right":116,"hip_left":96,"hip_right":93}}'),
-(11, 'Hip Flexor Stretch - Left', 'flexibility', 30, 3, '{"analysis":{"rom_score":62.5,"form_quality":65.8},"angles":[{"hip_left":85,"knee_left":125}],"maxAngles":{"hip_left":85,"knee_left":125}}'),
-(11, 'Hip Flexor Stretch - Right', 'flexibility', 30, 3, '{"analysis":{"rom_score":58.3,"form_quality":61.2},"angles":[{"hip_right":78,"knee_right":120}],"maxAngles":{"hip_right":78,"knee_right":120}}'),
-(11, 'Plank Hold', 'stability', 25, 1, '{"analysis":{"stability_score":55.7,"form_quality":52.3},"duration":25}'),
-(11, 'Bridge Hold', 'stability', 35, 1, '{"analysis":{"stability_score":68.4,"form_quality":71.2},"duration":35}');
-
--- ============================================
--- DEMO PATIENT 3: Elderly Fall Prevention (High Risk)
--- ============================================
-INSERT INTO patients (
+-- Patient 3: Chronic Pain Middle-Aged Male
+INSERT OR IGNORE INTO patients (
     id, first_name, last_name, date_of_birth, gender, email, phone,
-    address_line1, city, state, zip_code,
+    address_line1, address_line2, city, state, zip_code,
     emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+    primary_physician, insurance_provider, insurance_policy_number,
+    medical_history, current_medications, allergies,
+    assessment_reason, chief_complaint, pain_scale, activity_level,
     height_cm, weight_kg,
-    chief_complaint, pain_scale, activity_level, assessment_reason,
-    medical_history, current_medications, allergies
+    created_at, updated_at
 ) VALUES (
-    12,
-    'Dorothy',
-    'Williams',
-    '1948-11-08',
-    'female',
-    'dorothy.williams@example.com',
-    '(555) 345-6789',
-    '234 Senior Living Way',
-    'Phoenix',
-    'AZ',
-    '85001',
-    'Sarah Williams',
-    '(555) 345-6790',
-    'Daughter',
-    160.0,  -- 5'3"
-    58.0,   -- 128 lbs, BMI: 22.7 (normal)
-    'Recent near-fall episodes, decreased balance confidence, general weakness',
-    3,
-    'limited',
-    'fall_prevention',
-    '{"conditions":["Osteoporosis","Type 2 Diabetes (controlled)","Mild osteoarthritis - bilateral knees","History of 2 falls in past year"],"surgeries":["Cataract surgery OU (2020)","Cholecystectomy (1995)"]}',
-    '["Alendronate 70mg weekly","Metformin 500mg BID","Vitamin D 2000 IU daily","Calcium 600mg BID"]',
-    '["Sulfa drugs"]'
+    102, 'James', 'Martinez', '1968-11-10', 'male', 'james.martinez@email.com', '555-0301',
+    '789 Pine Road', 'Unit 12', 'Orlando', 'FL', '32801',
+    'Lisa Martinez', '555-0302', 'Wife',
+    'Dr. Emily Foster', 'Blue Cross Blue Shield', 'BCBS-45678901',
+    '{"conditions": ["Chronic Lower Back Pain", "Sciatica", "Herniated Disc L4-L5"]}',
+    '["Gabapentin 300mg", "Ibuprofen 400mg PRN", "Cyclobenzaprine 10mg"]',
+    '["Codeine"]',
+    'chronic_pain', 'Persistent lower back pain radiating down left leg for 8 months. Pain worsens with prolonged sitting or standing. Affecting work productivity.',
+    7, 'light',
+    180.0, 95.2,
+    datetime('now', '-20 days'), datetime('now', '-20 days')
 );
 
-INSERT INTO assessments (id, patient_id, assessment_type, status, assessment_date, clinical_notes)
-VALUES (
-    12,
-    12,
-    'initial_evaluation',
-    'completed',
-    '2025-10-18 09:30:00',
-    'High fall risk assessment. Positive Romberg test. TUG test: 18 seconds (abnormal for age). Decreased ankle dorsiflexion bilaterally. Lower extremity strength 3/5. Uses single-point cane for community ambulation. Lives alone, daughter nearby. Good cognition, motivated for therapy.'
-);
-
-INSERT INTO movement_tests (assessment_id, test_name, test_category, skeleton_data)
-VALUES
-(12, 'Chair Stand Test', 'strength', 40, 6, '{"analysis":{"rom_score":58.2,"form_quality":61.5,"balance_score":55.8},"angles":[{"knee_left":115,"knee_right":112,"hip_left":88,"hip_right":85},{"knee_left":117,"knee_right":114,"hip_left":90,"hip_right":87},{"knee_left":113,"knee_right":110,"hip_left":86,"hip_right":83},{"knee_left":116,"knee_right":113,"hip_left":89,"hip_right":86},{"knee_left":114,"knee_right":111,"hip_left":87,"hip_right":84},{"knee_left":115,"knee_right":112,"hip_left":88,"hip_right":85}],"maxAngles":{"knee_left":117,"knee_right":114,"hip_left":90,"hip_right":87},"minAngles":{"knee_left":113,"knee_right":110,"hip_left":86,"hip_right":83}}'),
-(12, 'Single Leg Balance - Left', 'balance', 8, 1, '{"analysis":{"balance_score":42.3,"stability_score":38.7,"form_quality":45.1},"angles":[{"hip_left":168,"knee_left":175,"ankle_left":85}],"avgAngles":{"hip_left":168,"knee_left":175,"ankle_left":85}}'),
-(12, 'Single Leg Balance - Right', 'balance', 6, 1, '{"analysis":{"balance_score":38.5,"stability_score":35.2,"form_quality":40.8},"angles":[{"hip_right":165,"knee_right":172,"ankle_right":83}],"avgAngles":{"hip_right":165,"knee_right":172,"ankle_right":83}}'),
-(12, 'Heel Raises', 'strength', 30, 8, '{"analysis":{"rom_score":52.1,"form_quality":55.7},"angles":[{"ankle_left":65,"ankle_right":62}],"maxAngles":{"ankle_left":65,"ankle_right":62}}'),
-(12, 'Tandem Stance', 'balance', 12, 1, '{"analysis":{"balance_score":48.6,"stability_score":51.2},"duration":12}');
-
--- ============================================
--- DEMO PATIENT 4: Athletic Shoulder Injury
--- ============================================
-INSERT INTO patients (
+-- Patient 4: Active Senior with Mobility Decline
+INSERT OR IGNORE INTO patients (
     id, first_name, last_name, date_of_birth, gender, email, phone,
-    address_line1, city, state, zip_code,
+    address_line1, address_line2, city, state, zip_code,
     emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+    primary_physician, insurance_provider, insurance_policy_number,
+    medical_history, current_medications, allergies,
+    assessment_reason, chief_complaint, pain_scale, activity_level,
     height_cm, weight_kg,
-    chief_complaint, pain_scale, activity_level, assessment_reason,
-    medical_history, current_medications, allergies
+    created_at, updated_at
 ) VALUES (
-    13,
-    'Marcus',
-    'Thompson',
-    '1995-05-18',
-    'male',
-    'marcus.thompson@example.com',
-    '(555) 456-7890',
-    '567 Athletic Drive',
-    'Seattle',
-    'WA',
-    '98101',
-    'Lisa Thompson',
-    '(555) 456-7891',
-    'Mother',
-    188.0,  -- 6'2"
-    92.0,   -- 203 lbs, BMI: 26.0 (athletic build)
-    'Right shoulder pain during overhead activities, previous rotator cuff strain',
-    5,
-    'very_active',
-    'sports_injury',
-    '{"conditions":["Right rotator cuff strain (4 weeks ago)","Previous left ankle sprain (2022)"],"surgeries":[]}',
-    '["Naproxen 500mg PRN"]',
-    '[]'
+    103, 'Eleanor', 'Williams', '1952-05-30', 'female', 'eleanor.williams@email.com', '555-0401',
+    '321 Elm Street', NULL, 'Tampa', 'FL', '33601',
+    'Richard Williams', '555-0402', 'Husband',
+    'Dr. David Park', 'Aetna', 'AET-23456789',
+    '{"conditions": ["Osteoarthritis (Bilateral Knees)", "Hypertension", "Former Tennis Player"]}',
+    '["Losartan 50mg", "Acetaminophen 650mg", "Glucosamine 1500mg"]',
+    '[]',
+    'mobility_decline', 'Gradual decline in walking distance over past year. Bilateral knee pain and stiffness, especially in mornings. Unable to continue tennis activities.',
+    5, 'moderate',
+    168.0, 72.8,
+    datetime('now', '-15 days'), datetime('now', '-15 days')
 );
 
-INSERT INTO assessments (id, patient_id, assessment_type, status, assessment_date, clinical_notes)
-VALUES (
-    13,
-    13,
-    'initial_evaluation',
-    'completed',
-    '2025-10-21 16:45:00',
-    'Competitive volleyball player with 4-week history of right shoulder pain. Pain with overhead serving and spiking. ROM: Flexion 165°, Abduction 155°, ER 75°, IR 55° (limited). Positive Neer and Hawkins-Kennedy tests. Rotator cuff strength 4/5. Scapular dyskinesis noted. Eager to return to sport.'
-);
-
-INSERT INTO movement_tests (assessment_id, test_name, test_category, skeleton_data)
-VALUES
-(13, 'Shoulder Flexion Test', 'flexibility', 30, 8, '{"analysis":{"rom_score":82.5,"form_quality":85.3},"angles":[{"shoulder_left":175,"shoulder_right":165}],"maxAngles":{"shoulder_left":175,"shoulder_right":165}}'),
-(13, 'Wall Angels', 'mobility', 40, 10, '{"analysis":{"rom_score":78.6,"form_quality":81.2},"angles":[{"shoulder_left":168,"shoulder_right":158},{"shoulder_left":170,"shoulder_right":160},{"shoulder_left":169,"shoulder_right":159},{"shoulder_left":171,"shoulder_right":161},{"shoulder_left":168,"shoulder_right":158},{"shoulder_left":172,"shoulder_right":162},{"shoulder_left":169,"shoulder_right":159},{"shoulder_left":170,"shoulder_right":160},{"shoulder_left":171,"shoulder_right":161},{"shoulder_left":169,"shoulder_right":159}],"maxAngles":{"shoulder_left":172,"shoulder_right":162},"minAngles":{"shoulder_left":168,"shoulder_right":158}}'),
-(13, 'Plank Hold', 'stability', 75, 1, '{"analysis":{"stability_score":92.3,"form_quality":88.7},"duration":75}'),
-(13, 'Bodyweight Squat', 'squat', 35, 12, '{"analysis":{"rom_score":95.2,"form_quality":92.8,"balance_score":94.1},"angles":[{"knee_left":132,"knee_right":130,"hip_left":118,"hip_right":115}],"maxAngles":{"knee_left":132,"knee_right":130,"hip_left":118,"hip_right":115}}'),
-(13, 'Single Leg Balance - Right', 'balance', 60, 1, '{"analysis":{"balance_score":96.5,"stability_score":94.2,"form_quality":95.8},"angles":[{"hip_right":178,"knee_right":179,"ankle_right":92}],"avgAngles":{"hip_right":178,"knee_right":179,"ankle_right":92}}');
-
--- ============================================
--- DEMO PATIENT 5: Obesity & Multiple Comorbidities
--- ============================================
-INSERT INTO patients (
+-- Patient 5: Athlete with Balance Issues
+INSERT OR IGNORE INTO patients (
     id, first_name, last_name, date_of_birth, gender, email, phone,
-    address_line1, city, state, zip_code,
+    address_line1, address_line2, city, state, zip_code,
     emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+    primary_physician, insurance_provider, insurance_policy_number,
+    medical_history, current_medications, allergies,
+    assessment_reason, chief_complaint, pain_scale, activity_level,
     height_cm, weight_kg,
-    chief_complaint, pain_scale, activity_level, assessment_reason,
-    medical_history, current_medications, allergies
+    created_at, updated_at
 ) VALUES (
-    14,
-    'Robert',
-    'Martinez',
-    '1972-09-30',
-    'male',
-    'robert.martinez@example.com',
-    '(555) 567-8901',
-    '890 Health Way',
-    'Miami',
-    'FL',
-    '33101',
-    'Carmen Martinez',
-    '(555) 567-8902',
-    'Spouse',
-    175.0,  -- 5'9"
-    115.0,  -- 254 lbs, BMI: 37.6 (obese class II)
-    'Bilateral knee pain, difficulty with stairs and prolonged standing, shortness of breath with activity',
-    8,
-    'sedentary',
-    'weight_management',
-    '{"conditions":["Obesity (BMI 37.6)","Type 2 Diabetes","Hypertension","Obstructive Sleep Apnea","Osteoarthritis - bilateral knees"],"surgeries":["Bariatric surgery consultation scheduled"]}',
-    '["Metformin 1000mg BID","Lisinopril 20mg daily","Atorvastatin 40mg daily","Insulin glargine 30 units QHS","CPAP nightly"]',
-    '["Codeine - nausea"]'
+    104, 'Michael', 'Johnson', '1985-09-14', 'male', 'michael.johnson@email.com', '555-0501',
+    '654 Cedar Lane', 'Apt 8A', 'Jacksonville', 'FL', '32099',
+    'Sarah Johnson', '555-0502', 'Sister',
+    'Dr. Amanda Lee', 'Cigna', 'CIG-34567890',
+    '{"conditions": ["Post-Concussion Syndrome", "Vestibular Disorder", "Former College Football Player"]}',
+    '["Meclizine 25mg PRN"]',
+    '[]',
+    'balance_issues', 'Persistent dizziness and balance problems since concussion 4 months ago. Difficulty with rapid head movements. Affecting return to athletic activities.',
+    4, 'active',
+    188.0, 92.5,
+    datetime('now', '-10 days'), datetime('now', '-10 days')
 );
 
-INSERT INTO assessments (id, patient_id, assessment_type, status, assessment_date, clinical_notes)
-VALUES (
-    14,
-    14,
-    'initial_evaluation',
-    'completed',
-    '2025-10-17 11:00:00',
-    'Pre-bariatric surgery PT evaluation. Significant functional limitations. 6MWT: 285 meters (severely reduced). TUG: 16 seconds. Bilateral knee crepitus and effusion. Unable to perform standard squat due to pain and ROM limitation. Uses bilateral knee braces. Motivated for weight loss and improved function. Will need modified exercise program.'
+-- ============================================
+-- DEMO ASSESSMENTS
+-- ============================================
+
+-- Assessment for Patient 100 (Robert Thompson - Post-Surgery)
+INSERT OR IGNORE INTO assessments (
+    id, patient_id, clinician_id, assessment_type, status,
+    completed_at, clinical_notes, created_at
+) VALUES (
+    200, 100, NULL, 'initial', 'completed',
+    datetime('now', '-29 days'),
+    'Initial post-op assessment 6 weeks after right hip replacement. Patient shows limited ROM in hip flexion (80 degrees) and external rotation. Gait pattern antalgic with right hip hiking. Pain level moderate (6/10). Recommended progressive strengthening and ROM exercises.',
+    datetime('now', '-29 days')
 );
 
-INSERT INTO movement_tests (assessment_id, test_name, test_category, skeleton_data)
-VALUES
-(14, 'Modified Chair Squat', 'squat', 45, 5, '{"analysis":{"rom_score":42.5,"form_quality":38.7,"balance_score":45.2},"angles":[{"knee_left":105,"knee_right":102,"hip_left":78,"hip_right":75},{"knee_left":107,"knee_right":104,"hip_left":80,"hip_right":77},{"knee_left":103,"knee_right":100,"hip_left":76,"hip_right":73},{"knee_left":106,"knee_right":103,"hip_left":79,"hip_right":76},{"knee_left":104,"knee_right":101,"hip_left":77,"hip_right":74}],"maxAngles":{"knee_left":107,"knee_right":104,"hip_left":80,"hip_right":77},"minAngles":{"knee_left":103,"knee_right":100,"hip_left":76,"hip_right":73}}'),
-(14, 'Seated March', 'mobility', 40, 15, '{"analysis":{"rom_score":51.3,"form_quality":55.8},"angles":[{"hip_left":72,"hip_right":70}],"maxAngles":{"hip_left":72,"hip_right":70}}'),
-(14, 'Wall Push-ups', 'strength', 35, 8, '{"analysis":{"rom_score":48.2,"form_quality":52.1},"angles":[{"shoulder_left":145,"shoulder_right":142}],"maxAngles":{"shoulder_left":145,"shoulder_right":142}}'),
-(14, 'Seated Balance Reach', 'balance', 30, 6, '{"analysis":{"balance_score":62.5,"stability_score":58.3},"duration":30}');
+-- Assessment for Patient 101 (Margaret Chen - Fall Prevention)
+INSERT OR IGNORE INTO assessments (
+    id, patient_id, clinician_id, assessment_type, status,
+    completed_at, clinical_notes, created_at
+) VALUES (
+    201, 101, NULL, 'initial', 'completed',
+    datetime('now', '-24 days'),
+    'Fall risk assessment showing moderate risk. Berg Balance Scale: 42/56 (moderate fall risk). TUG test: 18 seconds (high risk). Significant balance deficits with tandem stance and single leg stance. Recommending balance training program.',
+    datetime('now', '-24 days')
+);
+
+-- Assessment for Patient 102 (James Martinez - Chronic Pain)
+INSERT OR IGNORE INTO assessments (
+    id, patient_id, clinician_id, assessment_type, status,
+    completed_at, clinical_notes, created_at
+) VALUES (
+    202, 102, NULL, 'initial', 'completed',
+    datetime('now', '-19 days'),
+    'Chronic low back pain evaluation. Limited lumbar flexion (40 degrees) and extension (15 degrees). Positive straight leg raise at 45 degrees on left. Core strength 2/5. Oswestry Disability Index: 42% (moderate disability). Focus on core stabilization and pain management techniques.',
+    datetime('now', '-19 days')
+);
+
+-- Assessment for Patient 103 (Eleanor Williams - Mobility Decline)
+INSERT OR IGNORE INTO assessments (
+    id, patient_id, clinician_id, assessment_type, status,
+    completed_at, clinical_notes, created_at
+) VALUES (
+    203, 103, NULL, 'initial', 'completed',
+    datetime('now', '-14 days'),
+    'Knee OA assessment showing bilateral degenerative changes. Right knee ROM: 5-110 degrees, Left knee ROM: 0-105 degrees. Quad strength 3+/5 bilaterally. 6-minute walk test: 280 meters (below normal for age). WOMAC score: 58/100. Recommending strengthening and functional mobility training.',
+    datetime('now', '-14 days')
+);
+
+-- Assessment for Patient 104 (Michael Johnson - Balance Issues)
+INSERT OR IGNORE INTO assessments (
+    id, patient_id, clinician_id, assessment_type, status,
+    completed_at, clinical_notes, created_at
+) VALUES (
+    204, 104, NULL, 'initial', 'completed',
+    datetime('now', '-9 days'),
+    'Post-concussion vestibular assessment. Positive Dynamic Visual Acuity test. Balance Error Scoring System (BESS): 22 errors (abnormal). Abnormal head thrust test. Recommending vestibular rehabilitation therapy with progressive return to sport protocol.',
+    datetime('now', '-9 days')
+);
 
 -- ============================================
--- SUMMARY STATS FOR DEMO DATA
+-- DEMO MOVEMENT TESTS (Simplified - Without Full Skeleton Data)
 -- ============================================
--- Total Patients: 5
--- Age Range: 29 - 76 years
--- Gender: 3 Male, 2 Female
--- BMI Range: 22.7 (Normal) - 37.6 (Obese Class II)
--- Total Assessments: 5 (all completed)
--- Total Movement Tests: 24
+
+-- Movement Test 1: Bodyweight Squat for Patient 100
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, status, score,
+    skeleton_data, completed_at, created_at
+) VALUES (
+    300, 200, 'Bodyweight Squat', 'completed', 65.3,
+    '{"fps": 30, "total_frames": 1350, "reps": 8, "duration": 45, "analysis": {"form_quality": 65.3, "rom_score": 58.7, "balance_score": 72.1, "consistency": 68.5, "recommendations": ["Increase depth gradually", "Focus on hip mobility", "Strengthen quadriceps"]}, "angles": []}',
+    datetime('now', '-29 days'), datetime('now', '-29 days')
+);
+
+-- Movement Test 2: Hip Flexor Stretch for Patient 100
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    301, 200, 'Hip Flexor Stretch', 5, 150,
+    '{"fps": 30, "total_frames": 4500, "analysis": {"form_quality": 71.2, "rom_score": 62.4, "balance_score": 85.3, "consistency": 75.8, "recommendations": ["Hold stretch longer (30s minimum)", "Focus on posterior pelvic tilt", "Avoid arching lower back"]}, "angles": []}',
+    datetime('now', '-29 days')
+);
+
+-- Movement Test 3: Single Leg Stand for Patient 101
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    302, 201, 'Single Leg Stand', 6, 72,
+    '{"fps": 30, "total_frames": 2160, "analysis": {"form_quality": 52.8, "rom_score": 68.3, "balance_score": 48.5, "consistency": 55.2, "recommendations": ["Start with supported single leg stance", "Progress duration gradually", "Focus on hip stability"]}, "angles": []}',
+    datetime('now', '-24 days')
+);
+
+-- Movement Test 4: Tandem Walk for Patient 101
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    303, 201, 'Tandem Walk', 1, 30,
+    '{"fps": 30, "total_frames": 900, "analysis": {"form_quality": 58.6, "rom_score": 72.1, "balance_score": 51.3, "consistency": 62.5, "recommendations": ["Practice heel-to-toe pattern", "Use assistive device initially", "Focus on trunk control"]}, "angles": []}',
+    datetime('now', '-24 days')
+);
+
+-- Movement Test 5: Cat-Cow Stretch for Patient 102
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    304, 202, 'Cat-Cow Stretch', 10, 60,
+    '{"fps": 30, "total_frames": 1800, "analysis": {"form_quality": 74.5, "rom_score": 68.9, "balance_score": 88.2, "consistency": 81.3, "recommendations": ["Good controlled movement", "Increase repetitions to 15", "Focus on breathing coordination"]}, "angles": []}',
+    datetime('now', '-19 days')
+);
+
+-- Movement Test 6: Bird Dog Exercise for Patient 102
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    305, 202, 'Bird Dog Exercise', 8, 80,
+    '{"fps": 30, "total_frames": 2400, "analysis": {"form_quality": 62.7, "rom_score": 71.4, "balance_score": 65.8, "consistency": 69.5, "recommendations": ["Maintain neutral spine", "Avoid hip hiking", "Progress to longer holds"]}, "angles": []}',
+    datetime('now', '-19 days')
+);
+
+-- Movement Test 7: Sit to Stand for Patient 103
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    306, 203, 'Sit to Stand', 10, 30,
+    '{"fps": 30, "total_frames": 900, "analysis": {"form_quality": 76.8, "rom_score": 72.3, "balance_score": 81.5, "consistency": 78.9, "recommendations": ["Good functional movement", "Progress to single leg variant", "Maintain upright posture"]}, "angles": []}',
+    datetime('now', '-14 days')
+);
+
+-- Movement Test 8: Heel Raises for Patient 103
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    307, 203, 'Heel Raises', 15, 45,
+    '{"fps": 30, "total_frames": 1350, "analysis": {"form_quality": 82.4, "rom_score": 85.7, "balance_score": 79.3, "consistency": 83.1, "recommendations": ["Excellent ankle mobility", "Add resistance for progression", "Consider single leg variant"]}, "angles": []}',
+    datetime('now', '-14 days')
+);
+
+-- Movement Test 9: Head Turns for Patient 104
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    308, 204, 'Head Turns', 20, 40,
+    '{"fps": 30, "total_frames": 1200, "analysis": {"form_quality": 65.9, "rom_score": 78.6, "balance_score": 58.4, "consistency": 67.2, "recommendations": ["Slow controlled movements", "Focus on visual tracking", "Progress to standing position"]}, "angles": []}',
+    datetime('now', '-9 days')
+);
+
+-- Movement Test 10: Balance Board Exercise for Patient 104
+INSERT OR IGNORE INTO movement_tests (
+    id, assessment_id, test_name, repetitions, duration_seconds,
+    skeleton_data, created_at
+) VALUES (
+    309, 204, 'Balance Board Exercise', 1, 120,
+    '{"fps": 30, "total_frames": 3600, "analysis": {"form_quality": 55.3, "rom_score": 68.1, "balance_score": 52.7, "consistency": 59.5, "recommendations": ["Start with stable surface", "Progress duration gradually", "Add cognitive tasks when ready"]}, "angles": []}',
+    datetime('now', '-9 days')
+);
+
+-- ============================================
+-- SUMMARY
+-- ============================================
+-- Demo data created:
+-- - 5 Diverse Patients (ages 39-80, various conditions)
+-- - 5 Initial Assessments (all completed)
+-- - 10 Movement Tests (2 per assessment)
 -- 
--- Patient Types Represented:
--- 1. Post-surgical rehabilitation
--- 2. Chronic pain (occupational)
--- 3. Geriatric fall prevention
--- 4. Athletic/sports injury
--- 5. Obesity with multiple comorbidities
--- ============================================
+-- Patient Profiles:
+-- 1. Robert Thompson (74) - Post-hip surgery, limited mobility
+-- 2. Margaret Chen (80) - Fall risk, balance issues
+-- 3. James Martinez (57) - Chronic back pain, sciatica
+-- 4. Eleanor Williams (73) - Knee arthritis, former athlete
+-- 5. Michael Johnson (39) - Post-concussion, vestibular issues
+--
+-- This data demonstrates the system's ability to handle:
+-- - Various age groups (39-80 years)
+-- - Multiple clinical presentations
+-- - Different assessment types
+-- - Diverse movement capabilities
+-- - Realistic medical scenarios
