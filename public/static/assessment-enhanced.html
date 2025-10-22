@@ -313,26 +313,42 @@
         
         function waitForMediaPipe() {
             let attempts = 0;
-            const maxAttempts = 20; // 10 seconds max
+            const maxAttempts = 30; // 15 seconds max (increased timeout)
             
             const checkInterval = setInterval(() => {
                 attempts++;
                 
-                if (typeof window.Pose !== 'undefined' && 
-                    typeof window.Camera !== 'undefined' && 
-                    typeof window.drawConnectors !== 'undefined' &&
-                    typeof window.drawLandmarks !== 'undefined' &&
-                    typeof window.POSE_CONNECTIONS !== 'undefined') {
-                    
+                // Check for Pose (minimum requirement)
+                const hasPose = typeof window.Pose !== 'undefined' || 
+                               typeof Pose !== 'undefined';
+                
+                // Camera is optional (we have fallback)
+                const hasCamera = typeof window.Camera !== 'undefined' || 
+                                 typeof Camera !== 'undefined';
+                
+                // Drawing utils are optional (we have fallback)
+                const hasDrawing = typeof window.drawConnectors !== 'undefined' || 
+                                  typeof drawConnectors !== 'undefined';
+                
+                if (hasPose) {
                     clearInterval(checkInterval);
-                    console.log('✅ MediaPipe libraries loaded successfully');
+                    console.log('✅ MediaPipe Pose loaded');
+                    if (hasCamera) console.log('✅ MediaPipe Camera loaded');
+                    if (hasDrawing) console.log('✅ MediaPipe drawing utilities loaded');
+                    if (!hasCamera) console.warn('⚠️ Using fallback frame processing (MediaPipe Camera not found)');
+                    if (!hasDrawing) console.warn('⚠️ Using fallback drawing (MediaPipe drawing utils not found)');
                     return;
+                }
+                
+                // Show progress
+                if (attempts % 4 === 0) {
+                    console.log(`⏳ Waiting for MediaPipe libraries... (${attempts * 0.5}s)`);
                 }
                 
                 if (attempts >= maxAttempts) {
                     clearInterval(checkInterval);
-                    console.error('❌ MediaPipe libraries failed to load');
-                    showStatus('MediaPipe libraries failed to load. Please refresh the page.', 'error');
+                    console.error('❌ MediaPipe Pose library failed to load after 15 seconds');
+                    showStatus('MediaPipe libraries taking too long to load. Please check your internet connection and refresh.', 'error');
                 }
             }, 500);
         }
@@ -405,62 +421,103 @@
 
         async function initWebCamera() {
             const video = document.getElementById('videoElement');
+            const canvas = document.getElementById('canvasElement');
             
             try {
-                // Check if MediaPipe libraries are loaded
-                if (typeof window.Pose === 'undefined') {
-                    throw new Error('MediaPipe Pose library not loaded. Please refresh the page.');
-                }
-                if (typeof window.Camera === 'undefined') {
-                    throw new Error('MediaPipe Camera library not loaded. Please refresh the page.');
-                }
+                console.log('🎥 Starting camera initialization...');
                 
-                // Request camera access
-                const stream = await navigator.mediaDevices.getUserMedia({
+                // Step 1: Get camera stream FIRST (simplest approach)
+                console.log('📹 Requesting camera access...');
+                const constraints = {
                     video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
                         facingMode: STATE.cameraType === 'phone' ? 'environment' : 'user'
                     },
                     audio: false
-                });
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('✅ Camera access granted');
                 
                 video.srcObject = stream;
                 await video.play();
+                console.log('✅ Video playing');
                 
-                // Initialize MediaPipe Pose with proper global scope
-                STATE.pose = new window.Pose({
-                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+                // Step 2: Initialize MediaPipe (with fallback)
+                console.log('🤖 Initializing MediaPipe Pose...');
+                
+                // Try different ways to access MediaPipe
+                const PoseConstructor = window.Pose || window.pose?.Pose || Pose;
+                const CameraConstructor = window.Camera || window.camera_utils?.Camera || Camera;
+                
+                if (!PoseConstructor) {
+                    throw new Error('MediaPipe Pose not found. Scripts may not be loaded. Please refresh page.');
+                }
+                
+                STATE.pose = new PoseConstructor({
+                    locateFile: (file) => {
+                        console.log('📦 Loading MediaPipe file:', file);
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+                    }
                 });
                 
                 STATE.pose.setOptions({
                     modelComplexity: 1,
                     smoothLandmarks: true,
+                    enableSegmentation: false,
                     minDetectionConfidence: 0.5,
                     minTrackingConfidence: 0.5
                 });
                 
                 STATE.pose.onResults(onPoseResults);
+                console.log('✅ MediaPipe Pose initialized');
                 
-                // Wait for pose model to initialize
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Start camera processing with proper global scope
-                STATE.camera = new window.Camera(video, {
-                    onFrame: async () => {
-                        if (STATE.pose) {
+                // Step 3: Start processing (with or without Camera utility)
+                if (CameraConstructor) {
+                    console.log('📷 Using MediaPipe Camera utility');
+                    STATE.camera = new CameraConstructor(video, {
+                        onFrame: async () => {
+                            if (STATE.pose && video.readyState === 4) {
+                                await STATE.pose.send({ image: video });
+                            }
+                        },
+                        width: 1280,
+                        height: 720
+                    });
+                    STATE.camera.start();
+                } else {
+                    // Fallback: Manual frame processing
+                    console.log('📷 Using manual frame processing (fallback)');
+                    const processFrame = async () => {
+                        if (STATE.pose && video.readyState === 4) {
                             await STATE.pose.send({ image: video });
                         }
-                    },
-                    width: 1280,
-                    height: 720
-                });
+                        if (STATE.isRecording || !STATE.camera) {
+                            requestAnimationFrame(processFrame);
+                        }
+                    };
+                    STATE.camera = { start: () => processFrame(), stop: () => {} };
+                    STATE.camera.start();
+                }
                 
-                STATE.camera.start();
+                console.log('✅ Camera processing started');
                 
             } catch (error) {
-                console.error('Camera initialization error:', error);
-                throw new Error(`Camera access denied: ${error.message}`);
+                console.error('❌ Camera initialization error:', error);
+                
+                // Provide specific error messages
+                if (error.name === 'NotAllowedError') {
+                    throw new Error('Camera permission denied. Please allow camera access and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    throw new Error('No camera found. Please connect a camera and try again.');
+                } else if (error.name === 'NotReadableError') {
+                    throw new Error('Camera is in use by another application. Please close other apps using camera.');
+                } else if (error.message.includes('MediaPipe')) {
+                    throw new Error('MediaPipe libraries not loaded. Please refresh the page and wait a moment.');
+                } else {
+                    throw new Error(`Camera error: ${error.message}`);
+                }
             }
         }
 
@@ -478,14 +535,39 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             if (results.poseLandmarks) {
-                // Draw skeleton with proper global scope
-                if (typeof window.drawConnectors !== 'undefined') {
-                    window.drawConnectors(ctx, results.poseLandmarks, window.POSE_CONNECTIONS, 
-                        {color: '#00FF00', lineWidth: 4});
+                // Try different ways to access drawing utilities
+                const drawConnectors = window.drawConnectors || window.drawing_utils?.drawConnectors;
+                const drawLandmarks = window.drawLandmarks || window.drawing_utils?.drawLandmarks;
+                const POSE_CONNECTIONS = window.POSE_CONNECTIONS || window.pose?.POSE_CONNECTIONS;
+                
+                // Draw skeleton
+                if (drawConnectors && POSE_CONNECTIONS) {
+                    try {
+                        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, 
+                            {color: '#00FF00', lineWidth: 4});
+                    } catch (e) {
+                        console.warn('Drawing connectors failed:', e);
+                    }
                 }
-                if (typeof window.drawLandmarks !== 'undefined') {
-                    window.drawLandmarks(ctx, results.poseLandmarks, 
-                        {color: '#FF0000', lineWidth: 2, radius: 6});
+                
+                if (drawLandmarks) {
+                    try {
+                        drawLandmarks(ctx, results.poseLandmarks, 
+                            {color: '#FF0000', lineWidth: 2, radius: 6});
+                    } catch (e) {
+                        console.warn('Drawing landmarks failed:', e);
+                    }
+                }
+                
+                // Fallback: Manual drawing if utilities not available
+                if (!drawConnectors || !drawLandmarks) {
+                    // Draw simple dots for landmarks
+                    results.poseLandmarks.forEach(landmark => {
+                        ctx.beginPath();
+                        ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 5, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#FF0000';
+                        ctx.fill();
+                    });
                 }
                 
                 // Update live metrics
