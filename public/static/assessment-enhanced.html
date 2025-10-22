@@ -18,16 +18,17 @@
       }
     </script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/modern-design.css" rel="stylesheet">
     <!-- MediaPipe Pose -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <style>
-        body { overflow-x: hidden; }
+        body { overflow-x: hidden; background: #1a1a2e; }
         .camera-container { position: relative; width: 100%; height: 100%; }
-        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: cover; }
-        #canvasElement { position: absolute; width: 100%; height: 100%; }
+        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+        #canvasElement { position: absolute; width: 100%; height: 100%; border-radius: 16px; }
         .rep-counter { font-size: 5rem; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .pain-point { cursor: crosshair; transition: all 0.2s; }
         .pain-point:hover { transform: scale(1.1); }
@@ -36,30 +37,30 @@
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
     <!-- Step 1: Camera Selection -->
     <div id="cameraSelection" class="min-h-screen flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-4xl w-full">
+        <div class="glass-card-solid p-8 md:p-12 max-w-4xl w-full fade-in-up">
             <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">
                 <i class="fas fa-camera mr-2 text-brand-orange"></i>
                 Select Camera Type
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button onclick="initCamera('phone')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-brand-orange hover:shadow-lg transition-all">
-                    <i class="fas fa-mobile-alt text-3xl md:text-4xl text-brand-orange mb-2 md:mb-3"></i>
-                    <h3 class="font-bold text-gray-800 text-sm md:text-base">Phone</h3>
+                <button onclick="initCamera('phone')" class="glass-card p-6 md:p-8 hover:scale-105 transition-all text-center group">
+                    <i class="fas fa-mobile-alt text-4xl md:text-5xl text-brand-orange mb-3 md:mb-4 group-hover:scale-110 transition-transform"></i>
+                    <h3 class="font-bold text-gray-800 text-base md:text-lg">Phone</h3>
                 </button>
-                <button onclick="initCamera('webcam')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-brand-blue hover:shadow-lg transition-all">
-                    <i class="fas fa-laptop text-3xl md:text-4xl text-brand-blue mb-2 md:mb-3"></i>
-                    <h3 class="font-bold text-gray-800 text-sm md:text-base">Laptop</h3>
+                <button onclick="initCamera('webcam')" class="glass-card p-6 md:p-8 hover:scale-105 transition-all text-center group">
+                    <i class="fas fa-laptop text-4xl md:text-5xl text-brand-blue mb-3 md:mb-4 group-hover:scale-110 transition-transform"></i>
+                    <h3 class="font-bold text-gray-800 text-base md:text-lg">Laptop</h3>
                 </button>
-                <button onclick="initCamera('external')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-green-500 hover:shadow-lg transition-all">
-                    <i class="fas fa-camera text-3xl md:text-4xl text-green-500 mb-2 md:mb-3"></i>
-                    <h3 class="font-bold text-gray-800 text-sm md:text-base">External</h3>
+                <button onclick="initCamera('external')" class="glass-card p-6 md:p-8 hover:scale-105 transition-all text-center group">
+                    <i class="fas fa-camera text-4xl md:text-5xl text-green-500 mb-3 md:mb-4 group-hover:scale-110 transition-transform"></i>
+                    <h3 class="font-bold text-gray-800 text-base md:text-lg">External</h3>
                 </button>
-                <button onclick="initCamera('femto_mega')" class="p-4 md:p-6 border-2 border-gray-300 rounded-lg hover:border-purple-500 hover:shadow-lg transition-all">
-                    <i class="fas fa-cube text-3xl md:text-4xl text-purple-500 mb-2 md:mb-3"></i>
-                    <h3 class="font-bold text-gray-800 text-sm md:text-base">Pro</h3>
+                <button onclick="initCamera('femto_mega')" class="glass-card p-6 md:p-8 hover:scale-105 transition-all text-center group">
+                    <i class="fas fa-cube text-4xl md:text-5xl text-purple-500 mb-3 md:mb-4 group-hover:scale-110 transition-transform"></i>
+                    <h3 class="font-bold text-gray-800 text-base md:text-lg">Pro</h3>
                 </button>
             </div>
         </div>
@@ -68,7 +69,7 @@
     <!-- Step 2: Assessment View -->
     <div id="assessmentView" class="hidden min-h-screen">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-brand-blue to-brand-orange text-white p-3 md:p-4">
+        <div class="glass-header text-white p-4 md:p-6">
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-lg md:text-2xl font-bold">Exercise <span id="currentExerciseCount">1</span> of 5</h1>
@@ -112,24 +113,24 @@
             </div>
 
             <!-- Right: Instructions & Controls (40% on desktop, below camera on mobile) -->
-            <div class="w-full md:w-2/5 bg-white p-4 md:p-6 overflow-y-auto">
+            <div class="w-full md:w-2/5 glass-card-solid p-4 md:p-6 overflow-y-auto">
                 <!-- Exercise Instructions -->
                 <div class="mb-6">
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3">
                         <i class="fas fa-clipboard-list mr-2 text-brand-orange"></i>
                         <span id="exerciseName">Exercise Instructions</span>
                     </h3>
-                    <div class="bg-blue-50 border-l-4 border-brand-blue p-3 md:p-4 rounded mb-4">
+                    <div class="bg-brand-blue/10 border-l-4 border-brand-blue p-3 md:p-4 rounded-lg mb-4 backdrop-blur-sm">
                         <p id="exerciseInstructions" class="text-sm md:text-base text-gray-700"></p>
                     </div>
                     
                     <!-- Target Metrics -->
                     <div class="grid grid-cols-2 gap-2 mb-4">
-                        <div class="bg-green-50 p-2 md:p-3 rounded text-center">
+                        <div class="bg-green-500/10 backdrop-blur-sm p-2 md:p-3 rounded-lg text-center border border-green-500/30">
                             <div class="text-xs md:text-sm text-gray-600">Target Reps</div>
                             <div class="text-xl md:text-2xl font-bold text-green-600" id="targetReps">10</div>
                         </div>
-                        <div class="bg-purple-50 p-2 md:p-3 rounded text-center">
+                        <div class="bg-purple-500/10 backdrop-blur-sm p-2 md:p-3 rounded-lg text-center border border-purple-500/30">
                             <div class="text-xs md:text-sm text-gray-600">Completed</div>
                             <div class="text-xl md:text-2xl font-bold text-purple-600" id="completedReps">0</div>
                         </div>
@@ -139,20 +140,20 @@
                 <!-- Recording Controls -->
                 <div class="space-y-3 mb-6">
                     <button id="recordBtn" onclick="toggleRecording()" 
-                        class="w-full px-6 py-3 md:py-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-base md:text-lg font-semibold disabled:opacity-50" 
+                        class="w-full px-6 py-3 md:py-4 btn-gradient bg-red-500 text-white text-base md:text-lg disabled:opacity-50" 
                         disabled>
                         <i class="fas fa-circle mr-2"></i>
                         <span id="recordBtnText">Start Recording</span>
                     </button>
                     
                     <button id="nextExerciseBtn" onclick="nextExercise()" 
-                        class="hidden w-full px-6 py-3 md:py-4 bg-brand-blue text-white rounded-lg hover:shadow-lg transition-shadow text-base md:text-lg font-semibold">
+                        class="hidden w-full px-6 py-3 md:py-4 btn-gradient text-base md:text-lg">
                         <span id="nextBtnText">Next Exercise</span>
                         <i class="fas fa-arrow-right ml-2"></i>
                     </button>
                     
                     <button id="completeBtn" onclick="completeAssessment()" 
-                        class="hidden w-full px-6 py-3 md:py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-base md:text-lg font-semibold">
+                        class="hidden w-full px-6 py-3 md:py-4 btn-gradient bg-green-500 text-base md:text-lg">
                         <i class="fas fa-check mr-2"></i>
                         Complete Assessment
                     </button>

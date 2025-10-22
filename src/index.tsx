@@ -40,144 +40,162 @@ app.get('/', (c) => {
           }
         </script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/modern-design.css" rel="stylesheet">
     </head>
-    <body class="bg-gray-50">
-        <div class="min-h-screen">
+    <body class="modern-bg"
+        <div class="min-h-screen relative z-10">
             <!-- Header -->
-            <header class="bg-gradient-to-r from-brand-blue to-brand-orange text-white shadow-lg">
-                <div class="max-w-7xl mx-auto px-4 py-6">
-                    <h1 class="text-4xl font-bold">
-                        <i class="fas fa-heartbeat mr-3"></i>
+            <header class="glass-header text-white shadow-lg">
+                <div class="max-w-7xl mx-auto px-4 py-8">
+                    <h1 class="text-5xl font-bold fade-in-up">
+                        <i class="fas fa-heartbeat mr-3 text-brand-orange"></i>
                         F-AI bian Assessment System
                     </h1>
-                    <p class="mt-2 text-blue-100">Elderly Home Rehabilitation Monitoring & Remote Patient Monitoring</p>
+                    <p class="mt-3 text-xl text-white/90 fade-in-up" style="animation-delay: 0.2s">Elderly Home Rehabilitation Monitoring & Remote Patient Monitoring</p>
                 </div>
             </header>
 
             <!-- Main Content -->
-            <main class="max-w-7xl mx-auto px-4 py-12">
+            <main class="max-w-7xl mx-auto px-4 py-16">
                 <!-- Quick Actions -->
-                <div class="grid md:grid-cols-3 gap-6 mb-12">
+                <div class="grid md:grid-cols-3 gap-8 mb-16">
                     <!-- Patient Intake -->
-                    <a href="/static/intake.html" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-brand-orange">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-brand-orange text-white w-12 h-12 rounded-full flex items-center justify-center text-xl">
-                                <i class="fas fa-user-plus"></i>
+                    <a href="/static/intake.html" class="block feature-card text-white group fade-in-up">
+                        <div class="flex items-center mb-6">
+                            <div class="bg-brand-orange/30 backdrop-blur-sm w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                <i class="fas fa-user-plus text-white drop-shadow-lg"></i>
                             </div>
-                            <h2 class="ml-4 text-2xl font-bold text-gray-800">New Patient</h2>
+                            <h2 class="ml-4 text-3xl font-bold drop-shadow-md">New Patient</h2>
                         </div>
-                        <p class="text-gray-600">Start patient intake and demographic information collection</p>
-                        <div class="mt-4 text-brand-orange font-semibold">
+                        <p class="text-white/90 text-lg mb-4">Start patient intake and demographic information collection</p>
+                        <div class="mt-6 text-white font-semibold flex items-center group-hover:translate-x-2 transition-transform">
                             Get Started <i class="fas fa-arrow-right ml-2"></i>
                         </div>
                     </a>
 
                     <!-- Assessment -->
-                    <a href="/static/dashboard.html" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-brand-blue">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-brand-blue text-white w-12 h-12 rounded-full flex items-center justify-center text-xl">
-                                <i class="fas fa-video"></i>
+                    <a href="/static/dashboard.html" class="block feature-card text-white group fade-in-up" style="animation-delay: 0.1s">
+                        <div class="flex items-center mb-6">
+                            <div class="bg-brand-blue/30 backdrop-blur-sm w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                <i class="fas fa-video text-white drop-shadow-lg"></i>
                             </div>
-                            <h2 class="ml-4 text-2xl font-bold text-gray-800">Dashboard</h2>
+                            <h2 class="ml-4 text-3xl font-bold drop-shadow-md">Dashboard</h2>
                         </div>
-                        <p class="text-gray-600">View all patients and manage assessments</p>
-                        <div class="mt-4 text-brand-blue font-semibold">
+                        <p class="text-white/90 text-lg mb-4">View all patients and manage assessments</p>
+                        <div class="mt-6 text-white font-semibold flex items-center group-hover:translate-x-2 transition-transform">
                             View Dashboard <i class="fas fa-arrow-right ml-2"></i>
                         </div>
                     </a>
 
                     <!-- Reports -->
-                    <a href="/static/dashboard.html" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 border-t-4 border-green-500">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-green-500 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl">
-                                <i class="fas fa-chart-line"></i>
+                    <a href="/static/dashboard.html" class="block feature-card text-white group fade-in-up" style="animation-delay: 0.2s">
+                        <div class="flex items-center mb-6">
+                            <div class="bg-green-500/30 backdrop-blur-sm w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                <i class="fas fa-chart-line text-white drop-shadow-lg"></i>
                             </div>
-                            <h2 class="ml-4 text-2xl font-bold text-gray-800">RPM Monitoring</h2>
+                            <h2 class="ml-4 text-3xl font-bold drop-shadow-md">RPM Monitoring</h2>
                         </div>
-                        <p class="text-gray-600">Track remote patient monitoring and billing</p>
-                        <div class="mt-4 text-green-500 font-semibold">
+                        <p class="text-white/90 text-lg mb-4">Track remote patient monitoring and billing</p>
+                        <div class="mt-6 text-white font-semibold flex items-center group-hover:translate-x-2 transition-transform">
                             View Reports <i class="fas fa-arrow-right ml-2"></i>
                         </div>
                     </a>
                 </div>
 
                 <!-- Features -->
-                <div class="bg-white rounded-lg shadow-md p-8 mb-12">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-6">System Features</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="flex items-start">
-                            <i class="fas fa-camera text-brand-orange text-2xl mt-1"></i>
-                            <div class="ml-4">
-                                <h4 class="font-bold text-gray-800">AI-Powered Movement Analysis</h4>
-                                <p class="text-gray-600 text-sm">Camera-based skeleton tracking with MediaPipe (33 joints) or Femto Mega (32 joints with depth)</p>
+                <div class="glass-card-solid p-10 mb-16 fade-in-up" style="animation-delay: 0.3s">
+                    <h3 class="text-3xl font-bold text-gray-800 mb-8">
+                        <span class="text-gradient">System Features</span>
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="flex items-start group">
+                            <div class="bg-gradient-to-br from-brand-orange to-red-500 w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform flex-shrink-0">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <div class="ml-5">
+                                <h4 class="font-bold text-gray-800 text-lg mb-2">AI-Powered Movement Analysis</h4>
+                                <p class="text-gray-600">Camera-based skeleton tracking with MediaPipe (33 joints) or Femto Mega (32 joints with depth)</p>
                             </div>
                         </div>
-                        <div class="flex items-start">
-                            <i class="fas fa-dumbbell text-brand-blue text-2xl mt-1"></i>
-                            <div class="ml-4">
-                                <h4 class="font-bold text-gray-800">Personalized Exercise Programs</h4>
-                                <p class="text-gray-600 text-sm">17 therapeutic exercises across 6 categories targeting identified deficiencies</p>
+                        <div class="flex items-start group">
+                            <div class="bg-gradient-to-br from-brand-blue to-blue-600 w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform flex-shrink-0">
+                                <i class="fas fa-dumbbell"></i>
+                            </div>
+                            <div class="ml-5">
+                                <h4 class="font-bold text-gray-800 text-lg mb-2">Personalized Exercise Programs</h4>
+                                <p class="text-gray-600">17 therapeutic exercises across 6 categories targeting identified deficiencies</p>
                             </div>
                         </div>
-                        <div class="flex items-start">
-                            <i class="fas fa-clipboard-check text-green-500 text-2xl mt-1"></i>
-                            <div class="ml-4">
-                                <h4 class="font-bold text-gray-800">Compliance Tracking</h4>
-                                <p class="text-gray-600 text-sm">Monitor patient adherence to exercise programs with detailed session logs</p>
+                        <div class="flex items-start group">
+                            <div class="bg-gradient-to-br from-green-500 to-emerald-600 w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform flex-shrink-0">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <div class="ml-5">
+                                <h4 class="font-bold text-gray-800 text-lg mb-2">Compliance Tracking</h4>
+                                <p class="text-gray-600">Monitor patient adherence to exercise programs with detailed session logs</p>
                             </div>
                         </div>
-                        <div class="flex items-start">
-                            <i class="fas fa-file-medical text-purple-500 text-2xl mt-1"></i>
-                            <div class="ml-4">
-                                <h4 class="font-bold text-gray-800">RPM Billing Support</h4>
-                                <p class="text-gray-600 text-sm">Automatic CPT code tracking (99453, 99454, 99457, 99458) for reimbursement</p>
+                        <div class="flex items-start group">
+                            <div class="bg-gradient-to-br from-purple-500 to-pink-500 w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform flex-shrink-0">
+                                <i class="fas fa-file-medical"></i>
+                            </div>
+                            <div class="ml-5">
+                                <h4 class="font-bold text-gray-800 text-lg mb-2">RPM Billing Support</h4>
+                                <p class="text-gray-600">Automatic CPT code tracking (99453, 99454, 99457, 99458) for reimbursement</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Workflow Overview -->
-                <div class="bg-gradient-to-r from-blue-50 to-orange-50 rounded-lg p-8">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Assessment Workflow</h3>
-                    <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4">
-                        <div class="text-center flex-1">
-                            <div class="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl text-brand-orange shadow-md">1</div>
-                            <h4 class="font-bold mt-3 text-gray-800">Patient Intake</h4>
-                            <p class="text-sm text-gray-600">Demographics & Medical History</p>
+                <div class="glass-card p-10 fade-in-up" style="animation-delay: 0.4s">
+                    <h3 class="text-3xl font-bold text-white mb-10 text-center">
+                        <span class="drop-shadow-lg">Assessment Workflow</span>
+                    </h3>
+                    <div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4">
+                        <div class="text-center flex-1 group">
+                            <div class="bg-gradient-to-br from-brand-orange to-red-500 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl text-white shadow-xl group-hover:scale-110 transition-transform font-bold">1</div>
+                            <h4 class="font-bold mt-4 text-white text-lg drop-shadow-md">Patient Intake</h4>
+                            <p class="text-sm text-white/80 mt-1">Demographics & Medical History</p>
                         </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl text-brand-orange shadow-md">2</div>
-                            <h4 class="font-bold mt-3 text-gray-800">Movement Assessment</h4>
-                            <p class="text-sm text-gray-600">Camera-based Skeleton Tracking</p>
+                        <i class="fas fa-arrow-right text-white/50 text-3xl hidden md:block"></i>
+                        <div class="text-center flex-1 group">
+                            <div class="bg-gradient-to-br from-brand-orange to-red-500 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl text-white shadow-xl group-hover:scale-110 transition-transform font-bold">2</div>
+                            <h4 class="font-bold mt-4 text-white text-lg drop-shadow-md">Movement Assessment</h4>
+                            <p class="text-sm text-white/80 mt-1">Camera-based Skeleton Tracking</p>
                         </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl text-brand-orange shadow-md">3</div>
-                            <h4 class="font-bold mt-3 text-gray-800">AI Analysis</h4>
-                            <p class="text-sm text-gray-600">Biomechanical Deficiencies</p>
+                        <i class="fas fa-arrow-right text-white/50 text-3xl hidden md:block"></i>
+                        <div class="text-center flex-1 group">
+                            <div class="bg-gradient-to-br from-brand-orange to-red-500 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl text-white shadow-xl group-hover:scale-110 transition-transform font-bold">3</div>
+                            <h4 class="font-bold mt-4 text-white text-lg drop-shadow-md">AI Analysis</h4>
+                            <p class="text-sm text-white/80 mt-1">Biomechanical Deficiencies</p>
                         </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl text-brand-orange shadow-md">4</div>
-                            <h4 class="font-bold mt-3 text-gray-800">Exercise Prescription</h4>
-                            <p class="text-sm text-gray-600">Personalized Programs</p>
+                        <i class="fas fa-arrow-right text-white/50 text-3xl hidden md:block"></i>
+                        <div class="text-center flex-1 group">
+                            <div class="bg-gradient-to-br from-brand-orange to-red-500 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl text-white shadow-xl group-hover:scale-110 transition-transform font-bold">4</div>
+                            <h4 class="font-bold mt-4 text-white text-lg drop-shadow-md">Exercise Prescription</h4>
+                            <p class="text-sm text-white/80 mt-1">Personalized Programs</p>
                         </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl text-brand-orange shadow-md">5</div>
-                            <h4 class="font-bold mt-3 text-gray-800">RPM Monitoring</h4>
-                            <p class="text-sm text-gray-600">Compliance & Billing</p>
+                        <i class="fas fa-arrow-right text-white/50 text-3xl hidden md:block"></i>
+                        <div class="text-center flex-1 group">
+                            <div class="bg-gradient-to-br from-brand-orange to-red-500 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl text-white shadow-xl group-hover:scale-110 transition-transform font-bold">5</div>
+                            <h4 class="font-bold mt-4 text-white text-lg drop-shadow-md">RPM Monitoring</h4>
+                            <p class="text-sm text-white/80 mt-1">Compliance & Billing</p>
                         </div>
                     </div>
                 </div>
             </main>
 
             <!-- Footer -->
-            <footer class="bg-gray-800 text-white mt-20 py-8">
-                <div class="max-w-7xl mx-auto px-4 text-center">
-                    <p>&copy; 2025 F-AI bian Assessment System. All rights reserved.</p>
-                    <p class="text-gray-400 text-sm mt-2">Powered by Hono + Cloudflare Workers</p>
+            <footer class="glass-card mt-20 py-10 mx-4 mb-8">
+                <div class="max-w-7xl mx-auto px-4 text-center text-white">
+                    <p class="text-lg font-semibold drop-shadow-md">&copy; 2025 F-AI bian Assessment System. All rights reserved.</p>
+                    <p class="text-white/70 text-sm mt-3">Powered by Hono + Cloudflare Workers</p>
+                    <div class="mt-6 flex justify-center space-x-6">
+                        <i class="fas fa-heart text-brand-orange text-xl"></i>
+                        <i class="fas fa-shield-alt text-brand-blue text-xl"></i>
+                        <i class="fas fa-lock text-green-400 text-xl"></i>
+                    </div>
                 </div>
             </footer>
         </div>
