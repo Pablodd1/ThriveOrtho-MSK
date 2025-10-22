@@ -283,6 +283,70 @@
                 </div>
             </div>
 
+            <!-- DIAGNOSTIC ASSISTANT for MD/PA/PT -->
+            <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-purple-300">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 border-b-2 border-purple-500 pb-2">
+                        <i class="fas fa-stethoscope mr-2 text-purple-600"></i>
+                        AI Diagnostic Assistant (ICD-10 Suggestions)
+                    </h2>
+                    <span class="px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-semibold">
+                        <i class="fas fa-robot mr-1"></i>Clinical Decision Support
+                    </span>
+                </div>
+                
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 rounded">
+                    <p class="text-sm text-yellow-800">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <strong>Clinical Guidance Only:</strong> These are AI-generated suggestions based on biomechanical assessment findings. 
+                        The provider (MD/PA/PT) should review, modify, or add additional diagnoses based on clinical judgment, patient history, and examination.
+                    </p>
+                </div>
+                
+                <div id="diagnosticSuggestions" class="space-y-4">
+                    <div class="text-gray-600">Loading diagnostic suggestions...</div>
+                </div>
+                
+                <!-- Manual Diagnosis Entry -->
+                <div class="mt-6 bg-white rounded-lg p-4 border-2 border-dashed border-gray-300">
+                    <h3 class="font-bold text-gray-800 mb-3">
+                        <i class="fas fa-plus-circle mr-2 text-brand-orange"></i>
+                        Add/Edit Diagnosis Manually
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">ICD-10 Code</label>
+                            <input type="text" id="manualICD10" placeholder="e.g., M25.561" 
+                                class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-brand-orange focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">Enter primary or additional diagnosis code</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                            <input type="text" id="manualDescription" placeholder="e.g., Pain in right knee" 
+                                class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-brand-orange focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">Clinical description of diagnosis</p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button onclick="addManualDiagnosis()" 
+                            class="px-6 py-2 bg-brand-orange text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold">
+                            <i class="fas fa-plus mr-2"></i>Add to Diagnosis List
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Final Diagnosis List -->
+                <div class="mt-6 bg-white rounded-lg p-4 border-2 border-green-300">
+                    <h3 class="font-bold text-gray-800 mb-3">
+                        <i class="fas fa-clipboard-check mr-2 text-green-600"></i>
+                        Final Diagnosis List (for Billing & Documentation)
+                    </h3>
+                    <div id="finalDiagnosisList" class="space-y-2">
+                        <p class="text-sm text-gray-500 italic">Selected diagnoses will appear here...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Additional Medical Records (Dormant) -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">
@@ -376,6 +440,7 @@
                 displayPatientDemographics();
                 displayBMIAnalysis();
                 displayMovementSummary();
+                generateDiagnosticSuggestions(); // NEW: Generate AI diagnostic suggestions
             } catch (error) {
                 console.error('Failed to load data:', error);
             }
@@ -1124,6 +1189,407 @@
         function downloadPDF() {
             alert('PDF download functionality will use browser print-to-PDF. Click OK then use Print button and select "Save as PDF"');
             setTimeout(() => window.print(), 100);
+        }
+
+        // ============================================
+        // DIAGNOSTIC ASSISTANT SYSTEM
+        // ============================================
+        const DIAGNOSIS_STATE = {
+            suggestedDiagnoses: [],
+            selectedDiagnoses: [],
+            manualDiagnoses: []
+        };
+
+        function generateDiagnosticSuggestions() {
+            const patient = STATE.patientData;
+            const tests = STATE.assessmentData.tests || [];
+            const age = calculateAge(patient.date_of_birth);
+            const bmi = calculateBMI(patient.height_cm, patient.weight_kg);
+            const bmiCategory = getBMICategory(bmi);
+            
+            // Aggregate all deficiencies from Phase 1 enhancements
+            const allDeficiencies = [];
+            tests.forEach(test => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                if (data.analysis && data.analysis.deficiencies) {
+                    allDeficiencies.push(...data.analysis.deficiencies);
+                }
+            });
+            
+            // Generate ICD-10 suggestions based on findings
+            const suggestions = [];
+            
+            // 1. ROM/Mobility Issues
+            const romIssues = allDeficiencies.filter(d => d.area === 'Range of Motion');
+            if (romIssues.length > 0) {
+                suggestions.push({
+                    category: 'Mobility/ROM',
+                    severity: romIssues[0].severity,
+                    primary_code: 'M25.60',
+                    primary_description: 'Stiffness of joint, unspecified joint',
+                    alternative_codes: [
+                        { code: 'M25.561', description: 'Pain in right knee', specificity: 'specific' },
+                        { code: 'M25.562', description: 'Pain in left knee', specificity: 'specific' },
+                        { code: 'M25.50', description: 'Pain in unspecified joint', specificity: 'general' },
+                        { code: 'M62.81', description: 'Muscle weakness (generalized)', specificity: 'general' }
+                    ],
+                    clinical_rationale: romIssues[0].description,
+                    evidence: 'ROM assessment shows limited range, scoring below clinical threshold'
+                });
+            }
+            
+            // 2. Balance/Fall Risk
+            const balanceIssues = allDeficiencies.filter(d => d.area === 'Balance & Stability');
+            if (balanceIssues.length > 0 || age > 65) {
+                suggestions.push({
+                    category: 'Balance/Fall Risk',
+                    severity: balanceIssues.length > 0 ? balanceIssues[0].severity : 'moderate',
+                    primary_code: 'R26.81',
+                    primary_description: 'Unsteadiness on feet',
+                    alternative_codes: [
+                        { code: 'R29.6', description: 'Repeated falls', specificity: 'specific' },
+                        { code: 'Z91.81', description: 'History of falling', specificity: 'specific' },
+                        { code: 'M62.81', description: 'Muscle weakness', specificity: 'general' }
+                    ],
+                    clinical_rationale: balanceIssues.length > 0 ? balanceIssues[0].description : `Age ${age} with balance assessment concerns`,
+                    evidence: 'Balance testing shows reduced postural stability with increased fall risk'
+                });
+            }
+            
+            // 3. Symmetry/Compensatory Movement
+            const symmetryIssues = allDeficiencies.filter(d => d.area === 'Movement Symmetry');
+            if (symmetryIssues.length > 0) {
+                suggestions.push({
+                    category: 'Asymmetry/Compensation',
+                    severity: symmetryIssues[0].severity,
+                    primary_code: 'M62.81',
+                    primary_description: 'Muscle weakness (generalized)',
+                    alternative_codes: [
+                        { code: 'M25.50', description: 'Pain in joint (specify location)', specificity: 'specific' },
+                        { code: 'S43.9', description: 'Sprain of unspecified parts of shoulder girdle', specificity: 'specific' },
+                        { code: 'M79.3', description: 'Panniculitis, unspecified', specificity: 'general' },
+                        { code: 'R26.89', description: 'Other abnormalities of gait and mobility', specificity: 'general' }
+                    ],
+                    clinical_rationale: symmetryIssues[0].description,
+                    evidence: 'Bilateral movement analysis reveals significant asymmetries suggesting compensation patterns'
+                });
+            }
+            
+            // 4. Exercise Tolerance/Fatigue
+            const fatigueIssues = allDeficiencies.filter(d => d.area === 'Exercise Tolerance');
+            if (fatigueIssues.length > 0) {
+                suggestions.push({
+                    category: 'Exercise Tolerance',
+                    severity: fatigueIssues[0].severity,
+                    primary_code: 'R53.83',
+                    primary_description: 'Other fatigue',
+                    alternative_codes: [
+                        { code: 'M62.81', description: 'Muscle weakness (generalized)', specificity: 'general' },
+                        { code: 'Z72.3', description: 'Lack of physical exercise', specificity: 'specific' },
+                        { code: 'R53.1', description: 'Weakness', specificity: 'general' }
+                    ],
+                    clinical_rationale: fatigueIssues[0].description,
+                    evidence: 'Significant fatigue detected during exercise testing with performance degradation'
+                });
+            }
+            
+            // 5. Movement Speed Abnormalities
+            const speedIssues = allDeficiencies.filter(d => d.area.includes('Movement Speed'));
+            if (speedIssues.length > 0) {
+                suggestions.push({
+                    category: 'Gait/Movement Speed',
+                    severity: speedIssues[0].severity,
+                    primary_code: 'R26.89',
+                    primary_description: 'Other abnormalities of gait and mobility',
+                    alternative_codes: [
+                        { code: 'R26.0', description: 'Ataxic gait', specificity: 'specific' },
+                        { code: 'R26.2', description: 'Difficulty in walking, not elsewhere classified', specificity: 'specific' },
+                        { code: 'M62.81', description: 'Muscle weakness', specificity: 'general' },
+                        { code: 'F45.8', description: 'Other somatoform disorders (kinesiophobia)', specificity: 'specific' }
+                    ],
+                    clinical_rationale: speedIssues[0].description,
+                    evidence: 'Movement speed analysis reveals abnormal tempo suggesting motor control issues'
+                });
+            }
+            
+            // 6. Form/Posture Issues
+            const formIssues = allDeficiencies.filter(d => d.area === 'Movement Form');
+            if (formIssues.length > 0) {
+                suggestions.push({
+                    category: 'Movement Form/Posture',
+                    severity: formIssues[0].severity,
+                    primary_code: 'M62.81',
+                    primary_description: 'Muscle weakness (generalized)',
+                    alternative_codes: [
+                        { code: 'M40.00', description: 'Postural kyphosis, site unspecified', specificity: 'specific' },
+                        { code: 'M53.2', description: 'Spinal instabilities', specificity: 'specific' },
+                        { code: 'R26.89', description: 'Other abnormalities of gait and mobility', specificity: 'general' }
+                    ],
+                    clinical_rationale: formIssues[0].description,
+                    evidence: 'Poor movement form quality indicating weakness or compensatory patterns'
+                });
+            }
+            
+            // 7. BMI-related diagnoses
+            if (bmiCategory === 'Obese') {
+                suggestions.push({
+                    category: 'Body Mass Index',
+                    severity: 'moderate',
+                    primary_code: 'E66.9',
+                    primary_description: 'Obesity, unspecified',
+                    alternative_codes: [
+                        { code: 'E66.01', description: 'Morbid (severe) obesity due to excess calories', specificity: 'specific' },
+                        { code: 'Z68.41', description: 'Body mass index [BMI] 40.0-44.9, adult', specificity: 'specific' },
+                        { code: 'E66.8', description: 'Other obesity', specificity: 'general' }
+                    ],
+                    clinical_rationale: `BMI ${bmi.toFixed(1)} falls in obese category. Contributes to mobility limitations and joint stress.`,
+                    evidence: `Measured BMI: ${bmi.toFixed(1)} kg/m² (Obese category)`
+                });
+            } else if (bmiCategory === 'Overweight') {
+                suggestions.push({
+                    category: 'Body Mass Index',
+                    severity: 'mild',
+                    primary_code: 'E66.3',
+                    primary_description: 'Overweight',
+                    alternative_codes: [
+                        { code: 'Z68.30', description: 'Body mass index [BMI] 30-30.9, adult', specificity: 'specific' },
+                        { code: 'E66.9', description: 'Obesity, unspecified', specificity: 'general' }
+                    ],
+                    clinical_rationale: `BMI ${bmi.toFixed(1)} in overweight range.`,
+                    evidence: `Measured BMI: ${bmi.toFixed(1)} kg/m²`
+                });
+            }
+            
+            // 8. Age-related (elderly specific)
+            if (age >= 65) {
+                suggestions.push({
+                    category: 'Age-Related Decline',
+                    severity: 'mild',
+                    primary_code: 'R54',
+                    primary_description: 'Age-related physical debility',
+                    alternative_codes: [
+                        { code: 'M62.50', description: 'Muscle wasting and atrophy, not elsewhere classified, unspecified site', specificity: 'specific' },
+                        { code: 'Z72.3', description: 'Lack of physical exercise', specificity: 'specific' },
+                        { code: 'R53.81', description: 'Other malaise', specificity: 'general' }
+                    ],
+                    clinical_rationale: `${age}-year-old patient showing age-typical functional decline`,
+                    evidence: 'Comprehensive functional assessment in elderly population'
+                });
+            }
+            
+            // 9. Pain-related diagnosis
+            if (patient.pain_scale && patient.pain_scale > 3) {
+                suggestions.push({
+                    category: 'Pain',
+                    severity: patient.pain_scale > 6 ? 'severe' : 'moderate',
+                    primary_code: 'M79.3',
+                    primary_description: 'Panniculitis, unspecified (chronic pain)',
+                    alternative_codes: [
+                        { code: 'M25.50', description: 'Pain in unspecified joint', specificity: 'general' },
+                        { code: 'M79.1', description: 'Myalgia (muscle pain)', specificity: 'general' },
+                        { code: 'M54.5', description: 'Low back pain', specificity: 'specific' },
+                        { code: 'G89.29', description: 'Other chronic pain', specificity: 'specific' }
+                    ],
+                    clinical_rationale: `Patient reports pain level ${patient.pain_scale}/10. Chief complaint: ${patient.chief_complaint}`,
+                    evidence: `Subjective pain rating: ${patient.pain_scale}/10`
+                });
+            }
+            
+            DIAGNOSIS_STATE.suggestedDiagnoses = suggestions;
+            displayDiagnosticSuggestions(suggestions);
+        }
+
+        function displayDiagnosticSuggestions(suggestions) {
+            if (suggestions.length === 0) {
+                document.getElementById('diagnosticSuggestions').innerHTML = `
+                    <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4 text-center">
+                        <i class="fas fa-check-circle text-green-600 text-3xl mb-2"></i>
+                        <p class="text-green-800 font-semibold">No significant clinical findings detected</p>
+                        <p class="text-sm text-green-700 mt-2">Patient demonstrates functional movement patterns within normal limits</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = suggestions.map((suggestion, idx) => {
+                const severityColors = {
+                    'severe': 'border-red-500 bg-red-50',
+                    'moderate': 'border-orange-500 bg-orange-50',
+                    'mild': 'border-yellow-500 bg-yellow-50'
+                };
+                
+                const severityBadges = {
+                    'severe': 'bg-red-600 text-white',
+                    'moderate': 'bg-orange-600 text-white',
+                    'mild': 'bg-yellow-600 text-white'
+                };
+                
+                return `
+                    <div class="border-2 ${severityColors[suggestion.severity]} rounded-lg p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="px-3 py-1 ${severityBadges[suggestion.severity]} rounded-full text-xs font-bold uppercase">
+                                        ${suggestion.severity}
+                                    </span>
+                                    <h3 class="font-bold text-gray-800 text-lg">${suggestion.category}</h3>
+                                </div>
+                                <div class="bg-white rounded p-3 border-l-4 border-purple-500 mb-2">
+                                    <p class="font-bold text-purple-700 mb-1">
+                                        <i class="fas fa-code mr-2"></i>Primary Suggested: ${suggestion.primary_code}
+                                    </p>
+                                    <p class="text-gray-700">${suggestion.primary_description}</p>
+                                </div>
+                            </div>
+                            <button onclick="selectDiagnosis(${idx}, '${suggestion.primary_code}', '${suggestion.primary_description}')" 
+                                class="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                                <i class="fas fa-check mr-1"></i>Select
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-2 mb-3">
+                            <p class="text-sm text-gray-700"><strong>Clinical Rationale:</strong> ${suggestion.clinical_rationale}</p>
+                            <p class="text-sm text-gray-600"><strong>Evidence:</strong> ${suggestion.evidence}</p>
+                        </div>
+                        
+                        <div class="bg-white rounded p-3">
+                            <p class="font-semibold text-gray-800 mb-2">
+                                <i class="fas fa-list-alt mr-2 text-brand-blue"></i>Alternative/Specific ICD-10 Codes:
+                            </p>
+                            <div class="space-y-1">
+                                ${suggestion.alternative_codes.map(alt => `
+                                    <div class="flex items-center justify-between py-1 border-b border-gray-200 last:border-0">
+                                        <div class="flex-1">
+                                            <span class="font-mono text-sm font-bold text-brand-orange">${alt.code}</span>
+                                            <span class="text-sm text-gray-700 ml-2">${alt.description}</span>
+                                            <span class="ml-2 px-2 py-0.5 text-xs ${alt.specificity === 'specific' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} rounded">
+                                                ${alt.specificity}
+                                            </span>
+                                        </div>
+                                        <button onclick="selectDiagnosis(${idx}, '${alt.code}', '${alt.description}')" 
+                                            class="ml-2 px-3 py-1 bg-brand-orange text-white rounded hover:bg-orange-600 transition-colors text-sm">
+                                            Select
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('diagnosticSuggestions').innerHTML = html;
+        }
+
+        function selectDiagnosis(suggestionIdx, code, description) {
+            // Add to selected diagnoses if not already present
+            const exists = DIAGNOSIS_STATE.selectedDiagnoses.find(d => d.code === code);
+            if (exists) {
+                alert('This diagnosis is already in your final list.');
+                return;
+            }
+            
+            DIAGNOSIS_STATE.selectedDiagnoses.push({
+                code: code,
+                description: description,
+                source: 'ai-suggested',
+                category: DIAGNOSIS_STATE.suggestedDiagnoses[suggestionIdx].category
+            });
+            
+            updateFinalDiagnosisList();
+            
+            // Visual feedback
+            const btn = event.target.closest('button');
+            btn.innerHTML = '<i class="fas fa-check-double mr-1"></i>Added';
+            btn.classList.remove('bg-green-600', 'bg-brand-orange', 'hover:bg-green-700', 'hover:bg-orange-600');
+            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btn.disabled = true;
+        }
+
+        function addManualDiagnosis() {
+            const code = document.getElementById('manualICD10').value.trim().toUpperCase();
+            const description = document.getElementById('manualDescription').value.trim();
+            
+            if (!code || !description) {
+                alert('Please enter both ICD-10 code and description.');
+                return;
+            }
+            
+            // Check if already exists
+            const exists = DIAGNOSIS_STATE.selectedDiagnoses.find(d => d.code === code);
+            if (exists) {
+                alert('This diagnosis code is already in your final list.');
+                return;
+            }
+            
+            DIAGNOSIS_STATE.selectedDiagnoses.push({
+                code: code,
+                description: description,
+                source: 'manual',
+                category: 'Provider-Added'
+            });
+            
+            updateFinalDiagnosisList();
+            
+            // Clear inputs
+            document.getElementById('manualICD10').value = '';
+            document.getElementById('manualDescription').value = '';
+            
+            alert('✓ Diagnosis added to final list');
+        }
+
+        function updateFinalDiagnosisList() {
+            if (DIAGNOSIS_STATE.selectedDiagnoses.length === 0) {
+                document.getElementById('finalDiagnosisList').innerHTML = 
+                    '<p class="text-sm text-gray-500 italic">Selected diagnoses will appear here...</p>';
+                return;
+            }
+            
+            const html = DIAGNOSIS_STATE.selectedDiagnoses.map((dx, idx) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded border-l-4 ${dx.source === 'ai-suggested' ? 'border-purple-500' : 'border-brand-orange'}">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="font-mono font-bold text-lg text-brand-blue">${dx.code}</span>
+                            <span class="px-2 py-0.5 text-xs rounded ${dx.source === 'ai-suggested' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}">
+                                ${dx.source === 'ai-suggested' ? 'AI Suggested' : 'Provider Added'}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-700">${dx.description}</p>
+                        <p class="text-xs text-gray-500 mt-1">Category: ${dx.category}</p>
+                    </div>
+                    <button onclick="removeDiagnosis(${idx})" 
+                        class="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm">
+                        <i class="fas fa-times mr-1"></i>Remove
+                    </button>
+                </div>
+            `).join('');
+            
+            const summary = `
+                <div class="bg-brand-blue text-white p-3 rounded-lg mb-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-90">Total Diagnoses Selected</p>
+                            <p class="text-3xl font-bold">${DIAGNOSIS_STATE.selectedDiagnoses.length}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm opacity-90">AI Suggested: ${DIAGNOSIS_STATE.selectedDiagnoses.filter(d => d.source === 'ai-suggested').length}</p>
+                            <p class="text-sm opacity-90">Provider Added: ${DIAGNOSIS_STATE.selectedDiagnoses.filter(d => d.source === 'manual').length}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('finalDiagnosisList').innerHTML = summary + html;
+        }
+
+        function removeDiagnosis(idx) {
+            if (confirm('Remove this diagnosis from the final list?')) {
+                DIAGNOSIS_STATE.selectedDiagnoses.splice(idx, 1);
+                updateFinalDiagnosisList();
+                
+                // Re-render suggestions to re-enable buttons
+                displayDiagnosticSuggestions(DIAGNOSIS_STATE.suggestedDiagnoses);
+            }
         }
     </script>
 </body>

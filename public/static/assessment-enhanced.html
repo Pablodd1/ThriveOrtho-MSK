@@ -175,8 +175,32 @@
                             <span>Balance:</span>
                             <span id="balanceScore" class="font-bold">-</span>
                         </div>
+                        <div class="flex justify-between">
+                            <span>Symmetry:</span>
+                            <span id="symmetryScore" class="font-bold text-brand-orange">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Movement Speed:</span>
+                            <span id="speedScore" class="font-bold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Fatigue Index:</span>
+                            <span id="fatigueScore" class="font-bold">-</span>
+                        </div>
                         <div id="deficienciesList" class="mt-3"></div>
                     </div>
+                </div>
+                
+                <!-- Voice Control Toggle -->
+                <div class="mt-4">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="voiceToggle" checked onchange="toggleVoiceGuidance()" 
+                            class="w-5 h-5 text-brand-orange rounded">
+                        <span class="text-sm text-gray-700">
+                            <i class="fas fa-volume-up mr-1"></i>
+                            Voice Guidance
+                        </span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -209,6 +233,14 @@
             exerciseState: 'ready',
             previousAngles: {},
             qualityScore: 0,
+            
+            // PHASE 1 ENHANCEMENTS - Clinical Analysis
+            symmetryData: [],
+            speedData: [],
+            fatigueIndex: 0,
+            formFeedbackQueue: [],
+            voiceEnabled: true,
+            lastVoiceTime: 0,
             
             // Exercise definitions with medical parameters
             exercises: [
@@ -422,15 +454,31 @@
                 if (STATE.isRecording) {
                     updateAngleDisplay(angles);
                     
+                    // PHASE 1 ENHANCEMENTS - Real-time analysis
+                    const exercise = STATE.exercises[STATE.currentExercise - 1];
+                    
+                    // 1. Symmetry Analysis
+                    const symmetry = analyzeSymmetry(angles);
+                    STATE.symmetryData.push(symmetry);
+                    
+                    // 2. Posture Analysis
+                    const posture = analyzePosture(results.poseLandmarks);
+                    
+                    // 3. Form Feedback
+                    const formFeedback = provideFormFeedback(angles, posture, exercise);
+                    
                     // Detect reps for current exercise
                     detectReps(angles);
                     
-                    // Record frame
+                    // Record frame with enhanced data
                     STATE.skeletonFrames.push({
                         timestamp: Date.now() - STATE.recordingStartTime,
                         landmarks: results.poseLandmarks,
                         angles: angles,
-                        quality: quality
+                        quality: quality,
+                        symmetry: symmetry,
+                        posture: posture,
+                        formFeedback: formFeedback
                     });
                 }
             }
@@ -645,6 +693,287 @@
             setTimeout(() => {
                 counter.style.transform = 'scale(1)';
             }, 200);
+            
+            // Voice feedback for rep count
+            speakInstruction(`${STATE.repCount}`);
+        }
+
+        // ============================================
+        // PHASE 1 ENHANCEMENTS - CLINICAL FEATURES
+        // ============================================
+        
+        // 1. MOVEMENT SYMMETRY ANALYSIS
+        function analyzeSymmetry(angles) {
+            const symmetry = {
+                hip: Math.abs(angles.hip_left - angles.hip_right),
+                knee: Math.abs(angles.knee_left - angles.knee_right),
+                shoulder: Math.abs(angles.shoulder_left - angles.shoulder_right),
+                ankle: Math.abs(angles.ankle_left - angles.ankle_right),
+                elbow: Math.abs(angles.elbow_left - angles.elbow_right)
+            };
+            
+            const asymmetries = [];
+            const clinicalThreshold = 10; // degrees
+            
+            if (symmetry.hip > clinicalThreshold) {
+                asymmetries.push({
+                    joint: 'Hip',
+                    difference: symmetry.hip.toFixed(1),
+                    severity: symmetry.hip > 20 ? 'severe' : 'moderate',
+                    clinical_note: 'Hip asymmetry may indicate weakness, pain avoidance, or compensatory movement pattern'
+                });
+            }
+            
+            if (symmetry.knee > clinicalThreshold) {
+                asymmetries.push({
+                    joint: 'Knee',
+                    difference: symmetry.knee.toFixed(1),
+                    severity: symmetry.knee > 20 ? 'severe' : 'moderate',
+                    clinical_note: 'Knee asymmetry suggests possible instability, previous injury, or muscular imbalance'
+                });
+            }
+            
+            if (symmetry.shoulder > clinicalThreshold) {
+                asymmetries.push({
+                    joint: 'Shoulder',
+                    difference: symmetry.shoulder.toFixed(1),
+                    severity: symmetry.shoulder > 20 ? 'severe' : 'moderate',
+                    clinical_note: 'Shoulder asymmetry may indicate rotator cuff weakness or postural dysfunction'
+                });
+            }
+            
+            // Calculate overall symmetry score (0-100)
+            const avgAsymmetry = Object.values(symmetry).reduce((a, b) => a + b, 0) / Object.values(symmetry).length;
+            const symmetryScore = Math.max(0, 100 - (avgAsymmetry * 3)); // 0° diff = 100%, 33°+ diff = 0%
+            
+            return {
+                symmetry,
+                asymmetries,
+                score: symmetryScore,
+                leftDominant: angles.hip_left > angles.hip_right,
+                clinical_summary: asymmetries.length === 0 ? 
+                    'Bilateral symmetry within normal limits' : 
+                    `${asymmetries.length} significant asymmetries detected`
+            };
+        }
+        
+        // 2. VOICE-GUIDED INSTRUCTIONS
+        function speakInstruction(text, priority = 'normal') {
+            if (!STATE.voiceEnabled) return;
+            if (!('speechSynthesis' in window)) return;
+            
+            const now = Date.now();
+            // Prevent voice spam (min 2 seconds between non-priority messages)
+            if (priority !== 'high' && now - STATE.lastVoiceTime < 2000) return;
+            
+            STATE.lastVoiceTime = now;
+            
+            // Cancel previous utterances if high priority
+            if (priority === 'high') {
+                speechSynthesis.cancel();
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9; // Slightly slower for elderly patients
+            utterance.pitch = 1.0;
+            utterance.volume = 0.8;
+            utterance.lang = 'en-US';
+            
+            speechSynthesis.speak(utterance);
+        }
+        
+        function toggleVoiceGuidance() {
+            STATE.voiceEnabled = document.getElementById('voiceToggle').checked;
+            if (STATE.voiceEnabled) {
+                speakInstruction('Voice guidance enabled');
+            }
+        }
+        
+        // 3. REAL-TIME FORM FEEDBACK
+        function provideFormFeedback(angles, posture, exercise) {
+            const feedback = [];
+            const now = Date.now();
+            
+            // Squat form feedback
+            if (exercise.detectionType === 'squat') {
+                const avgKnee = (angles.knee_left + angles.knee_right) / 2;
+                
+                // Check squat depth
+                if (STATE.exerciseState === 'down' && avgKnee > 110) {
+                    feedback.push({
+                        type: 'coaching',
+                        message: 'Try to squat deeper for better range of motion',
+                        audio: true,
+                        priority: 'normal'
+                    });
+                }
+                
+                // Check knee valgus (knees caving in)
+                const kneeAsymmetry = Math.abs(angles.knee_left - angles.knee_right);
+                if (kneeAsymmetry > 15) {
+                    feedback.push({
+                        type: 'safety',
+                        message: 'Keep knees aligned over feet',
+                        audio: true,
+                        priority: 'high'
+                    });
+                }
+            }
+            
+            // Shoulder exercise feedback
+            if (exercise.detectionType === 'shoulder') {
+                const avgShoulder = (angles.shoulder_left + angles.shoulder_right) / 2;
+                
+                if (STATE.exerciseState === 'up' && avgShoulder < 160) {
+                    feedback.push({
+                        type: 'coaching',
+                        message: 'Raise arms higher, aim for full overhead reach',
+                        audio: true,
+                        priority: 'normal'
+                    });
+                }
+            }
+            
+            // Posture feedback (applies to all exercises)
+            if (posture.forwardHead) {
+                feedback.push({
+                    type: 'posture',
+                    message: 'Keep your head back, chin tucked',
+                    audio: true,
+                    priority: 'normal'
+                });
+            }
+            
+            if (posture.excessiveSpinalFlexion) {
+                feedback.push({
+                    type: 'safety',
+                    message: 'Keep your back straight',
+                    audio: true,
+                    priority: 'high'
+                });
+            }
+            
+            // Provide audio feedback (rate-limited)
+            feedback.forEach(fb => {
+                if (fb.audio && now - STATE.lastVoiceTime > 5000) {
+                    speakInstruction(fb.message, fb.priority);
+                }
+            });
+            
+            return feedback;
+        }
+        
+        function analyzePosture(landmarks) {
+            const nose = landmarks[0];
+            const leftShoulder = landmarks[11];
+            const rightShoulder = landmarks[12];
+            const leftHip = landmarks[23];
+            const rightHip = landmarks[24];
+            
+            // Forward head detection (nose significantly ahead of shoulders)
+            const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+            const forwardHead = nose.x < shoulderMidX - 0.05; // 5cm threshold
+            
+            // Spinal flexion (shoulders significantly ahead of hips)
+            const hipMidX = (leftHip.x + rightHip.x) / 2;
+            const excessiveSpinalFlexion = shoulderMidX < hipMidX - 0.1; // 10cm threshold
+            
+            return {
+                forwardHead,
+                excessiveSpinalFlexion,
+                shoulderLevel: Math.abs(leftShoulder.y - rightShoulder.y) < 0.02, // shoulders level
+                hipLevel: Math.abs(leftHip.y - rightHip.y) < 0.02
+            };
+        }
+        
+        // 4. MOVEMENT SPEED ANALYSIS
+        function analyzeMovementSpeed(repStartTime, repEndTime) {
+            const duration = (repEndTime - repStartTime) / 1000; // seconds
+            
+            let assessment = '';
+            let clinical_note = '';
+            
+            if (duration < 1.5) {
+                assessment = 'Too Fast';
+                clinical_note = 'Movement performed too quickly. Reduced control and proprioception.';
+            } else if (duration > 5) {
+                assessment = 'Too Slow';
+                clinical_note = 'Movement performed very slowly. May indicate weakness or fear of movement.';
+            } else {
+                assessment = 'Good Tempo';
+                clinical_note = 'Movement speed within optimal range for control and safety.';
+            }
+            
+            STATE.speedData.push({
+                timestamp: repEndTime,
+                duration: duration,
+                assessment: assessment
+            });
+            
+            return {
+                duration: duration.toFixed(1),
+                assessment,
+                clinical_note,
+                avgSpeed: STATE.speedData.length > 0 ? 
+                    (STATE.speedData.reduce((sum, d) => sum + d.duration, 0) / STATE.speedData.length).toFixed(1) : 
+                    duration.toFixed(1)
+            };
+        }
+        
+        // 5. FATIGUE DETECTION INDEX
+        function calculateFatigueIndex() {
+            if (STATE.repCount < 3) return 0; // Need at least 3 reps for comparison
+            
+            const recentFrames = STATE.skeletonFrames.slice(-30); // Last 30 frames
+            const earlyFrames = STATE.skeletonFrames.slice(30, 60); // Earlier frames for comparison
+            
+            if (recentFrames.length === 0 || earlyFrames.length === 0) return 0;
+            
+            // Compare quality degradation
+            const recentQuality = recentFrames.reduce((sum, f) => sum + f.quality, 0) / recentFrames.length;
+            const earlyQuality = earlyFrames.reduce((sum, f) => sum + f.quality, 0) / earlyFrames.length;
+            
+            const qualityDrop = earlyQuality - recentQuality;
+            
+            // Compare movement speed changes
+            const avgSpeed = STATE.speedData.length > 0 ?
+                STATE.speedData.reduce((sum, d) => sum + d.duration, 0) / STATE.speedData.length : 2.5;
+            const recentSpeed = STATE.speedData.slice(-2).reduce((sum, d) => sum + d.duration, 0) / 
+                Math.max(1, STATE.speedData.slice(-2).length);
+            
+            const speedIncrease = recentSpeed - avgSpeed; // Slower = more fatigue
+            
+            // Fatigue index calculation (0-100)
+            let fatigueIndex = 0;
+            fatigueIndex += qualityDrop * 50; // Quality drop contributes 50%
+            fatigueIndex += Math.max(0, speedIncrease) * 20; // Speed reduction contributes 50%
+            
+            STATE.fatigueIndex = Math.min(100, Math.max(0, fatigueIndex));
+            
+            let assessment = '';
+            let clinical_note = '';
+            
+            if (STATE.fatigueIndex < 20) {
+                assessment = 'No Fatigue';
+                clinical_note = 'Patient maintains consistent form and speed throughout exercise.';
+            } else if (STATE.fatigueIndex < 50) {
+                assessment = 'Mild Fatigue';
+                clinical_note = 'Minor decline in performance. Exercise tolerance adequate.';
+            } else if (STATE.fatigueIndex < 75) {
+                assessment = 'Moderate Fatigue';
+                clinical_note = 'Significant performance decline. Consider reducing intensity.';
+                speakInstruction('You can rest if needed', 'normal');
+            } else {
+                assessment = 'Severe Fatigue';
+                clinical_note = 'Marked fatigue detected. Stop exercise to prevent injury.';
+                speakInstruction('Please stop and rest', 'high');
+            }
+            
+            return {
+                index: STATE.fatigueIndex.toFixed(0),
+                assessment,
+                clinical_note
+            };
         }
 
         // ============================================
@@ -729,6 +1058,9 @@
                     rom_score: 0,
                     form_quality: 0,
                     balance_score: 0,
+                    symmetry_score: 0,
+                    speed_score: 0,
+                    fatigue_score: 0,
                     deficiencies: ['No movement data captured']
                 };
             }
@@ -743,18 +1075,63 @@
             // Calculate Balance
             const balanceScore = calculateBalanceScore(frames);
             
-            // Detect deficiencies
-            const deficiencies = detectDeficiencies(angles, exercise, romScore, formQuality, balanceScore);
+            // PHASE 1 ENHANCEMENTS - Calculate new metrics
+            
+            // Calculate Symmetry Score (average from all frames)
+            const symmetryScore = STATE.symmetryData.length > 0 ?
+                STATE.symmetryData.reduce((sum, s) => sum + s.score, 0) / STATE.symmetryData.length : 100;
+            
+            // Get final symmetry analysis
+            const finalSymmetry = STATE.symmetryData.length > 0 ?
+                STATE.symmetryData[STATE.symmetryData.length - 1] : null;
+            
+            // Calculate Speed Score (closer to 2.5s per rep = optimal)
+            const avgRepDuration = STATE.speedData.length > 0 ?
+                STATE.speedData.reduce((sum, s) => sum + s.duration, 0) / STATE.speedData.length : 2.5;
+            const speedScore = Math.max(0, 100 - Math.abs(avgRepDuration - 2.5) * 20);
+            
+            // Get Fatigue Assessment
+            const fatigue = calculateFatigueIndex();
+            const fatigueScore = 100 - parseFloat(fatigue.index);
+            
+            // Detect deficiencies with enhanced metrics
+            const deficiencies = detectDeficiencies(
+                angles, exercise, romScore, formQuality, balanceScore,
+                symmetryScore, speedScore, fatigueScore, finalSymmetry
+            );
             
             return {
                 rom_score: romScore,
                 form_quality: formQuality,
                 balance_score: balanceScore,
+                symmetry_score: symmetryScore,
+                speed_score: speedScore,
+                fatigue_score: fatigueScore,
                 deficiencies: deficiencies,
                 reps_completed: STATE.repCount,
                 target_reps: exercise.targetReps,
-                duration: (frames[frames.length - 1].timestamp) / 1000
+                duration: (frames[frames.length - 1].timestamp) / 1000,
+                // Enhanced clinical data
+                symmetry_analysis: finalSymmetry,
+                speed_analysis: {
+                    avg_duration: avgRepDuration.toFixed(1),
+                    consistency: calculateSpeedConsistency()
+                },
+                fatigue_analysis: fatigue
             };
+        }
+        
+        function calculateSpeedConsistency() {
+            if (STATE.speedData.length < 2) return 100;
+            
+            const durations = STATE.speedData.map(s => s.duration);
+            const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+            const variance = durations.reduce((sum, d) => sum + Math.pow(d - avg, 2), 0) / durations.length;
+            const stdDev = Math.sqrt(variance);
+            
+            // Lower std dev = higher consistency
+            const consistency = Math.max(0, 100 - (stdDev * 40));
+            return consistency.toFixed(0);
         }
 
         function calculateROMScore(angles, exercise) {
@@ -815,7 +1192,8 @@
             return score;
         }
 
-        function detectDeficiencies(angles, exercise, romScore, formQuality, balanceScore) {
+        function detectDeficiencies(angles, exercise, romScore, formQuality, balanceScore, 
+                                   symmetryScore, speedScore, fatigueScore, symmetryAnalysis) {
             const deficiencies = [];
             
             // ROM deficiencies
@@ -824,7 +1202,8 @@
                     area: 'Range of Motion',
                     severity: romScore < 50 ? 'severe' : 'moderate',
                     description: `Limited ROM detected (${romScore.toFixed(0)}%). Target areas need stretching and mobility work.`,
-                    recommendation: 'Daily stretching routine for affected joints'
+                    recommendation: 'Daily stretching routine for affected joints',
+                    icd10_suggested: ['M25.60 - Stiffness of joint, unspecified', 'M62.81 - Muscle weakness']
                 });
             }
             
@@ -834,7 +1213,8 @@
                     area: 'Movement Form',
                     severity: formQuality < 50 ? 'severe' : 'moderate',
                     description: `Poor form quality (${formQuality.toFixed(0)}%). May indicate weakness or compensation patterns.`,
-                    recommendation: 'Focus on controlled movements with proper technique'
+                    recommendation: 'Focus on controlled movements with proper technique',
+                    icd10_suggested: ['M62.81 - Muscle weakness', 'R26.89 - Other abnormalities of gait and mobility']
                 });
             }
             
@@ -844,7 +1224,55 @@
                     area: 'Balance & Stability',
                     severity: balanceScore < 50 ? 'severe' : 'moderate',
                     description: `Reduced stability (${balanceScore.toFixed(0)}%). Fall risk assessment recommended.`,
-                    recommendation: 'Balance training exercises and proprioceptive work'
+                    recommendation: 'Balance training exercises and proprioceptive work',
+                    icd10_suggested: ['R26.81 - Unsteadiness on feet', 'R29.6 - Repeated falls', 'Z91.81 - History of falling']
+                });
+            }
+            
+            // PHASE 1 - Symmetry deficiencies
+            if (symmetryScore < 70 && symmetryAnalysis) {
+                const asymJoints = symmetryAnalysis.asymmetries.map(a => a.joint).join(', ');
+                deficiencies.push({
+                    area: 'Movement Symmetry',
+                    severity: symmetryScore < 50 ? 'severe' : 'moderate',
+                    description: `Bilateral asymmetry detected (${asymJoints}). Score: ${symmetryScore.toFixed(0)}%. May indicate weakness, pain avoidance, or previous injury.`,
+                    recommendation: 'Unilateral strengthening, assess for pain or structural issues',
+                    icd10_suggested: ['M62.81 - Muscle weakness (generalized)', 'M25.50 - Pain in joint', 'S43.9 - Sprain/strain (specify joint)']
+                });
+            }
+            
+            // Speed deficiencies
+            if (speedScore < 60) {
+                const tooFast = STATE.speedData.some(s => s.duration < 1.5);
+                const tooSlow = STATE.speedData.some(s => s.duration > 5);
+                
+                if (tooFast) {
+                    deficiencies.push({
+                        area: 'Movement Speed - Too Fast',
+                        severity: 'moderate',
+                        description: 'Movements performed too quickly, reducing control and increasing injury risk.',
+                        recommendation: 'Emphasize slow, controlled movements. Count 3 seconds down, 1 second up.',
+                        icd10_suggested: ['R26.89 - Other abnormalities of gait and mobility']
+                    });
+                } else if (tooSlow) {
+                    deficiencies.push({
+                        area: 'Movement Speed - Too Slow',
+                        severity: 'moderate',
+                        description: 'Movements performed very slowly, may indicate weakness or kinesiophobia (fear of movement).',
+                        recommendation: 'Gradual progression, address pain concerns, strengthen target muscles',
+                        icd10_suggested: ['M62.81 - Muscle weakness', 'F45.8 - Kinesiophobia/pain-related fear']
+                    });
+                }
+            }
+            
+            // Fatigue deficiencies
+            if (fatigueScore < 50) {
+                deficiencies.push({
+                    area: 'Exercise Tolerance',
+                    severity: fatigueScore < 30 ? 'severe' : 'moderate',
+                    description: `Significant fatigue detected during exercise (${fatigueScore.toFixed(0)}% tolerance). Performance declined rapidly.`,
+                    recommendation: 'Reduce exercise intensity/volume. Build endurance gradually. Consider deconditioning.',
+                    icd10_suggested: ['R53.83 - Fatigue', 'M62.81 - Muscle weakness', 'Z72.3 - Lack of physical exercise']
                 });
             }
             
@@ -853,8 +1281,9 @@
                 deficiencies.push({
                     area: 'Exercise Completion',
                     severity: 'moderate',
-                    description: `Only completed ${STATE.repCount}/${exercise.targetReps} reps. May indicate fatigue or difficulty.`,
-                    recommendation: 'Build endurance gradually, monitor for pain'
+                    description: `Only completed ${STATE.repCount}/${exercise.targetReps} reps. May indicate fatigue, pain, or difficulty.`,
+                    recommendation: 'Build endurance gradually, monitor for pain, assess baseline fitness',
+                    icd10_suggested: ['R53.83 - Fatigue', 'M25.50 - Pain in joint', 'M62.81 - Muscle weakness']
                 });
             }
             
@@ -867,16 +1296,43 @@
             document.getElementById('formScore').textContent = `${analysis.form_quality.toFixed(0)}%`;
             document.getElementById('balanceScore').textContent = `${analysis.balance_score.toFixed(0)}%`;
             
+            // PHASE 1 - Display enhanced metrics
+            document.getElementById('symmetryScore').textContent = `${analysis.symmetry_score.toFixed(0)}%`;
+            document.getElementById('speedScore').textContent = `${analysis.speed_score.toFixed(0)}%`;
+            document.getElementById('fatigueScore').textContent = `${analysis.fatigue_score.toFixed(0)}%`;
+            
+            // Color code scores
+            const colorScore = (elementId, score) => {
+                const element = document.getElementById(elementId);
+                if (score >= 80) element.classList.add('text-green-600');
+                else if (score >= 60) element.classList.add('text-yellow-600');
+                else element.classList.add('text-red-600');
+            };
+            
+            colorScore('romScore', analysis.rom_score);
+            colorScore('formScore', analysis.form_quality);
+            colorScore('balanceScore', analysis.balance_score);
+            colorScore('symmetryScore', analysis.symmetry_score);
+            colorScore('speedScore', analysis.speed_score);
+            colorScore('fatigueScore', analysis.fatigue_score);
+            
             const list = document.getElementById('deficienciesList');
             if (analysis.deficiencies.length > 0) {
-                list.innerHTML = '<div class="font-bold text-red-600 mb-2">⚠️ Concerns Identified:</div>' +
+                list.innerHTML = '<div class="font-bold text-red-600 mb-2">⚠️ Clinical Findings:</div>' +
                     analysis.deficiencies.map(d => `
-                        <div class="text-xs bg-red-50 p-2 rounded mb-1">
-                            <strong>${d.area}</strong> (${d.severity}): ${d.description}
+                        <div class="text-xs bg-red-50 p-2 rounded mb-2 border-l-4 border-red-500">
+                            <div class="font-bold text-red-700">${d.area} (${d.severity})</div>
+                            <div class="mt-1">${d.description}</div>
+                            <div class="mt-1 text-gray-600"><strong>Recommendation:</strong> ${d.recommendation}</div>
+                            ${d.icd10_suggested ? `
+                                <div class="mt-1 text-brand-orange text-xs">
+                                    <strong>Suggested ICD-10:</strong> ${d.icd10_suggested.join(', ')}
+                                </div>
+                            ` : ''}
                         </div>
                     `).join('');
             } else {
-                list.innerHTML = '<div class="text-green-600 font-bold">✅ No significant issues detected</div>';
+                list.innerHTML = '<div class="text-green-600 font-bold">✅ No significant clinical findings</div>';
             }
         }
 
