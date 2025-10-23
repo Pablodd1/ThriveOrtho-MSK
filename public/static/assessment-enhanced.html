@@ -35,6 +35,88 @@
         @media (max-width: 768px) {
             .rep-counter { font-size: 3rem; }
         }
+        
+        /* Medical Scribe Styles */
+        .scribe-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .scribe-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #003D7A 0%, #0055AA 100%);
+            border-radius: 6px;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .mic-active {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .transcript-item {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-left: 3px solid #003D7A;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .complaint-item {
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            background: #fff3cd;
+            border-left: 4px solid #ff6b6b;
+            border-radius: 4px;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .pain-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 9999;
+            animation: alertPulse 0.5s ease-in-out;
+            display: none;
+        }
+        @keyframes alertPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+        .stat-box {
+            text-align: center;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 2px solid #e9ecef;
+        }
+        .stat-box .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #003D7A;
+        }
+        .stat-box .stat-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -114,6 +196,70 @@
 
             <!-- Right: Instructions & Controls (40% on desktop, below camera on mobile) -->
             <div class="w-full md:w-2/5 bg-white p-4 md:p-6 overflow-y-auto">
+                <!-- Medical Scribe Panel -->
+                <div id="medicalScribePanel" class="scribe-panel hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-bold text-gray-800">
+                            <i class="fas fa-microphone mr-2 text-brand-blue"></i>
+                            Medical Scribe
+                        </h4>
+                        <button onclick="toggleMicrophone()" id="micToggleBtn" class="px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+                            <i class="fas fa-microphone-slash mr-1"></i>
+                            <span id="micToggleText">Stop</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Status Bar -->
+                    <div class="scribe-status-bar">
+                        <div class="flex items-center">
+                            <i class="fas fa-circle mic-active mr-2" id="micStatusIcon"></i>
+                            <span id="microphoneStatus">Listening...</span>
+                        </div>
+                        <div id="recordingTime" class="font-mono">00:00</div>
+                    </div>
+                    
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                        <div class="stat-box">
+                            <div class="stat-number" id="complaintCount">0</div>
+                            <div class="stat-label">🚨 Complaints</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="transcriptCount">0</div>
+                            <div class="stat-label">📝 Transcripts</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="wordsSpoken">0</div>
+                            <div class="stat-label">💬 Words</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Transcript -->
+                    <div class="mb-3">
+                        <div class="text-xs font-bold text-gray-600 mb-1">LIVE TRANSCRIPT:</div>
+                        <div id="liveTranscript" class="p-2 bg-blue-50 rounded text-sm italic min-h-[2rem] border border-blue-200">
+                            Listening for speech...
+                        </div>
+                    </div>
+                    
+                    <!-- Complaints Section -->
+                    <div id="complaintsSection" class="mb-3" style="display:none;">
+                        <div class="text-xs font-bold text-red-600 mb-1">⚠️ PAIN COMPLAINTS:</div>
+                        <div id="complaintsContainer" class="max-h-32 overflow-y-auto"></div>
+                    </div>
+                    
+                    <!-- Transcript Log -->
+                    <div>
+                        <div class="text-xs font-bold text-gray-600 mb-1">TRANSCRIPT LOG:</div>
+                        <div id="transcriptContainer" class="max-h-40 overflow-y-auto"></div>
+                    </div>
+                    
+                    <!-- Export Button -->
+                    <button onclick="exportTranscript()" class="w-full mt-3 px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-blue-900 transition-colors text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Transcript
+                    </button>
+                </div>
                 <!-- Exercise Instructions -->
                 <div class="mb-6">
                     <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3">
@@ -241,6 +387,20 @@
             formFeedbackQueue: [],
             voiceEnabled: true,
             lastVoiceTime: 0,
+            
+            // MEDICAL SCRIBE SYSTEM
+            microphoneActive: false,
+            mediaRecorder: null,
+            audioChunks: [],
+            audioBlobs: [],
+            recognition: null,
+            recognizing: false,
+            transcription: [],
+            patientComplaints: [],
+            totalWordsSpoken: 0,
+            totalComplaints: 0,
+            scribeStartTime: null,
+            interimTranscript: '',
             
             // Exercise definitions with medical parameters
             exercises: [
@@ -405,6 +565,9 @@
                 
                 await initWebCamera();
                 await createAssessment();
+                
+                // Auto-start microphone when camera is ready
+                await initMedicalScribe();
                 
                 showStatus('Camera ready! You can start recording.', 'success');
                 document.getElementById('recordBtn').disabled = false;
@@ -1107,6 +1270,484 @@
         }
 
         // ============================================
+        // MEDICAL SCRIBE SYSTEM
+        // ============================================
+        
+        async function initMedicalScribe() {
+            console.log('🎤 Initializing Medical Scribe System...');
+            
+            // Check browser support
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.warn('⚠️ Speech Recognition not supported in this browser');
+                showStatus('Speech recognition not supported. Transcript feature disabled.', 'warning');
+                return false;
+            }
+            
+            try {
+                // Initialize Speech Recognition
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                STATE.recognition = new SpeechRecognition();
+                
+                STATE.recognition.continuous = true;
+                STATE.recognition.interimResults = true;
+                STATE.recognition.lang = 'en-US';
+                STATE.recognition.maxAlternatives = 1;
+                
+                // Speech Recognition Event Handlers
+                STATE.recognition.onstart = () => {
+                    console.log('✅ Speech recognition started');
+                    STATE.recognizing = true;
+                    STATE.scribeStartTime = Date.now();
+                    updateMicrophoneStatus('Listening...', 'active');
+                };
+                
+                STATE.recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    
+                    // Update live transcript display
+                    if (interimTranscript) {
+                        STATE.interimTranscript = interimTranscript;
+                        document.getElementById('liveTranscript').textContent = interimTranscript;
+                    }
+                    
+                    // Process final transcript
+                    if (finalTranscript) {
+                        processFinalTranscript(finalTranscript.trim());
+                    }
+                };
+                
+                STATE.recognition.onerror = (event) => {
+                    console.error('❌ Speech recognition error:', event.error);
+                    if (event.error === 'no-speech') {
+                        console.log('No speech detected, continuing...');
+                    } else if (event.error === 'aborted') {
+                        console.log('Speech recognition aborted');
+                    } else {
+                        updateMicrophoneStatus(`Error: ${event.error}`, 'error');
+                    }
+                };
+                
+                STATE.recognition.onend = () => {
+                    console.log('Speech recognition ended');
+                    STATE.recognizing = false;
+                    
+                    // Auto-restart if microphone is still active
+                    if (STATE.microphoneActive) {
+                        console.log('Restarting speech recognition...');
+                        setTimeout(() => {
+                            if (STATE.microphoneActive) {
+                                STATE.recognition.start();
+                            }
+                        }, 500);
+                    }
+                };
+                
+                // Initialize Audio Recording Backup
+                await initAudioRecording();
+                
+                // Start the scribe system
+                await startMedicalScribe();
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize medical scribe:', error);
+                showStatus('Failed to start medical scribe: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        async function initAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                STATE.mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+                });
+                
+                STATE.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        STATE.audioChunks.push(event.data);
+                    }
+                };
+                
+                STATE.mediaRecorder.onstop = () => {
+                    if (STATE.audioChunks.length > 0) {
+                        const audioBlob = new Blob(STATE.audioChunks, { type: 'audio/webm' });
+                        STATE.audioBlobs.push({
+                            timestamp: Date.now(),
+                            blob: audioBlob,
+                            duration: (Date.now() - STATE.scribeStartTime) / 1000
+                        });
+                        STATE.audioChunks = [];
+                    }
+                };
+                
+                console.log('✅ Audio recording initialized');
+                return true;
+                
+            } catch (error) {
+                console.warn('⚠️ Audio recording not available:', error);
+                return false;
+            }
+        }
+        
+        async function startMedicalScribe() {
+            if (STATE.microphoneActive) return;
+            
+            STATE.microphoneActive = true;
+            STATE.scribeStartTime = Date.now();
+            STATE.transcription = [];
+            STATE.patientComplaints = [];
+            STATE.totalWordsSpoken = 0;
+            STATE.totalComplaints = 0;
+            
+            // Show scribe panel
+            document.getElementById('medicalScribePanel').classList.remove('hidden');
+            
+            // Start speech recognition
+            try {
+                STATE.recognition.start();
+                console.log('🎤 Medical scribe started');
+            } catch (error) {
+                console.error('Failed to start recognition:', error);
+            }
+            
+            // Start audio recording
+            if (STATE.mediaRecorder && STATE.mediaRecorder.state === 'inactive') {
+                STATE.mediaRecorder.start(1000); // Record in 1-second chunks
+                console.log('🎙️ Audio recording started');
+            }
+            
+            // Start recording time display
+            updateRecordingTime();
+            
+            // Play welcome message
+            speakInstruction('Welcome! I am listening to your session. Please describe any pain or discomfort.', 'high');
+        }
+        
+        function stopMedicalScribe() {
+            if (!STATE.microphoneActive) return;
+            
+            STATE.microphoneActive = false;
+            
+            // Stop speech recognition
+            if (STATE.recognition) {
+                STATE.recognition.stop();
+                console.log('🎤 Speech recognition stopped');
+            }
+            
+            // Stop audio recording
+            if (STATE.mediaRecorder && STATE.mediaRecorder.state === 'recording') {
+                STATE.mediaRecorder.stop();
+                console.log('🎙️ Audio recording stopped');
+            }
+            
+            updateMicrophoneStatus('Stopped', 'inactive');
+        }
+        
+        function toggleMicrophone() {
+            if (STATE.microphoneActive) {
+                stopMedicalScribe();
+                document.getElementById('micToggleText').textContent = 'Start';
+                document.getElementById('micToggleBtn').classList.remove('bg-red-600', 'hover:bg-red-700');
+                document.getElementById('micToggleBtn').classList.add('bg-green-600', 'hover:bg-green-700');
+            } else {
+                startMedicalScribe();
+                document.getElementById('micToggleText').textContent = 'Stop';
+                document.getElementById('micToggleBtn').classList.remove('bg-green-600', 'hover:bg-green-700');
+                document.getElementById('micToggleBtn').classList.add('bg-red-600', 'hover:bg-red-700');
+            }
+        }
+        
+        function processFinalTranscript(text) {
+            if (!text || text.length < 2) return;
+            
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            
+            // Count words
+            const wordCount = text.split(/\s+/).length;
+            STATE.totalWordsSpoken += wordCount;
+            
+            // Add to transcription log
+            STATE.transcription.push({
+                timestamp: timestamp,
+                text: text,
+                exercise: exercise.name,
+                rep_count: STATE.repCount,
+                wordCount: wordCount
+            });
+            
+            // Update transcript display
+            const transcriptContainer = document.getElementById('transcriptContainer');
+            const transcriptItem = document.createElement('div');
+            transcriptItem.className = 'transcript-item';
+            transcriptItem.innerHTML = `
+                <div class="text-xs text-gray-500">[${timestamp}] ${exercise.name}</div>
+                <div class="mt-1">${text}</div>
+            `;
+            transcriptContainer.insertBefore(transcriptItem, transcriptContainer.firstChild);
+            
+            // Check for pain complaints
+            if (isPainComplaint(text)) {
+                handlePainComplaint(text, timestamp, exercise.name);
+            }
+            
+            // Update stats
+            document.getElementById('transcriptCount').textContent = STATE.transcription.length;
+            document.getElementById('wordsSpoken').textContent = STATE.totalWordsSpoken;
+            
+            // Clear live transcript
+            document.getElementById('liveTranscript').textContent = 'Listening for speech...';
+        }
+        
+        function isPainComplaint(text) {
+            const painKeywords = [
+                'hurt', 'hurts', 'pain', 'painful', 'ache', 'aches', 'aching',
+                'sore', 'soreness', 'uncomfortable', 'sharp', 'dull', 'burning',
+                'stiff', 'stiffness', 'tight', 'tightness', 'tender', 'tenderness',
+                'throb', 'throbbing', 'shoot', 'shooting', 'pinch', 'pinching',
+                'cramp', 'cramping', 'spasm', 'weak', 'weakness', 'numb', 'numbness',
+                'tingle', 'tingling', 'can\'t move', 'difficult to move', 'hard to move'
+            ];
+            
+            const lowerText = text.toLowerCase();
+            return painKeywords.some(keyword => lowerText.includes(keyword));
+        }
+        
+        function handlePainComplaint(text, timestamp, exerciseName) {
+            STATE.totalComplaints++;
+            
+            const complaint = {
+                timestamp: timestamp,
+                complaint: text,
+                exercise: exerciseName,
+                rep_count: STATE.repCount,
+                type: determinePainType(text)
+            };
+            
+            STATE.patientComplaints.push(complaint);
+            
+            // Show complaints section
+            document.getElementById('complaintsSection').style.display = 'block';
+            
+            // Add to complaints display
+            const complaintsContainer = document.getElementById('complaintsContainer');
+            const complaintItem = document.createElement('div');
+            complaintItem.className = 'complaint-item';
+            complaintItem.innerHTML = `
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-2 mt-1"></i>
+                    <div class="flex-1">
+                        <div class="font-bold text-red-700">${complaint.type.toUpperCase()}</div>
+                        <div class="text-sm mt-1">${text}</div>
+                        <div class="text-xs text-gray-600 mt-1">
+                            [${timestamp}] ${exerciseName} - Rep ${STATE.repCount}
+                        </div>
+                    </div>
+                </div>
+            `;
+            complaintsContainer.insertBefore(complaintItem, complaintsContainer.firstChild);
+            
+            // Update complaint count
+            document.getElementById('complaintCount').textContent = STATE.totalComplaints;
+            
+            // Show visual alert
+            showPainAlert(complaint.type);
+            
+            // Play audio alert
+            playAlertSound();
+            
+            console.log('🚨 Pain complaint detected:', complaint);
+        }
+        
+        function determinePainType(text) {
+            const lowerText = text.toLowerCase();
+            
+            if (lowerText.includes('sharp') || lowerText.includes('shooting') || lowerText.includes('stabbing')) {
+                return 'sharp pain';
+            } else if (lowerText.includes('burn') || lowerText.includes('burning')) {
+                return 'burning pain';
+            } else if (lowerText.includes('dull') || lowerText.includes('ache') || lowerText.includes('aching')) {
+                return 'dull ache';
+            } else if (lowerText.includes('throb') || lowerText.includes('throbbing') || lowerText.includes('pulsing')) {
+                return 'throbbing pain';
+            } else if (lowerText.includes('stiff') || lowerText.includes('tight')) {
+                return 'stiffness';
+            } else if (lowerText.includes('weak') || lowerText.includes('weakness')) {
+                return 'weakness';
+            } else if (lowerText.includes('numb') || lowerText.includes('tingle')) {
+                return 'numbness/tingling';
+            } else {
+                return 'pain';
+            }
+        }
+        
+        function showPainAlert(painType) {
+            // Create or get alert element
+            let alertDiv = document.getElementById('painAlert');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'painAlert';
+                alertDiv.className = 'pain-alert';
+                document.body.appendChild(alertDiv);
+            }
+            
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle mr-3"></i>
+                ${painType.toUpperCase()} REPORTED
+            `;
+            alertDiv.style.display = 'block';
+            
+            // Flash the camera border red
+            const canvas = document.getElementById('canvasElement');
+            canvas.style.border = '8px solid red';
+            
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+                canvas.style.border = 'none';
+            }, 2000);
+        }
+        
+        function playAlertSound() {
+            // Generate alert sound using Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800; // High pitch alert
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (error) {
+                console.warn('Could not play alert sound:', error);
+            }
+        }
+        
+        function updateRecordingTime() {
+            if (!STATE.microphoneActive) return;
+            
+            const elapsed = Math.floor((Date.now() - STATE.scribeStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            
+            document.getElementById('recordingTime').textContent = `${minutes}:${seconds}`;
+            
+            setTimeout(updateRecordingTime, 1000);
+        }
+        
+        function updateMicrophoneStatus(status, state) {
+            document.getElementById('microphoneStatus').textContent = status;
+            
+            const icon = document.getElementById('micStatusIcon');
+            if (state === 'active') {
+                icon.classList.add('mic-active');
+                icon.classList.remove('text-gray-400');
+                icon.classList.add('text-green-400');
+            } else if (state === 'error') {
+                icon.classList.remove('mic-active');
+                icon.classList.remove('text-green-400');
+                icon.classList.add('text-red-400');
+            } else {
+                icon.classList.remove('mic-active');
+                icon.classList.remove('text-green-400');
+                icon.classList.add('text-gray-400');
+            }
+        }
+        
+        function exportTranscript() {
+            const exercise = STATE.exercises[STATE.currentExercise - 1];
+            const duration = STATE.scribeStartTime ? 
+                Math.floor((Date.now() - STATE.scribeStartTime) / 1000) : 0;
+            
+            let exportText = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MEDICAL SCRIBE TRANSCRIPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Patient: ${STATE.patientData ? `${STATE.patientData.first_name} ${STATE.patientData.last_name}` : 'Unknown'}
+Session Date: ${new Date().toLocaleDateString()}
+Session Time: ${new Date().toLocaleTimeString()}
+Exercise: ${exercise.name}
+Duration: ${Math.floor(duration / 60)}m ${duration % 60}s
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SESSION STATISTICS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total Transcripts: ${STATE.transcription.length}
+Total Words Spoken: ${STATE.totalWordsSpoken}
+Pain Complaints: ${STATE.totalComplaints}
+Reps Completed: ${STATE.repCount}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 PAIN COMPLAINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+            
+            if (STATE.patientComplaints.length > 0) {
+                STATE.patientComplaints.forEach((c, i) => {
+                    exportText += `[${i + 1}] ${c.timestamp} - ${c.type.toUpperCase()}\n`;
+                    exportText += `    Complaint: "${c.complaint}"\n`;
+                    exportText += `    Exercise: ${c.exercise}\n`;
+                    exportText += `    Rep Count: ${c.rep_count}\n\n`;
+                });
+            } else {
+                exportText += 'No pain complaints recorded during this session.\n\n';
+            }
+            
+            exportText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 FULL TRANSCRIPTION LOG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+            
+            STATE.transcription.forEach((t, i) => {
+                exportText += `[${i + 1}] ${t.timestamp}\n`;
+                exportText += `    "${t.text}"\n`;
+                exportText += `    Exercise: ${t.exercise} (Rep ${t.rep_count})\n\n`;
+            });
+            
+            exportText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF TRANSCRIPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+            
+            // Download as text file
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `medical-scribe-${STATE.patientId}-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatus('✅ Transcript exported successfully!', 'success');
+        }
+        
+        // ============================================
         // RECORDING CONTROLS
         // ============================================
         function displayExerciseInfo() {
@@ -1546,7 +2187,26 @@
         }
 
         async function completeAssessment() {
+            // Stop medical scribe before completing
+            if (STATE.microphoneActive) {
+                stopMedicalScribe();
+            }
+            
             showStatus('🎉 Assessment complete! Generating medical note...', 'success');
+            
+            // Save transcript data to sessionStorage for medical note
+            if (STATE.transcription.length > 0 || STATE.patientComplaints.length > 0) {
+                sessionStorage.setItem('medical_scribe_data', JSON.stringify({
+                    transcription: STATE.transcription,
+                    complaints: STATE.patientComplaints,
+                    stats: {
+                        totalTranscripts: STATE.transcription.length,
+                        totalWords: STATE.totalWordsSpoken,
+                        totalComplaints: STATE.totalComplaints,
+                        duration: STATE.scribeStartTime ? Math.floor((Date.now() - STATE.scribeStartTime) / 1000) : 0
+                    }
+                }));
+            }
             
             await fetch(`/api/assessments/${STATE.assessmentId}/complete`, {
                 method: 'PUT',
@@ -1554,7 +2214,12 @@
                 body: JSON.stringify({
                     overall_score: 75,
                     clinical_notes: '5 exercises completed successfully',
-                    recommendations: ['Continue with prescribed exercises', 'Monitor progress weekly']
+                    recommendations: ['Continue with prescribed exercises', 'Monitor progress weekly'],
+                    scribe_data: {
+                        transcription: STATE.transcription,
+                        complaints: STATE.patientComplaints,
+                        totalWords: STATE.totalWordsSpoken
+                    }
                 })
             });
             
