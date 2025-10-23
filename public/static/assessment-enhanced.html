@@ -497,6 +497,11 @@
                     if (hasDrawing) console.log('✅ MediaPipe drawing utilities loaded');
                     if (!hasCamera) console.warn('⚠️ Using fallback frame processing (MediaPipe Camera not found)');
                     if (!hasDrawing) console.warn('⚠️ Using fallback drawing (MediaPipe drawing utils not found)');
+                    
+                    // Show diagnostic link if loading took too long
+                    if (attempts > 10) {
+                        showStatus('MediaPipe loaded slowly. If you experience camera issues, <a href="/static/camera-diagnostic.html" class="underline">run diagnostics</a>', 'warning');
+                    }
                     return;
                 }
                 
@@ -508,7 +513,13 @@
                 if (attempts >= maxAttempts) {
                     clearInterval(checkInterval);
                     console.error('❌ MediaPipe Pose library failed to load after 15 seconds');
-                    showStatus('MediaPipe libraries taking too long to load. Please check your internet connection and refresh.', 'error');
+                    const statusMsg = document.createElement('div');
+                    statusMsg.innerHTML = `
+                        MediaPipe libraries failed to load. 
+                        <a href="/static/camera-diagnostic.html" class="underline font-bold">Run Diagnostic Tool</a> 
+                        or refresh the page.
+                    `;
+                    showStatus(statusMsg.innerHTML, 'error');
                 }
             }, 500);
         }
@@ -669,18 +680,22 @@
             } catch (error) {
                 console.error('❌ Camera initialization error:', error);
                 
-                // Provide specific error messages
+                // Provide specific error messages with diagnostic link
+                let errorMsg = '';
                 if (error.name === 'NotAllowedError') {
-                    throw new Error('Camera permission denied. Please allow camera access and try again.');
+                    errorMsg = 'Camera permission denied. Please allow camera access in your browser and try again.';
                 } else if (error.name === 'NotFoundError') {
-                    throw new Error('No camera found. Please connect a camera and try again.');
+                    errorMsg = 'No camera found. Please connect a camera and try again.';
                 } else if (error.name === 'NotReadableError') {
-                    throw new Error('Camera is in use by another application. Please close other apps using camera.');
+                    errorMsg = 'Camera is in use by another application. Please close other apps (Zoom, Teams, etc.) using camera.';
                 } else if (error.message.includes('MediaPipe')) {
-                    throw new Error('MediaPipe libraries not loaded. Please refresh the page and wait a moment.');
+                    errorMsg = 'MediaPipe libraries not loaded. Please refresh the page and wait for libraries to load.';
                 } else {
-                    throw new Error(`Camera error: ${error.message}`);
+                    errorMsg = `Camera error: ${error.message}`;
                 }
+                
+                errorMsg += ` <a href="/static/camera-diagnostic.html" class="underline font-bold text-white">Run Diagnostic Tool</a>`;
+                throw new Error(errorMsg);
             }
         }
 
@@ -2241,17 +2256,25 @@ END OF TRANSCRIPT
 
         function showStatus(message, type) {
             const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
+            // Support HTML content for links
+            if (message.includes('<a')) {
+                statusDiv.innerHTML = message;
+            } else {
+                statusDiv.textContent = message;
+            }
             statusDiv.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg max-w-md w-full mx-4 z-50 ${
                 type === 'success' ? 'bg-green-100 text-green-700' :
                 type === 'error' ? 'bg-red-100 text-red-700' :
+                type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
                 'bg-blue-100 text-blue-700'
             }`;
             statusDiv.classList.remove('hidden');
             
+            // Keep error messages visible longer
+            const timeout = type === 'error' ? 10000 : 5000;
             setTimeout(() => {
                 statusDiv.classList.add('hidden');
-            }, 5000);
+            }, timeout);
         }
     </script>
 </body>
