@@ -347,6 +347,174 @@
                 </div>
             </div>
 
+            <!-- MRI READER TOOL -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-blue-300">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 border-b-2 border-blue-500 pb-2">
+                        <i class="fas fa-x-ray mr-2 text-blue-600"></i>
+                        MRI/Imaging Report Reader
+                    </h2>
+                    <span class="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-semibold">
+                        <i class="fas fa-microscope mr-1"></i>AI-Powered Analysis
+                    </span>
+                </div>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>MRI Report Interpreter:</strong> Paste MRI/CT/X-ray reports below to generate easy-to-understand explanations for both medical professionals and patients.
+                    </p>
+                </div>
+
+                <!-- MRI Report Input -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-bold text-gray-700">
+                            <i class="fas fa-file-medical-alt mr-2 text-blue-600"></i>
+                            MRI/Imaging Report Text
+                        </label>
+                        <button onclick="pasteFromClipboard()" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+                            <i class="fas fa-paste mr-1"></i>Paste from Clipboard
+                        </button>
+                    </div>
+                    <textarea id="mriReportInput" rows="8" 
+                        placeholder="Example:
+INDICATION: Knee pain, right
+TECHNIQUE: Sagittal T1, T2, PD-weighted images. Coronal and axial PD images.
+FINDINGS:
+- Medial meniscus: Horizontal tear of the posterior horn
+- Lateral meniscus: Intact
+- ACL: Intact
+- PCL: Intact
+- Collateral ligaments: Intact
+- Bone marrow: Normal signal intensity
+- Joint effusion: Moderate
+IMPRESSION:
+1. Horizontal tear of the medial meniscus, posterior horn
+2. Moderate joint effusion
+3. No evidence of ligamentous injury"
+                        class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:outline-none font-mono text-sm"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Paste the MRI report text or upload a file below</p>
+                </div>
+
+                <!-- File Upload Option -->
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        <i class="fas fa-cloud-upload-alt mr-2 text-blue-600"></i>
+                        Or Upload Report File (PDF/Image)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="mriFileUpload" accept=".pdf,.jpg,.jpeg,.png,.txt" 
+                            onchange="handleFileUpload(event)"
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer border-2 border-dashed border-blue-300 rounded-lg p-2">
+                        <button onclick="document.getElementById('mriFileUpload').value = ''; document.getElementById('uploadStatus').textContent = ''" 
+                            class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
+                            <i class="fas fa-times mr-1"></i>Clear
+                        </button>
+                    </div>
+                    <p id="uploadStatus" class="text-xs text-gray-500 mt-1"></p>
+                </div>
+
+                <!-- Analyze Button -->
+                <div class="mb-6">
+                    <button onclick="analyzeMRIReport()" 
+                        class="w-full md:w-auto px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg hover:shadow-xl">
+                        <i class="fas fa-brain mr-2"></i>Analyze Report
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="mriLoading" class="hidden mb-6">
+                    <div class="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-blue-200">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-3"></i>
+                            <p class="text-gray-600 font-semibold">Analyzing MRI report...</p>
+                            <p class="text-sm text-gray-500 mt-2">Extracting findings and generating explanations</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MRI Analysis Results -->
+                <div id="mriAnalysisResults" class="hidden space-y-6">
+                    <!-- Key Findings Summary -->
+                    <div class="bg-white rounded-lg p-5 border-2 border-yellow-300">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>
+                            Key Findings Summary
+                        </h3>
+                        <div id="keyFindings" class="space-y-2">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+
+                    <!-- For Medical Professionals -->
+                    <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-5 border-2 border-green-300">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-user-md mr-2 text-green-600"></i>
+                            For Medical Professionals (Technical)
+                        </h3>
+                        <div id="doctorExplanation" class="prose prose-sm max-w-none">
+                            <!-- Dynamic content -->
+                        </div>
+                        <button onclick="speakExplanation('doctor')" class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                            <i class="fas fa-volume-up mr-2"></i>Read Aloud (Technical)
+                        </button>
+                    </div>
+
+                    <!-- For Patients -->
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-5 border-2 border-purple-300">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-user-injured mr-2 text-purple-600"></i>
+                            For Patients (Simple Explanation)
+                        </h3>
+                        <div id="patientExplanation" class="prose prose-sm max-w-none">
+                            <!-- Dynamic content -->
+                        </div>
+                        <button onclick="speakExplanation('patient')" class="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
+                            <i class="fas fa-volume-up mr-2"></i>Read Aloud (Simple)
+                        </button>
+                    </div>
+
+                    <!-- Clinical Implications -->
+                    <div class="bg-white rounded-lg p-5 border-2 border-red-300">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-heartbeat mr-2 text-red-600"></i>
+                            Clinical Implications & Recommendations
+                        </h3>
+                        <div id="clinicalImplications" class="space-y-2">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+
+                    <!-- Related ICD-10 Codes -->
+                    <div class="bg-white rounded-lg p-5 border-2 border-indigo-300">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-code mr-2 text-indigo-600"></i>
+                            Related ICD-10 Codes
+                        </h3>
+                        <div id="mriICD10Codes" class="space-y-2">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="flex gap-3 flex-wrap">
+                        <button onclick="exportMRIAnalysis('pdf')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold">
+                            <i class="fas fa-file-pdf mr-2"></i>Export as PDF
+                        </button>
+                        <button onclick="exportMRIAnalysis('print')" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-semibold">
+                            <i class="fas fa-print mr-2"></i>Print Analysis
+                        </button>
+                        <button onclick="copyMRIAnalysis()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold">
+                            <i class="fas fa-copy mr-2"></i>Copy to Clipboard
+                        </button>
+                        <button onclick="resetMRIAnalysis()" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 text-sm font-semibold">
+                            <i class="fas fa-redo mr-2"></i>Analyze Another Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Additional Medical Records (Dormant) -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">
@@ -1590,6 +1758,562 @@
                 // Re-render suggestions to re-enable buttons
                 displayDiagnosticSuggestions(DIAGNOSIS_STATE.suggestedDiagnoses);
             }
+        }
+
+        // ============================================
+        // MRI READER TOOL FUNCTIONS
+        // ============================================
+        
+        let MRI_STATE = {
+            currentReport: '',
+            analysis: null,
+            audioSynthesis: null
+        };
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('mriReportInput').value = text;
+                showStatus('Text pasted from clipboard', 'success');
+            } catch (error) {
+                showStatus('Could not access clipboard. Please paste manually (Ctrl+V)', 'error');
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('uploadStatus');
+            statusEl.textContent = `Uploading ${file.name}...`;
+            statusEl.className = 'text-xs text-blue-600 mt-1';
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const content = e.target.result;
+                
+                if (file.type === 'application/pdf') {
+                    statusEl.textContent = '⚠️ PDF text extraction requires manual copy-paste. Please copy text from PDF and paste into the text area.';
+                    statusEl.className = 'text-xs text-yellow-600 mt-1';
+                } else if (file.type.startsWith('image/')) {
+                    statusEl.textContent = '⚠️ Image OCR not yet supported. Please type or paste the report text manually.';
+                    statusEl.className = 'text-xs text-yellow-600 mt-1';
+                } else {
+                    // Plain text file
+                    document.getElementById('mriReportInput').value = content;
+                    statusEl.textContent = `✅ File loaded: ${file.name}`;
+                    statusEl.className = 'text-xs text-green-600 mt-1';
+                }
+            };
+            
+            reader.onerror = function() {
+                statusEl.textContent = '❌ Error reading file';
+                statusEl.className = 'text-xs text-red-600 mt-1';
+            };
+            
+            if (file.type.startsWith('image/')) {
+                reader.readAsDataURL(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        async function analyzeMRIReport() {
+            const reportText = document.getElementById('mriReportInput').value.trim();
+            
+            if (!reportText) {
+                showStatus('Please enter or paste an MRI report first', 'error');
+                return;
+            }
+
+            MRI_STATE.currentReport = reportText;
+
+            // Show loading
+            document.getElementById('mriLoading').classList.remove('hidden');
+            document.getElementById('mriAnalysisResults').classList.add('hidden');
+
+            // Simulate AI processing (in production, this would call an AI API)
+            setTimeout(() => {
+                const analysis = processMRIReport(reportText);
+                MRI_STATE.analysis = analysis;
+                
+                displayMRIAnalysis(analysis);
+                
+                // Hide loading, show results
+                document.getElementById('mriLoading').classList.add('hidden');
+                document.getElementById('mriAnalysisResults').classList.remove('hidden');
+                
+                showStatus('MRI report analyzed successfully!', 'success');
+            }, 2000);
+        }
+
+        function processMRIReport(reportText) {
+            // Extract key information using pattern matching
+            const findings = extractFindings(reportText);
+            const anatomy = extractAnatomy(reportText);
+            const pathology = extractPathology(reportText);
+            
+            // Generate explanations
+            const doctorExplanation = generateDoctorExplanation(findings, anatomy, pathology);
+            const patientExplanation = generatePatientExplanation(findings, anatomy, pathology);
+            const implications = generateClinicalImplications(pathology);
+            const icd10Codes = suggestICD10Codes(pathology);
+            
+            return {
+                keyFindings: findings,
+                anatomy: anatomy,
+                pathology: pathology,
+                doctorExplanation: doctorExplanation,
+                patientExplanation: patientExplanation,
+                clinicalImplications: implications,
+                icd10Codes: icd10Codes
+            };
+        }
+
+        function extractFindings(text) {
+            const findings = [];
+            const lowerText = text.toLowerCase();
+            
+            // Common MRI findings patterns
+            const patterns = [
+                { keyword: 'tear', severity: 'high', finding: 'Tear detected' },
+                { keyword: 'rupture', severity: 'high', finding: 'Rupture identified' },
+                { keyword: 'herniat', severity: 'high', finding: 'Herniation present' },
+                { keyword: 'fracture', severity: 'high', finding: 'Fracture noted' },
+                { keyword: 'effusion', severity: 'moderate', finding: 'Joint effusion' },
+                { keyword: 'degenerat', severity: 'moderate', finding: 'Degenerative changes' },
+                { keyword: 'arthritis', severity: 'moderate', finding: 'Arthritis observed' },
+                { keyword: 'stenosis', severity: 'moderate', finding: 'Stenosis identified' },
+                { keyword: 'edema', severity: 'moderate', finding: 'Edema present' },
+                { keyword: 'inflam', severity: 'moderate', finding: 'Inflammation noted' },
+                { keyword: 'spur', severity: 'low', finding: 'Bone spur detected' },
+                { keyword: 'strain', severity: 'low', finding: 'Strain identified' },
+                { keyword: 'sprain', severity: 'low', finding: 'Sprain noted' },
+                { keyword: 'intact', severity: 'normal', finding: 'Structure intact' },
+                { keyword: 'normal', severity: 'normal', finding: 'Normal findings' },
+                { keyword: 'unremarkable', severity: 'normal', finding: 'Unremarkable' }
+            ];
+            
+            patterns.forEach(pattern => {
+                if (lowerText.includes(pattern.keyword)) {
+                    findings.push(pattern);
+                }
+            });
+            
+            return findings.length > 0 ? findings : [{ keyword: 'general', severity: 'unknown', finding: 'Imaging findings noted' }];
+        }
+
+        function extractAnatomy(text) {
+            const anatomy = [];
+            const lowerText = text.toLowerCase();
+            
+            const anatomyTerms = [
+                'meniscus', 'acl', 'pcl', 'ligament', 'tendon', 'cartilage',
+                'disc', 'vertebra', 'spine', 'nerve', 'muscle',
+                'knee', 'hip', 'shoulder', 'elbow', 'wrist', 'ankle',
+                'lumbar', 'cervical', 'thoracic', 'sacral'
+            ];
+            
+            anatomyTerms.forEach(term => {
+                if (lowerText.includes(term)) {
+                    anatomy.push(term);
+                }
+            });
+            
+            return anatomy.length > 0 ? anatomy : ['general anatomy'];
+        }
+
+        function extractPathology(text) {
+            const pathology = [];
+            const lowerText = text.toLowerCase();
+            
+            const pathologyPatterns = [
+                { term: 'tear', type: 'structural', description: 'Tissue disruption/tear' },
+                { term: 'herniat', type: 'structural', description: 'Disc herniation' },
+                { term: 'degenerat', type: 'chronic', description: 'Degenerative changes' },
+                { term: 'arthritis', type: 'chronic', description: 'Arthritis' },
+                { term: 'stenosis', type: 'structural', description: 'Narrowing/stenosis' },
+                { term: 'effusion', type: 'inflammatory', description: 'Fluid accumulation' },
+                { term: 'edema', type: 'inflammatory', description: 'Swelling/edema' },
+                { term: 'fracture', type: 'acute', description: 'Bone fracture' },
+                { term: 'rupture', type: 'acute', description: 'Complete rupture' }
+            ];
+            
+            pathologyPatterns.forEach(pattern => {
+                if (lowerText.includes(pattern.term)) {
+                    pathology.push(pattern);
+                }
+            });
+            
+            return pathology;
+        }
+
+        function generateDoctorExplanation(findings, anatomy, pathology) {
+            let explanation = '<div class="space-y-3">';
+            
+            explanation += '<div class="font-bold text-lg text-gray-800 mb-2">Technical Assessment:</div>';
+            
+            // Anatomy involved
+            if (anatomy.length > 0) {
+                explanation += '<div><strong class="text-gray-700">Anatomical Structures:</strong> ';
+                explanation += anatomy.map(a => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm mr-1">${a}</span>`).join('');
+                explanation += '</div>';
+            }
+            
+            // Pathological findings
+            if (pathology.length > 0) {
+                explanation += '<div class="mt-2"><strong class="text-gray-700">Pathological Findings:</strong></div>';
+                explanation += '<ul class="list-disc list-inside space-y-1 mt-1">';
+                pathology.forEach(p => {
+                    const typeColor = p.type === 'acute' ? 'red' : p.type === 'chronic' ? 'orange' : p.type === 'inflammatory' ? 'yellow' : 'blue';
+                    explanation += `<li><span class="font-semibold text-${typeColor}-700">${p.description}</span> (${p.type})</li>`;
+                });
+                explanation += '</ul>';
+            }
+            
+            // Clinical significance
+            const highSeverity = findings.filter(f => f.severity === 'high').length;
+            const moderateSeverity = findings.filter(f => f.severity === 'moderate').length;
+            
+            explanation += '<div class="mt-3 p-3 bg-gray-100 rounded">';
+            explanation += '<strong class="text-gray-700">Clinical Significance:</strong><br>';
+            
+            if (highSeverity > 0) {
+                explanation += '<span class="text-red-700">● High-priority findings require immediate clinical correlation and consideration for intervention.</span><br>';
+            }
+            if (moderateSeverity > 0) {
+                explanation += '<span class="text-yellow-700">● Moderate findings warrant close monitoring and conservative management considerations.</span><br>';
+            }
+            if (highSeverity === 0 && moderateSeverity === 0) {
+                explanation += '<span class="text-green-700">● No significant acute pathology identified. Findings consistent with age-appropriate changes or normal variants.</span>';
+            }
+            
+            explanation += '</div>';
+            
+            explanation += '</div>';
+            return explanation;
+        }
+
+        function generatePatientExplanation(findings, anatomy, pathology) {
+            let explanation = '<div class="space-y-3 text-base">';
+            
+            explanation += '<div class="font-bold text-lg text-gray-800 mb-2">What This Means For You:</div>';
+            
+            // Simple explanation
+            if (pathology.length > 0) {
+                explanation += '<p class="leading-relaxed">';
+                explanation += 'The MRI scan has identified some findings in your ';
+                
+                if (anatomy.length > 0) {
+                    explanation += anatomy.slice(0, 2).map(a => `<strong>${a}</strong>`).join(' and ');
+                } else {
+                    explanation += '<strong>body</strong>';
+                }
+                
+                explanation += '. Here\'s what the doctors found:</p>';
+                
+                explanation += '<ul class="space-y-2 mt-2">';
+                
+                pathology.forEach(p => {
+                    let simpleDescription = '';
+                    let emoji = '';
+                    
+                    switch(p.type) {
+                        case 'acute':
+                            simpleDescription = 'This is a recent injury that needs attention';
+                            emoji = '🚨';
+                            break;
+                        case 'chronic':
+                            simpleDescription = 'This has been developing over time';
+                            emoji = '⏰';
+                            break;
+                        case 'inflammatory':
+                            simpleDescription = 'There is some swelling or inflammation';
+                            emoji = '💧';
+                            break;
+                        case 'structural':
+                            simpleDescription = 'There is a change in the structure';
+                            emoji = '🔧';
+                            break;
+                    }
+                    
+                    explanation += `<li class="flex items-start"><span class="mr-2">${emoji}</span><div><strong>${p.description}:</strong> ${simpleDescription}</div></li>`;
+                });
+                
+                explanation += '</ul>';
+            } else {
+                explanation += '<p class="leading-relaxed">The MRI scan shows that your body structures look mostly normal for your age. ';
+                explanation += 'Any findings are minor and don\'t indicate serious problems.</p>';
+            }
+            
+            // What to do next
+            explanation += '<div class="mt-4 p-4 bg-purple-100 rounded-lg">';
+            explanation += '<strong class="text-purple-900">Next Steps:</strong>';
+            explanation += '<ul class="mt-2 space-y-1 text-sm">';
+            
+            if (findings.filter(f => f.severity === 'high').length > 0) {
+                explanation += '<li>✓ Your doctor will discuss treatment options with you</li>';
+                explanation += '<li>✓ You may need physical therapy or other interventions</li>';
+                explanation += '<li>✓ Follow-up imaging might be recommended</li>';
+            } else if (findings.filter(f => f.severity === 'moderate').length > 0) {
+                explanation += '<li>✓ Continue with physical therapy as prescribed</li>';
+                explanation += '<li>✓ Monitor symptoms and report any changes</li>';
+                explanation += '<li>✓ Follow activity recommendations from your doctor</li>';
+            } else {
+                explanation += '<li>✓ Continue regular activity as tolerated</li>';
+                explanation += '<li>✓ Maintain good general health habits</li>';
+                explanation += '<li>✓ Follow up if symptoms change</li>';
+            }
+            
+            explanation += '</ul></div>';
+            
+            explanation += '</div>';
+            return explanation;
+        }
+
+        function generateClinicalImplications(pathology) {
+            const implications = [];
+            
+            pathology.forEach(p => {
+                let implication = {
+                    condition: p.description,
+                    treatment: '',
+                    prognosis: '',
+                    followup: ''
+                };
+                
+                switch(p.type) {
+                    case 'acute':
+                        implication.treatment = 'May require immediate intervention, immobilization, or surgical consultation';
+                        implication.prognosis = 'Good with appropriate treatment; healing timeline 6-12 weeks';
+                        implication.followup = 'Re-evaluation in 4-6 weeks; consider repeat imaging if not improving';
+                        break;
+                    case 'chronic':
+                        implication.treatment = 'Conservative management with PT, NSAIDs, activity modification';
+                        implication.prognosis = 'Progressive condition; management focuses on symptom control';
+                        implication.followup = 'Annual monitoring; repeat imaging if symptoms worsen';
+                        break;
+                    case 'inflammatory':
+                        implication.treatment = 'Anti-inflammatory medications, rest, ice, compression';
+                        implication.prognosis = 'Usually resolves with conservative treatment in 2-6 weeks';
+                        implication.followup = 'Follow-up in 2-3 weeks if not improving';
+                        break;
+                    case 'structural':
+                        implication.treatment = 'Depends on severity; may need surgical evaluation';
+                        implication.prognosis = 'Variable based on extent of structural damage';
+                        implication.followup = 'Orthopedic consultation recommended';
+                        break;
+                }
+                
+                implications.push(implication);
+            });
+            
+            return implications;
+        }
+
+        function suggestICD10Codes(pathology) {
+            const codes = [];
+            const codeMap = {
+                'tear': [
+                    { code: 'S83.2', description: 'Tear of meniscus, current injury' },
+                    { code: 'M23.2', description: 'Derangement of meniscus due to old tear' }
+                ],
+                'herniat': [
+                    { code: 'M51.2', description: 'Other intervertebral disc displacement' },
+                    { code: 'M51.26', description: 'Other intervertebral disc displacement, lumbar region' }
+                ],
+                'degenerat': [
+                    { code: 'M19.90', description: 'Unspecified osteoarthritis, unspecified site' },
+                    { code: 'M47.816', description: 'Spondylosis without myelopathy or radiculopathy, lumbar region' }
+                ],
+                'arthritis': [
+                    { code: 'M19.90', description: 'Unspecified osteoarthritis' },
+                    { code: 'M17.0', description: 'Bilateral primary osteoarthritis of knee' }
+                ],
+                'stenosis': [
+                    { code: 'M48.06', description: 'Spinal stenosis, lumbar region' },
+                    { code: 'M99.33', description: 'Osseous stenosis of neural canal of lumbar region' }
+                ],
+                'effusion': [
+                    { code: 'M25.40', description: 'Effusion, unspecified joint' },
+                    { code: 'M25.461', description: 'Effusion, right knee' }
+                ],
+                'edema': [
+                    { code: 'M79.9', description: 'Soft tissue disorder, unspecified' },
+                    { code: 'R60.9', description: 'Edema, unspecified' }
+                ],
+                'fracture': [
+                    { code: 'S82.001', description: 'Unspecified fracture of right patella' },
+                    { code: 'M84.4', description: 'Pathological fracture, unspecified' }
+                ],
+                'rupture': [
+                    { code: 'S83.401', description: 'Sprain of unspecified ligament of right knee' },
+                    { code: 'M66.9', description: 'Spontaneous rupture of synovium and tendon, unspecified' }
+                ]
+            };
+            
+            pathology.forEach(p => {
+                const term = p.term;
+                if (codeMap[term]) {
+                    codes.push(...codeMap[term]);
+                }
+            });
+            
+            // Remove duplicates
+            return [...new Map(codes.map(c => [c.code, c])).values()];
+        }
+
+        function displayMRIAnalysis(analysis) {
+            // Key Findings
+            const findingsEl = document.getElementById('keyFindings');
+            findingsEl.innerHTML = '';
+            analysis.keyFindings.forEach(finding => {
+                const severityColor = finding.severity === 'high' ? 'red' : 
+                                     finding.severity === 'moderate' ? 'yellow' : 
+                                     finding.severity === 'normal' ? 'green' : 'gray';
+                const severityIcon = finding.severity === 'high' ? 'exclamation-circle' : 
+                                    finding.severity === 'moderate' ? 'exclamation-triangle' : 
+                                    finding.severity === 'normal' ? 'check-circle' : 'info-circle';
+                
+                findingsEl.innerHTML += `
+                    <div class="flex items-center p-2 bg-${severityColor}-50 rounded border-l-4 border-${severityColor}-400">
+                        <i class="fas fa-${severityIcon} text-${severityColor}-600 mr-3"></i>
+                        <span class="font-semibold">${finding.finding}</span>
+                        <span class="ml-auto text-xs uppercase px-2 py-1 bg-${severityColor}-200 text-${severityColor}-800 rounded">${finding.severity}</span>
+                    </div>
+                `;
+            });
+            
+            // Doctor Explanation
+            document.getElementById('doctorExplanation').innerHTML = analysis.doctorExplanation;
+            
+            // Patient Explanation
+            document.getElementById('patientExplanation').innerHTML = analysis.patientExplanation;
+            
+            // Clinical Implications
+            const implicationsEl = document.getElementById('clinicalImplications');
+            implicationsEl.innerHTML = '';
+            analysis.clinicalImplications.forEach(impl => {
+                implicationsEl.innerHTML += `
+                    <div class="p-4 bg-gray-50 rounded-lg border-l-4 border-red-400">
+                        <div class="font-bold text-gray-800 mb-2">${impl.condition}</div>
+                        <div class="space-y-1 text-sm">
+                            <div><strong>Treatment:</strong> ${impl.treatment}</div>
+                            <div><strong>Prognosis:</strong> ${impl.prognosis}</div>
+                            <div><strong>Follow-up:</strong> ${impl.followup}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // ICD-10 Codes
+            const codesEl = document.getElementById('mriICD10Codes');
+            codesEl.innerHTML = '';
+            if (analysis.icd10Codes.length > 0) {
+                analysis.icd10Codes.forEach(code => {
+                    codesEl.innerHTML += `
+                        <div class="flex items-center justify-between p-3 bg-indigo-50 rounded border border-indigo-200">
+                            <div>
+                                <span class="font-mono font-bold text-indigo-900">${code.code}</span>
+                                <span class="ml-3 text-gray-700">${code.description}</span>
+                            </div>
+                            <button onclick="addICD10ToNote('${code.code}', '${code.description}')" 
+                                class="px-3 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">
+                                <i class="fas fa-plus mr-1"></i>Add to Note
+                            </button>
+                        </div>
+                    `;
+                });
+            } else {
+                codesEl.innerHTML = '<p class="text-gray-500 italic">No specific ICD-10 codes identified from this report.</p>';
+            }
+        }
+
+        function speakExplanation(type) {
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel(); // Stop any ongoing speech
+                
+                const text = type === 'doctor' ? 
+                    document.getElementById('doctorExplanation').innerText : 
+                    document.getElementById('patientExplanation').innerText;
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                speechSynthesis.speak(utterance);
+                
+                showStatus(`Reading ${type === 'doctor' ? 'technical' : 'simple'} explanation aloud...`, 'info');
+            } else {
+                showStatus('Text-to-speech not supported in this browser', 'error');
+            }
+        }
+
+        function exportMRIAnalysis(format) {
+            if (format === 'print') {
+                window.print();
+            } else if (format === 'pdf') {
+                showStatus('PDF export would be implemented with a PDF library in production', 'info');
+                window.print(); // Fallback to print dialog
+            }
+        }
+
+        function copyMRIAnalysis() {
+            const analysis = MRI_STATE.analysis;
+            if (!analysis) return;
+            
+            let copyText = '═══════════════════════════════════════\n';
+            copyText += 'MRI REPORT ANALYSIS\n';
+            copyText += '═══════════════════════════════════════\n\n';
+            
+            copyText += 'KEY FINDINGS:\n';
+            analysis.keyFindings.forEach(f => {
+                copyText += `• ${f.finding} (${f.severity})\n`;
+            });
+            
+            copyText += '\n\nFOR MEDICAL PROFESSIONALS:\n';
+            copyText += document.getElementById('doctorExplanation').innerText + '\n\n';
+            
+            copyText += 'FOR PATIENTS:\n';
+            copyText += document.getElementById('patientExplanation').innerText + '\n\n';
+            
+            copyText += 'ICD-10 CODES:\n';
+            analysis.icd10Codes.forEach(c => {
+                copyText += `${c.code} - ${c.description}\n`;
+            });
+            
+            navigator.clipboard.writeText(copyText).then(() => {
+                showStatus('Analysis copied to clipboard!', 'success');
+            }).catch(() => {
+                showStatus('Could not copy to clipboard', 'error');
+            });
+        }
+
+        function resetMRIAnalysis() {
+            document.getElementById('mriReportInput').value = '';
+            document.getElementById('mriFileUpload').value = '';
+            document.getElementById('uploadStatus').textContent = '';
+            document.getElementById('mriAnalysisResults').classList.add('hidden');
+            MRI_STATE.currentReport = '';
+            MRI_STATE.analysis = null;
+            
+            showStatus('Ready to analyze a new MRI report', 'info');
+        }
+
+        function addICD10ToNote(code, description) {
+            // Add to manual diagnosis section
+            document.getElementById('manualICD10').value = code;
+            document.getElementById('manualDescription').value = description;
+            
+            // Scroll to diagnosis section
+            document.querySelector('.bg-gradient-to-br.from-purple-50').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+            
+            showStatus(`ICD-10 code ${code} added to manual entry. Click "Add to Diagnosis List" to confirm.`, 'success');
         }
     </script>
 </body>
