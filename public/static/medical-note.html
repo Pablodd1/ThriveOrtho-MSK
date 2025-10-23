@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical Note - F-AI bian</title>
+    <title>Medical Note - SOBEAIREHAB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'brand-orange': '#FF6B35',
-              'brand-blue': '#004E89'
+              'brand-blue': '#003D7A',
+              'brand-yellow': '#FFD700'
             }
           }
         }
@@ -34,17 +34,17 @@
 <body class="bg-gray-50">
     <div class="min-h-screen">
         <!-- Header -->
-        <header class="bg-gradient-to-r from-brand-blue to-brand-orange text-white p-4 no-print">
+        <header class="bg-brand-blue text-white p-4 no-print shadow-lg">
             <div class="max-w-7xl mx-auto flex justify-between items-center">
                 <h1 class="text-2xl font-bold">
                     <i class="fas fa-file-medical mr-2"></i>
                     Medical Assessment Note
                 </h1>
                 <div class="space-x-2">
-                    <button onclick="window.print()" class="px-4 py-2 bg-white text-brand-blue rounded-md hover:shadow-lg">
+                    <button onclick="window.print()" class="px-4 py-2 bg-white text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
                         <i class="fas fa-print mr-2"></i>Print
                     </button>
-                    <button onclick="downloadPDF()" class="px-4 py-2 bg-white text-brand-orange rounded-md hover:shadow-lg">
+                    <button onclick="downloadPDF()" class="px-4 py-2 bg-brand-yellow text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
                         <i class="fas fa-file-pdf mr-2"></i>PDF
                     </button>
                 </div>

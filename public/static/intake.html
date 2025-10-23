@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Intake - F-AI bian</title>
+    <title>Patient Intake - SOBEAIREHAB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'brand-orange': '#FF6B35',
-              'brand-blue': '#004E89'
+              'brand-blue': '#003D7A',
+              'brand-yellow': '#FFD700'
             }
           }
         }
@@ -20,10 +20,10 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/modern-design.css" rel="stylesheet">
 </head>
-<body class="modern-bg">
+<body class="bg-gray-50">
     <div class="min-h-screen">
         <!-- Header -->
-        <header class="glass-header text-white shadow-lg">
+        <header class="bg-brand-blue text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4 md:py-6">
                 <a href="/" class="text-white hover:text-gray-200 text-sm md:text-base">
                     <i class="fas fa-arrow-left mr-2"></i> Back to Home
@@ -32,17 +32,18 @@
                     <i class="fas fa-user-plus mr-2 md:mr-3"></i>
                     Patient Intake Form
                 </h1>
+                <p class="text-sm text-white/90 mt-1">Optional - Skip to start quick assessment</p>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="max-w-4xl mx-auto px-4 py-6 md:py-8">
-            <div class="glass-card-solid p-6 md:p-10 fade-in-up">
+            <div class="bg-white rounded-lg shadow-lg p-6 md:p-10">
                 <form id="intakeForm">
                     <!-- Demographics -->
                     <div class="mb-6 md:mb-8">
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-orange pb-2">
-                            <i class="fas fa-user mr-2 text-brand-orange"></i>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-user mr-2 text-brand-blue"></i>
                             Demographics
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,15 +216,21 @@
                     <!-- Status Message -->
                     <div id="statusMessage" class="mb-4 p-4 rounded-md hidden"></div>
 
-                    <!-- Submit Button -->
-                    <div class="flex justify-end space-x-4">
-                        <a href="/" class="px-6 py-3 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors">
-                            Cancel
+                    <!-- Submit Buttons -->
+                    <div class="flex flex-col md:flex-row justify-between gap-3">
+                        <a href="/static/dashboard.html" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-center font-semibold">
+                            <i class="fas fa-bolt mr-2"></i>
+                            Skip to Quick Assessment
                         </a>
-                        <button type="submit" class="btn-gradient">
-                            <i class="fas fa-save mr-2"></i>
-                            Submit & Continue to Assessment
-                        </button>
+                        <div class="flex gap-3">
+                            <a href="/" class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold">
+                                Cancel
+                            </a>
+                            <button type="submit" class="px-6 py-3 bg-brand-blue text-white rounded-lg hover:bg-blue-900 transition-colors font-semibold">
+                                <i class="fas fa-save mr-2"></i>
+                                Save & Continue
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
