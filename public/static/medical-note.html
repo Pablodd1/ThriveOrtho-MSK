@@ -1947,19 +1947,46 @@ IMPRESSION:
             document.getElementById('mriLoading').classList.remove('hidden');
             document.getElementById('mriAnalysisResults').classList.add('hidden');
 
-            // Simulate AI processing (in production, this would call an AI API)
-            setTimeout(() => {
+            try {
+                console.log('🤖 Analyzing MRI report with Gemini AI...');
+                
+                // Try Gemini AI first
+                const response = await fetch('/api/ai/analyze-mri', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reportText: reportText
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.analysis) {
+                    console.log('✅ Gemini AI analysis complete!');
+                    MRI_STATE.analysis = data.analysis;
+                    displayMRIAnalysis(data.analysis);
+                    showStatus('✅ MRI report analyzed by Gemini 2.5 Flash AI!', 'success');
+                    
+                } else if (data.fallback) {
+                    throw new Error('Gemini API unavailable - using fallback');
+                } else {
+                    throw new Error(data.error || 'AI analysis failed');
+                }
+                
+            } catch (error) {
+                console.warn('⚠️ Gemini AI failed, using pattern-matching fallback:', error.message);
+                
+                // Fallback to pattern matching
                 const analysis = processMRIReport(reportText);
                 MRI_STATE.analysis = analysis;
-                
                 displayMRIAnalysis(analysis);
+                showStatus('⚠️ MRI report analyzed (pattern-matching fallback). Gemini AI temporarily unavailable.', 'warning');
                 
+            } finally {
                 // Hide loading, show results
                 document.getElementById('mriLoading').classList.add('hidden');
                 document.getElementById('mriAnalysisResults').classList.remove('hidden');
-                
-                showStatus('MRI report analyzed successfully!', 'success');
-            }, 2000);
+            }
         }
 
         function processMRIReport(reportText) {
@@ -2527,39 +2554,128 @@ IMPRESSION:
             }
         };
 
-        function generateHEP() {
+        async function generateHEP() {
             console.log('🤖 Generating AI-powered HEP from assessment...');
             
-            // Collect all deficiencies from tests
-            const tests = STATE.assessmentData?.tests || [];
-            HEP_STATE.deficiencies = [];
+            // Show loading state
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing with Gemini AI...';
             
-            tests.forEach(test => {
-                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
-                if (data.analysis && data.analysis.deficiencies) {
-                    HEP_STATE.deficiencies.push(...data.analysis.deficiencies);
-                }
-            });
-            
-            // Display deficiencies
-            const deficienciesDiv = document.getElementById('deficienciesList');
-            if (HEP_STATE.deficiencies.length === 0) {
-                deficienciesDiv.innerHTML = '<p class="text-orange-600"><i class="fas fa-info-circle mr-2"></i>No significant deficiencies detected. Consider general fitness program.</p>';
-            } else {
-                let html = '<ul class="list-disc ml-6 space-y-1">';
-                HEP_STATE.deficiencies.forEach(def => {
-                    const severityColor = def.severity === 'high' ? 'text-red-600' : def.severity === 'moderate' ? 'text-orange-600' : 'text-yellow-600';
-                    html += `<li class="${severityColor} font-semibold">${def.area}: ${def.description} (${def.severity})</li>`;
+            try {
+                // Collect all deficiencies from tests
+                const tests = STATE.assessmentData?.tests || [];
+                HEP_STATE.deficiencies = [];
+                
+                tests.forEach(test => {
+                    const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                    if (data.analysis && data.analysis.deficiencies) {
+                        HEP_STATE.deficiencies.push(...data.analysis.deficiencies);
+                    }
                 });
-                html += '</ul>';
-                deficienciesDiv.innerHTML = html;
+                
+                // Display deficiencies
+                const deficienciesDiv = document.getElementById('deficienciesList');
+                if (HEP_STATE.deficiencies.length === 0) {
+                    deficienciesDiv.innerHTML = '<p class="text-orange-600"><i class="fas fa-info-circle mr-2"></i>No significant deficiencies detected. Consider general fitness program.</p>';
+                    showStatus('⚠️ No deficiencies found. Using general fitness recommendations.', 'warning');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    return;
+                } else {
+                    let html = '<ul class="list-disc ml-6 space-y-1">';
+                    HEP_STATE.deficiencies.forEach(def => {
+                        const severityColor = def.severity === 'high' ? 'text-red-600' : def.severity === 'moderate' ? 'text-orange-600' : 'text-yellow-600';
+                        html += `<li class="${severityColor} font-semibold">${def.area}: ${def.description} (${def.severity})</li>`;
+                    });
+                    html += '</ul>';
+                    deficienciesDiv.innerHTML = html;
+                }
+                
+                // Try Gemini AI first
+                try {
+                    console.log('📡 Calling Gemini API for exercise recommendations...');
+                    
+                    const age = calculateAge(STATE.patientData.date_of_birth);
+                    const bmi = calculateBMI(STATE.patientData.height_cm, STATE.patientData.weight_kg);
+                    
+                    const response = await fetch('/api/ai/generate-hep', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            deficiencies: HEP_STATE.deficiencies,
+                            patientInfo: {
+                                age,
+                                bmi: bmi.toFixed(1),
+                                gender: STATE.patientData.gender
+                            }
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.recommendations) {
+                        console.log('✅ AI recommendations received from Gemini!');
+                        
+                        // Convert Gemini recommendations to our format
+                        const aiRecommendations = data.recommendations.exercises.map(ex => {
+                            // Map AI exercise name to our exercise keys
+                            const exerciseKey = mapExerciseNameToKey(ex.name);
+                            
+                            return {
+                                exercise: exerciseKey,
+                                reason: ex.reasoning,
+                                priority: ex.priority || 2,
+                                customization: {
+                                    sets: ex.sets,
+                                    reps: ex.reps,
+                                    intensity: ex.intensity,
+                                    speed: ex.speed
+                                }
+                            };
+                        });
+                        
+                        displayRecommendedExercises(aiRecommendations);
+                        showStatus('✅ AI-powered HEP generated by Gemini 2.5 Flash! Review and customize below.', 'success');
+                        
+                    } else if (data.fallback) {
+                        throw new Error('Gemini API unavailable - using fallback');
+                    } else {
+                        throw new Error(data.error || 'AI generation failed');
+                    }
+                    
+                } catch (aiError) {
+                    console.warn('⚠️ Gemini AI failed, using rule-based fallback:', aiError.message);
+                    
+                    // Fallback to rule-based recommendations
+                    const recommendations = analyzeDeficienciesAndRecommend(HEP_STATE.deficiencies);
+                    displayRecommendedExercises(recommendations);
+                    
+                    showStatus('✅ HEP generated (rule-based fallback). Gemini AI temporarily unavailable.', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('❌ HEP generation error:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
             }
+        }
+        
+        function mapExerciseNameToKey(aiExerciseName) {
+            const lowerName = aiExerciseName.toLowerCase();
             
-            // AI-recommend exercises based on deficiencies
-            const recommendations = analyzeDeficienciesAndRecommend(HEP_STATE.deficiencies);
-            displayRecommendedExercises(recommendations);
+            if (lowerName.includes('squat')) return 'squat';
+            if (lowerName.includes('plank')) return 'plank';
+            if (lowerName.includes('shoulder') && lowerName.includes('raise')) return 'shoulder_raise';
+            if (lowerName.includes('calf')) return 'calf_raise';
+            if (lowerName.includes('hip') && lowerName.includes('bridge')) return 'hip_bridge';
+            if (lowerName.includes('leg') && lowerName.includes('raise')) return 'leg_raise';
             
-            showStatus('HEP generated from assessment data! Review and customize below.', 'success');
+            // Default to squat if no match
+            return 'squat';
         }
 
         function analyzeDeficienciesAndRecommend(deficiencies) {

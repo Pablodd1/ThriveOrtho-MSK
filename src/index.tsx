@@ -2,9 +2,10 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 
-// Type definitions for Cloudflare D1
+// Type definitions for Cloudflare D1 and environment variables
 type Bindings = {
   DB: D1Database
+  GEMINI_API_KEY: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -676,6 +677,230 @@ app.post('/api/rpm', async (c) => {
     return c.json({ success: true })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
+// GEMINI AI API ROUTES
+// ============================================
+
+// Generate SOAP note from complaints (Medical Scribe)
+app.post('/api/ai/generate-soap', async (c) => {
+  try {
+    const { complaints, patientInfo } = await c.req.json()
+    
+    const prompt = `You are a licensed physical therapist writing a professional SOAP note.
+
+Patient Information:
+- Age: ${patientInfo.age || 'N/A'}
+- Gender: ${patientInfo.gender || 'N/A'}
+- BMI: ${patientInfo.bmi || 'N/A'}
+
+Patient Complaints (from medical scribe):
+${complaints.map((c: any, i: number) => `${i + 1}. "${c.text}" (${c.timestamp})`).join('\n')}
+
+Generate a professional SUBJECTIVE section for the SOAP note. Include:
+1. Chief complaint summary
+2. Pain characteristics (location, quality, severity if mentioned)
+3. Onset and duration
+4. Aggravating/alleviating factors if mentioned
+5. Patient's functional limitations if mentioned
+
+Write in professional medical terminology. Keep it concise but comprehensive.`
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 500
+        }
+      })
+    })
+
+    const data = await response.json() as any
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Gemini API error')
+    }
+    
+    const soapText = data.candidates[0].content.parts[0].text
+    
+    return c.json({ success: true, soapNote: soapText })
+  } catch (error: any) {
+    console.error('Gemini SOAP generation error:', error)
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      fallback: true // Signal to use fallback
+    }, 500)
+  }
+})
+
+// Generate HEP recommendations from deficiencies
+app.post('/api/ai/generate-hep', async (c) => {
+  try {
+    const { deficiencies, patientInfo } = await c.req.json()
+    
+    const prompt = `You are a licensed physical therapist creating a home exercise program (HEP).
+
+Patient Information:
+- Age: ${patientInfo.age || 'N/A'}
+- BMI: ${patientInfo.bmi || 'N/A'}
+- Gender: ${patientInfo.gender || 'N/A'}
+
+Assessment Deficiencies Identified:
+${deficiencies.map((d: any, i: number) => `${i + 1}. ${d.area}: ${d.description} (Severity: ${d.severity})`).join('\n')}
+
+Based on these deficiencies, recommend 3-5 therapeutic exercises. For each exercise, provide:
+1. Exercise name (choose from: Bodyweight Squats, Plank Hold, Shoulder Raises, Calf Raises, Hip Bridges, Leg Raises, or similar standard exercises)
+2. Recommended sets (1-5)
+3. Recommended reps (5-20) or duration in seconds for holds
+4. Intensity (Light/Moderate/Heavy)
+5. Speed/tempo (e.g., "Slow and controlled", "2-1-2", "Static hold")
+6. Clinical reasoning (why this exercise addresses the specific deficiency)
+7. Priority level (1=high priority, 2=recommended, 3=optional)
+
+Consider the patient's age and BMI when making recommendations. Start conservative for older/deconditioned patients.
+
+Output ONLY valid JSON in this exact format:
+{
+  "exercises": [
+    {
+      "name": "Exercise Name",
+      "sets": 3,
+      "reps": 10,
+      "intensity": "Moderate",
+      "speed": "Controlled (2-1-2)",
+      "reasoning": "Clinical reasoning here",
+      "priority": 1
+    }
+  ]
+}`
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1000
+        }
+      })
+    })
+
+    const data = await response.json() as any
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Gemini API error')
+    }
+    
+    let jsonText = data.candidates[0].content.parts[0].text
+    
+    // Clean JSON (remove markdown code blocks if present)
+    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    
+    const recommendations = JSON.parse(jsonText)
+    
+    return c.json({ success: true, recommendations })
+  } catch (error: any) {
+    console.error('Gemini HEP generation error:', error)
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      fallback: true
+    }, 500)
+  }
+})
+
+// Analyze MRI report
+app.post('/api/ai/analyze-mri', async (c) => {
+  try {
+    const { reportText } = await c.req.json()
+    
+    const prompt = `You are a radiologist and physical therapist analyzing an MRI report.
+
+MRI Report:
+${reportText}
+
+Analyze this report and provide:
+
+1. KEY FINDINGS: Extract the most important pathological findings with severity (high/moderate/mild/normal)
+
+2. ANATOMY: List all anatomical structures mentioned in the report
+
+3. PATHOLOGY: Identify all pathological conditions with their medical terms
+
+4. DOCTOR EXPLANATION: Write a technical explanation for medical professionals (2-3 sentences)
+
+5. PATIENT EXPLANATION: Write a simple, non-technical explanation a patient can understand (2-3 sentences)
+
+6. CLINICAL IMPLICATIONS: What does this mean for treatment? What should be done next?
+
+7. ICD-10 CODES: Suggest appropriate ICD-10 diagnosis codes with descriptions
+
+Output ONLY valid JSON in this exact format:
+{
+  "keyFindings": [
+    {"finding": "Description", "severity": "high|moderate|mild|normal"}
+  ],
+  "anatomy": ["Structure 1", "Structure 2"],
+  "pathology": [
+    {"term": "Medical term", "description": "Plain English", "severity": "high|moderate|mild"}
+  ],
+  "doctorExplanation": "Technical explanation...",
+  "patientExplanation": "Simple explanation...",
+  "clinicalImplications": [
+    "Implication 1",
+    "Implication 2"
+  ],
+  "icd10Codes": [
+    {"code": "M25.561", "description": "Pain in right knee"}
+  ]
+}`
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1500
+        }
+      })
+    })
+
+    const data = await response.json() as any
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Gemini API error')
+    }
+    
+    let jsonText = data.candidates[0].content.parts[0].text
+    
+    // Clean JSON
+    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    
+    const analysis = JSON.parse(jsonText)
+    
+    return c.json({ success: true, analysis })
+  } catch (error: any) {
+    console.error('Gemini MRI analysis error:', error)
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      fallback: true
+    }, 500)
   }
 })
 
