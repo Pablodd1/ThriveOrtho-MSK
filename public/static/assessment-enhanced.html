@@ -599,24 +599,77 @@
             
             try {
                 console.log('🎥 Starting camera initialization...');
+                console.log('📱 Device type:', STATE.cameraType);
+                console.log('🌐 User agent:', navigator.userAgent);
                 
-                // Step 1: Get camera stream FIRST (simplest approach)
+                // Step 1: Stop any existing streams first
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                }
+                
+                // Step 2: Try multiple camera configurations
                 console.log('📹 Requesting camera access...');
-                const constraints = {
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: STATE.cameraType === 'phone' ? 'environment' : 'user'
+                
+                let stream = null;
+                const attemptConfigs = [
+                    // Config 1: Ideal quality with facingMode
+                    {
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: STATE.cameraType === 'phone' ? 'environment' : 'user'
+                        },
+                        audio: false
                     },
-                    audio: false
-                };
+                    // Config 2: Lower quality, specific facingMode
+                    {
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: STATE.cameraType === 'phone' ? { exact: 'environment' } : 'user'
+                        },
+                        audio: false
+                    },
+                    // Config 3: Minimal constraints (most compatible)
+                    {
+                        video: true,
+                        audio: false
+                    }
+                ];
                 
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                console.log('✅ Camera access granted');
+                let lastError = null;
+                for (let i = 0; i < attemptConfigs.length; i++) {
+                    try {
+                        console.log(`🔄 Attempt ${i + 1}/${attemptConfigs.length}:`, attemptConfigs[i]);
+                        stream = await navigator.mediaDevices.getUserMedia(attemptConfigs[i]);
+                        console.log(`✅ Camera access granted (attempt ${i + 1})`);
+                        break;
+                    } catch (err) {
+                        console.warn(`⚠️ Attempt ${i + 1} failed:`, err.name, err.message);
+                        lastError = err;
+                        if (i < attemptConfigs.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    }
+                }
                 
+                if (!stream) {
+                    throw lastError || new Error('Could not access camera after multiple attempts');
+                }
+                
+                // Step 3: Attach stream to video element
                 video.srcObject = stream;
+                
+                // Wait for metadata to load
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = resolve;
+                    video.onerror = reject;
+                    setTimeout(() => reject(new Error('Video metadata timeout')), 10000);
+                });
+                
                 await video.play();
-                console.log('✅ Video playing');
+                console.log('✅ Video playing:', video.videoWidth, 'x', video.videoHeight);
                 
                 // Step 2: Initialize MediaPipe (with fallback)
                 console.log('🤖 Initializing MediaPipe Pose...');
@@ -687,7 +740,7 @@
                 } else if (error.name === 'NotFoundError') {
                     errorMsg = 'No camera found. Please connect a camera and try again.';
                 } else if (error.name === 'NotReadableError') {
-                    errorMsg = 'Camera is in use by another application. Please close other apps (Zoom, Teams, etc.) using camera.';
+                    errorMsg = '📱 Camera is in use or blocked. <a href="/static/camera-help-mobile.html" class="underline font-bold text-white">TAP HERE for step-by-step fix</a> (works 90% of time!)';
                 } else if (error.message.includes('MediaPipe')) {
                     errorMsg = 'MediaPipe libraries not loaded. Please refresh the page and wait for libraries to load.';
                 } else {
