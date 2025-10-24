@@ -347,6 +347,120 @@
                 </div>
             </div>
 
+            <!-- AI-POWERED HOME EXERCISE PROGRAM (HEP) BUILDER -->
+            <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-green-400">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-dumbbell mr-2 text-green-600"></i>
+                        AI-Powered Home Exercise Program (HEP)
+                    </h2>
+                    <button onclick="generateHEP()" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors">
+                        <i class="fas fa-magic mr-2"></i>Generate from Assessment
+                    </button>
+                </div>
+
+                <!-- Deficiencies Summary -->
+                <div id="deficienciesSummary" class="mb-6 bg-white rounded-lg p-4 border-l-4 border-yellow-500">
+                    <h3 class="font-bold text-gray-800 mb-2">
+                        <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>
+                        Identified Deficiencies from Assessment
+                    </h3>
+                    <div id="deficienciesList" class="text-sm text-gray-600">
+                        <p class="italic">Click "Generate from Assessment" to analyze deficiencies...</p>
+                    </div>
+                </div>
+
+                <!-- AI-Recommended Exercises -->
+                <div id="aiRecommendedExercises" class="mb-6 hidden">
+                    <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                        <i class="fas fa-robot mr-2 text-blue-600"></i>
+                        AI-Recommended Exercises (Based on Assessment)
+                    </h3>
+                    <div id="recommendedExercisesList" class="space-y-3"></div>
+                </div>
+
+                <!-- Exercise Library (Add/Remove) -->
+                <div class="mb-6">
+                    <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                        <i class="fas fa-book mr-2 text-purple-600"></i>
+                        Exercise Library (Add More Exercises)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button onclick="addExerciseFromLibrary('squat')" 
+                            class="p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 text-left transition-colors">
+                            <div class="font-semibold">Bodyweight Squats</div>
+                            <div class="text-xs text-gray-600">Lower body strength, mobility</div>
+                        </button>
+                        <button onclick="addExerciseFromLibrary('plank')" 
+                            class="p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 text-left transition-colors">
+                            <div class="font-semibold">Plank Hold</div>
+                            <div class="text-xs text-gray-600">Core stability, endurance</div>
+                        </button>
+                        <button onclick="addExerciseFromLibrary('shoulder_raise')" 
+                            class="p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 text-left transition-colors">
+                            <div class="font-semibold">Shoulder Raises</div>
+                            <div class="text-xs text-gray-600">Shoulder ROM, strength</div>
+                        </button>
+                        <button onclick="addExerciseFromLibrary('calf_raise')" 
+                            class="p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 text-left transition-colors">
+                            <div class="font-semibold">Calf Raises</div>
+                            <div class="text-xs text-gray-600">Ankle strength, balance</div>
+                        </button>
+                        <button onclick="addExerciseFromLibrary('hip_bridge')" 
+                            class="p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 text-left transition-colors">
+                            <div class="font-semibold">Hip Bridges</div>
+                            <div class="text-xs text-gray-600">Glute strength, hip extension</div>
+                        </button>
+                        <button onclick="addExerciseFromLibrary('leg_raise')" 
+                            class="p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 text-left transition-colors">
+                            <div class="font-semibold">Leg Raises</div>
+                            <div class="text-xs text-gray-600">Hip flexor strength, core</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Final HEP Prescription -->
+                <div id="finalHEP" class="bg-white rounded-lg p-4 border-2 border-green-400 hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-800">
+                            <i class="fas fa-clipboard-list mr-2 text-green-600"></i>
+                            Final Home Exercise Prescription
+                        </h3>
+                        <div class="space-x-2">
+                            <button onclick="printHEP()" 
+                                class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                                <i class="fas fa-print mr-1"></i>Print
+                            </button>
+                            <button onclick="exportHEP()" 
+                                class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                                <i class="fas fa-file-export mr-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                    <div id="finalHEPList" class="space-y-4"></div>
+                    
+                    <!-- Global HEP Settings -->
+                    <div class="mt-6 pt-4 border-t-2 border-gray-200">
+                        <h4 class="font-semibold text-gray-800 mb-3">Program Parameters:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">
+                                <div class="font-semibold text-blue-800">Frequency</div>
+                                <div class="text-2xl font-bold text-blue-600" id="hepFrequency">5x/week</div>
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded">
+                                <div class="font-semibold text-purple-800">Duration</div>
+                                <div class="text-2xl font-bold text-purple-600" id="hepDuration">4 weeks</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded">
+                                <div class="font-semibold text-green-800">Session Length</div>
+                                <div class="text-2xl font-bold text-green-600" id="hepSessionLength">30 min</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- MRI READER TOOL -->
             <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-blue-300">
                 <div class="flex items-center justify-between mb-4">
@@ -2314,6 +2428,537 @@ IMPRESSION:
             });
             
             showStatus(`ICD-10 code ${code} added to manual entry. Click "Add to Diagnosis List" to confirm.`, 'success');
+        }
+
+        // ============================================
+        // HOME EXERCISE PROGRAM (HEP) BUILDER
+        // ============================================
+        const HEP_STATE = {
+            exercises: [],
+            deficiencies: [],
+            nextExerciseId: 1
+        };
+
+        // Exercise database with detailed prescriptions
+        const EXERCISE_DATABASE = {
+            squat: {
+                name: 'Bodyweight Squats',
+                category: 'Lower Body Strength',
+                targets: ['Quadriceps', 'Hamstrings', 'Glutes', 'Core'],
+                indications: ['ROM deficiency hip/knee', 'Lower limb weakness', 'Balance impairment'],
+                contraindications: ['Acute knee pain', 'Recent hip/knee surgery'],
+                defaultSets: 3,
+                defaultReps: 10,
+                defaultIntensity: 'Moderate',
+                defaultSpeed: 'Controlled (2-1-2)',
+                progressions: ['Add weight', 'Single leg squat', 'Jump squat'],
+                instructions: '1. Stand feet shoulder-width apart\n2. Lower body bending knees and hips\n3. Keep chest up, back straight\n4. Lower until thighs parallel to ground\n5. Push through heels to stand',
+                safety: 'Stop if sharp pain occurs. Maintain knee alignment over toes.'
+            },
+            plank: {
+                name: 'Plank Hold',
+                category: 'Core Stability',
+                targets: ['Core', 'Shoulders', 'Back stabilizers'],
+                indications: ['Core weakness', 'Postural instability', 'Back pain prevention'],
+                contraindications: ['Acute low back pain', 'Shoulder instability'],
+                defaultSets: 3,
+                defaultReps: 30, // seconds
+                defaultIntensity: 'Moderate',
+                defaultSpeed: 'Static hold',
+                progressions: ['Increase hold time', 'Side plank', 'Plank with leg lift'],
+                instructions: '1. Start on forearms and toes\n2. Keep body in straight line\n3. Engage core muscles\n4. Hold position for prescribed time\n5. Breathe normally',
+                safety: 'Stop if lower back sags. Modify to knees if needed.'
+            },
+            shoulder_raise: {
+                name: 'Shoulder Raises (Forward/Lateral)',
+                category: 'Upper Body Mobility',
+                targets: ['Anterior/Lateral Deltoid', 'Rotator Cuff', 'Scapular Stabilizers'],
+                indications: ['Shoulder ROM deficiency', 'Shoulder weakness', 'Postural dysfunction'],
+                contraindications: ['Acute rotator cuff tear', 'Shoulder impingement (severe)'],
+                defaultSets: 3,
+                defaultReps: 12,
+                defaultIntensity: 'Light to Moderate',
+                defaultSpeed: 'Slow and controlled',
+                progressions: ['Add light weights', 'Increase ROM', 'Resistance band'],
+                instructions: '1. Stand upright, arms at sides\n2. Raise arms forward to shoulder height\n3. Lower slowly\n4. Repeat for lateral raises (to sides)\n5. Keep arms straight, slight bend in elbows',
+                safety: 'Stop at pain. Avoid shrugging shoulders. Keep controlled movement.'
+            },
+            calf_raise: {
+                name: 'Calf Raises',
+                category: 'Lower Body Strength',
+                targets: ['Gastrocnemius', 'Soleus', 'Ankle stabilizers'],
+                indications: ['Ankle weakness', 'Balance deficiency', 'Gait asymmetry'],
+                contraindications: ['Acute Achilles tendinopathy', 'Ankle sprain (acute)'],
+                defaultSets: 3,
+                defaultReps: 15,
+                defaultIntensity: 'Moderate',
+                defaultSpeed: 'Controlled (2-1-2)',
+                progressions: ['Single leg', 'Add weight', 'Elevated surface'],
+                instructions: '1. Stand on balls of feet\n2. Rise up onto toes\n3. Hold briefly at top\n4. Lower slowly\n5. Use wall for balance if needed',
+                safety: 'Stop if Achilles pain occurs. Progress slowly to single leg.'
+            },
+            hip_bridge: {
+                name: 'Hip Bridges',
+                category: 'Lower Body Strength',
+                targets: ['Glutes', 'Hamstrings', 'Lower back', 'Core'],
+                indications: ['Hip weakness', 'Core instability', 'Lower back pain'],
+                contraindications: ['Acute low back pain', 'Hip flexor strain'],
+                defaultSets: 3,
+                defaultReps: 12,
+                defaultIntensity: 'Moderate',
+                defaultSpeed: 'Controlled (2-1-2)',
+                progressions: ['Single leg', 'Elevated feet', 'Add weight on hips'],
+                instructions: '1. Lie on back, knees bent, feet flat\n2. Lift hips toward ceiling\n3. Squeeze glutes at top\n4. Lower slowly\n5. Keep core engaged',
+                safety: 'Avoid arching lower back. Stop if sharp pain occurs.'
+            },
+            leg_raise: {
+                name: 'Leg Raises (Straight Leg)',
+                category: 'Core & Hip Strength',
+                targets: ['Hip Flexors', 'Lower Abdominals', 'Core'],
+                indications: ['Core weakness', 'Hip flexor weakness', 'Gait deficiency'],
+                contraindications: ['Acute low back pain', 'Hip impingement'],
+                defaultSets: 3,
+                defaultReps: 10,
+                defaultIntensity: 'Light to Moderate',
+                defaultSpeed: 'Controlled (2-1-2)',
+                progressions: ['Increase ROM', 'Add ankle weight', 'Hold at top'],
+                instructions: '1. Lie on back, legs straight\n2. Raise one leg to 45-60 degrees\n3. Keep knee straight\n4. Lower slowly\n5. Alternate legs',
+                safety: 'Press lower back into floor. Bend knee if lower back hurts.'
+            }
+        };
+
+        function generateHEP() {
+            console.log('🤖 Generating AI-powered HEP from assessment...');
+            
+            // Collect all deficiencies from tests
+            const tests = STATE.assessmentData?.tests || [];
+            HEP_STATE.deficiencies = [];
+            
+            tests.forEach(test => {
+                const data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+                if (data.analysis && data.analysis.deficiencies) {
+                    HEP_STATE.deficiencies.push(...data.analysis.deficiencies);
+                }
+            });
+            
+            // Display deficiencies
+            const deficienciesDiv = document.getElementById('deficienciesList');
+            if (HEP_STATE.deficiencies.length === 0) {
+                deficienciesDiv.innerHTML = '<p class="text-orange-600"><i class="fas fa-info-circle mr-2"></i>No significant deficiencies detected. Consider general fitness program.</p>';
+            } else {
+                let html = '<ul class="list-disc ml-6 space-y-1">';
+                HEP_STATE.deficiencies.forEach(def => {
+                    const severityColor = def.severity === 'high' ? 'text-red-600' : def.severity === 'moderate' ? 'text-orange-600' : 'text-yellow-600';
+                    html += `<li class="${severityColor} font-semibold">${def.area}: ${def.description} (${def.severity})</li>`;
+                });
+                html += '</ul>';
+                deficienciesDiv.innerHTML = html;
+            }
+            
+            // AI-recommend exercises based on deficiencies
+            const recommendations = analyzeDeficienciesAndRecommend(HEP_STATE.deficiencies);
+            displayRecommendedExercises(recommendations);
+            
+            showStatus('HEP generated from assessment data! Review and customize below.', 'success');
+        }
+
+        function analyzeDeficienciesAndRecommend(deficiencies) {
+            const recommendations = [];
+            
+            // Rule-based AI recommendation engine
+            deficiencies.forEach(def => {
+                if (def.area === 'Range of Motion' && def.description.toLowerCase().includes('hip')) {
+                    recommendations.push({
+                        exercise: 'squat',
+                        reason: `Address ${def.description}`,
+                        priority: def.severity === 'high' ? 1 : 2,
+                        customization: {
+                            sets: def.severity === 'high' ? 3 : 2,
+                            reps: 10,
+                            intensity: def.severity === 'high' ? 'Light' : 'Moderate',
+                            speed: 'Slow and controlled'
+                        }
+                    });
+                    recommendations.push({
+                        exercise: 'hip_bridge',
+                        reason: `Strengthen hip extensors for ${def.description}`,
+                        priority: 2
+                    });
+                }
+                
+                if (def.area === 'Range of Motion' && def.description.toLowerCase().includes('shoulder')) {
+                    recommendations.push({
+                        exercise: 'shoulder_raise',
+                        reason: `Address ${def.description}`,
+                        priority: def.severity === 'high' ? 1 : 2,
+                        customization: {
+                            sets: 3,
+                            reps: 15,
+                            intensity: 'Light',
+                            speed: 'Very slow (3-1-3)'
+                        }
+                    });
+                }
+                
+                if (def.area === 'Bilateral Symmetry' || def.area === 'Balance') {
+                    recommendations.push({
+                        exercise: 'calf_raise',
+                        reason: `Improve balance and symmetry for ${def.description}`,
+                        priority: 2
+                    });
+                }
+                
+                if (def.area === 'Core Stability' || def.description.toLowerCase().includes('posture')) {
+                    recommendations.push({
+                        exercise: 'plank',
+                        reason: `Improve core stability for ${def.description}`,
+                        priority: def.severity === 'high' ? 1 : 2,
+                        customization: {
+                            sets: 3,
+                            reps: 20, // seconds
+                            intensity: 'Moderate',
+                            speed: 'Static hold'
+                        }
+                    });
+                }
+                
+                if (def.area === 'Strength' && def.description.toLowerCase().includes('lower')) {
+                    recommendations.push({
+                        exercise: 'squat',
+                        reason: `Address ${def.description}`,
+                        priority: 1
+                    });
+                    recommendations.push({
+                        exercise: 'hip_bridge',
+                        reason: `Strengthen posterior chain`,
+                        priority: 2
+                    });
+                }
+            });
+            
+            // Remove duplicates and sort by priority
+            const uniqueRecs = [];
+            const seen = new Set();
+            recommendations.forEach(rec => {
+                if (!seen.has(rec.exercise)) {
+                    seen.add(rec.exercise);
+                    uniqueRecs.push(rec);
+                }
+            });
+            
+            return uniqueRecs.sort((a, b) => a.priority - b.priority).slice(0, 6); // Top 6 exercises
+        }
+
+        function displayRecommendedExercises(recommendations) {
+            const container = document.getElementById('recommendedExercisesList');
+            const section = document.getElementById('aiRecommendedExercises');
+            
+            if (recommendations.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            section.classList.remove('hidden');
+            
+            let html = '';
+            recommendations.forEach((rec, index) => {
+                const exerciseData = EXERCISE_DATABASE[rec.exercise];
+                const priorityColor = rec.priority === 1 ? 'bg-red-100 border-red-400' : 'bg-yellow-100 border-yellow-400';
+                const priorityBadge = rec.priority === 1 ? '<span class="text-xs bg-red-600 text-white px-2 py-1 rounded-full">High Priority</span>' : '<span class="text-xs bg-yellow-600 text-white px-2 py-1 rounded-full">Recommended</span>';
+                
+                html += `
+                    <div class="border-2 ${priorityColor} rounded-lg p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h4 class="font-bold text-gray-800">${index + 1}. ${exerciseData.name}</h4>
+                                <p class="text-xs text-gray-600 mt-1"><i class="fas fa-lightbulb mr-1 text-yellow-500"></i><strong>AI Reason:</strong> ${rec.reason}</p>
+                            </div>
+                            ${priorityBadge}
+                        </div>
+                        <div class="text-sm text-gray-700 mt-2">
+                            <strong>Targets:</strong> ${exerciseData.targets.join(', ')}
+                        </div>
+                        <button onclick="addExerciseToHEP('${rec.exercise}', ${JSON.stringify(rec.customization || {}).replace(/"/g, '&quot;')})" 
+                            class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm">
+                            <i class="fas fa-plus-circle mr-2"></i>Add to HEP
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function addExerciseFromLibrary(exerciseKey) {
+            addExerciseToHEP(exerciseKey, {});
+        }
+
+        function addExerciseToHEP(exerciseKey, customization = {}) {
+            const exerciseData = EXERCISE_DATABASE[exerciseKey];
+            if (!exerciseData) {
+                showStatus('Exercise not found', 'error');
+                return;
+            }
+            
+            const exercise = {
+                id: HEP_STATE.nextExerciseId++,
+                key: exerciseKey,
+                name: exerciseData.name,
+                category: exerciseData.category,
+                targets: exerciseData.targets,
+                sets: customization.sets || exerciseData.defaultSets,
+                reps: customization.reps || exerciseData.defaultReps,
+                intensity: customization.intensity || exerciseData.defaultIntensity,
+                speed: customization.speed || exerciseData.defaultSpeed,
+                instructions: exerciseData.instructions,
+                safety: exerciseData.safety,
+                progressions: exerciseData.progressions
+            };
+            
+            HEP_STATE.exercises.push(exercise);
+            updateFinalHEP();
+            
+            showStatus(`${exercise.name} added to HEP!`, 'success');
+        }
+
+        function updateFinalHEP() {
+            const container = document.getElementById('finalHEPList');
+            const section = document.getElementById('finalHEP');
+            
+            if (HEP_STATE.exercises.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            section.classList.remove('hidden');
+            
+            let html = '';
+            HEP_STATE.exercises.forEach((ex, index) => {
+                html += `
+                    <div class="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-bold text-lg text-gray-800">${index + 1}. ${ex.name}</h4>
+                                <p class="text-xs text-gray-600">${ex.category} | Targets: ${ex.targets.join(', ')}</p>
+                            </div>
+                            <button onclick="removeExerciseFromHEP(${ex.id})" 
+                                class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Prescription Parameters -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                            <div class="bg-white p-2 rounded border">
+                                <label class="text-xs font-semibold text-gray-600">Sets</label>
+                                <input type="number" value="${ex.sets}" min="1" max="10" 
+                                    onchange="updateExerciseParam(${ex.id}, 'sets', this.value)"
+                                    class="w-full mt-1 px-2 py-1 border rounded text-center font-bold">
+                            </div>
+                            <div class="bg-white p-2 rounded border">
+                                <label class="text-xs font-semibold text-gray-600">Reps${ex.key === 'plank' ? ' (sec)' : ''}</label>
+                                <input type="number" value="${ex.reps}" min="1" max="100" 
+                                    onchange="updateExerciseParam(${ex.id}, 'reps', this.value)"
+                                    class="w-full mt-1 px-2 py-1 border rounded text-center font-bold">
+                            </div>
+                            <div class="bg-white p-2 rounded border">
+                                <label class="text-xs font-semibold text-gray-600">Intensity</label>
+                                <select onchange="updateExerciseParam(${ex.id}, 'intensity', this.value)"
+                                    class="w-full mt-1 px-2 py-1 border rounded text-sm">
+                                    <option ${ex.intensity === 'Light' ? 'selected' : ''}>Light</option>
+                                    <option ${ex.intensity === 'Moderate' ? 'selected' : ''}>Moderate</option>
+                                    <option ${ex.intensity === 'Heavy' ? 'selected' : ''}>Heavy</option>
+                                </select>
+                            </div>
+                            <div class="bg-white p-2 rounded border">
+                                <label class="text-xs font-semibold text-gray-600">Speed</label>
+                                <select onchange="updateExerciseParam(${ex.id}, 'speed', this.value)"
+                                    class="w-full mt-1 px-2 py-1 border rounded text-sm">
+                                    <option ${ex.speed.includes('Slow') ? 'selected' : ''}>Slow (3-1-3)</option>
+                                    <option ${ex.speed.includes('Controlled') ? 'selected' : ''}>Controlled (2-1-2)</option>
+                                    <option ${ex.speed.includes('Normal') ? 'selected' : ''}>Normal pace</option>
+                                    <option ${ex.speed.includes('Static') ? 'selected' : ''}>Static hold</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Instructions (collapsible) -->
+                        <details class="mt-2">
+                            <summary class="cursor-pointer font-semibold text-sm text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-info-circle mr-1"></i>View Instructions & Safety
+                            </summary>
+                            <div class="mt-2 p-3 bg-blue-50 rounded text-sm">
+                                <div class="mb-2">
+                                    <strong class="text-blue-800">Instructions:</strong>
+                                    <pre class="whitespace-pre-wrap text-gray-700 mt-1">${ex.instructions}</pre>
+                                </div>
+                                <div class="mb-2">
+                                    <strong class="text-red-800">Safety:</strong>
+                                    <p class="text-gray-700">${ex.safety}</p>
+                                </div>
+                                <div>
+                                    <strong class="text-green-800">Progressions:</strong>
+                                    <p class="text-gray-700">${ex.progressions.join(' → ')}</p>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function updateExerciseParam(exerciseId, param, value) {
+            const exercise = HEP_STATE.exercises.find(ex => ex.id === exerciseId);
+            if (exercise) {
+                exercise[param] = param === 'sets' || param === 'reps' ? parseInt(value) : value;
+                console.log(`Updated ${exercise.name}: ${param} = ${value}`);
+            }
+        }
+
+        function removeExerciseFromHEP(exerciseId) {
+            HEP_STATE.exercises = HEP_STATE.exercises.filter(ex => ex.id !== exerciseId);
+            updateFinalHEP();
+            showStatus('Exercise removed from HEP', 'info');
+        }
+
+        function printHEP() {
+            const printContent = generateHEPPrintHTML();
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        function exportHEP() {
+            let text = '═══════════════════════════════════════\n';
+            text += '   HOME EXERCISE PROGRAM (HEP)\n';
+            text += '   SOBEAIREHAB - Mobile Car & Home Therapy\n';
+            text += '═══════════════════════════════════════\n\n';
+            text += `Patient: ${STATE.patientData.first_name} ${STATE.patientData.last_name}\n`;
+            text += `Date: ${new Date().toLocaleDateString()}\n`;
+            text += `Clinician: Demo Clinician, PT, DPT\n\n`;
+            text += `PROGRAM PARAMETERS:\n`;
+            text += `• Frequency: 5x per week\n`;
+            text += `• Duration: 4 weeks\n`;
+            text += `• Session Length: 30 minutes\n\n`;
+            text += '═══════════════════════════════════════\n\n';
+            
+            HEP_STATE.exercises.forEach((ex, index) => {
+                text += `${index + 1}. ${ex.name.toUpperCase()}\n`;
+                text += `   Category: ${ex.category}\n`;
+                text += `   Targets: ${ex.targets.join(', ')}\n\n`;
+                text += `   PRESCRIPTION:\n`;
+                text += `   • Sets: ${ex.sets}\n`;
+                text += `   • Reps: ${ex.reps}${ex.key === 'plank' ? ' seconds' : ''}\n`;
+                text += `   • Intensity: ${ex.intensity}\n`;
+                text += `   • Speed: ${ex.speed}\n\n`;
+                text += `   INSTRUCTIONS:\n`;
+                text += `   ${ex.instructions.replace(/\n/g, '\n   ')}\n\n`;
+                text += `   SAFETY: ${ex.safety}\n\n`;
+                text += `   PROGRESSIONS: ${ex.progressions.join(' → ')}\n\n`;
+                text += '───────────────────────────────────────\n\n';
+            });
+            
+            text += '\nREMEMBER:\n';
+            text += '• Stop if sharp pain occurs\n';
+            text += '• Breathe normally throughout exercises\n';
+            text += '• Progress gradually - don\'t rush\n';
+            text += '• Contact clinic if pain exceeds 7/10\n\n';
+            text += '═══════════════════════════════════════\n';
+            
+            // Download as text file
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `HEP_${STATE.patientData.first_name}_${STATE.patientData.last_name}_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showStatus('HEP exported as text file!', 'success');
+        }
+
+        function generateHEPPrintHTML() {
+            let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Home Exercise Program</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { color: #003D7A; border-bottom: 3px solid #FFD700; padding-bottom: 10px; }
+                        .exercise { page-break-inside: avoid; margin-bottom: 30px; border: 2px solid #ccc; padding: 15px; }
+                        .exercise h3 { color: #003D7A; margin-top: 0; }
+                        .params { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f5f5f5; padding: 10px; margin: 10px 0; }
+                        .param { text-align: center; }
+                        .param-label { font-size: 11px; color: #666; }
+                        .param-value { font-size: 18px; font-weight: bold; color: #003D7A; }
+                        pre { white-space: pre-wrap; background: #f9f9f9; padding: 10px; font-size: 12px; }
+                        .safety { background: #ffe4e4; padding: 10px; margin: 10px 0; border-left: 4px solid #dc2626; }
+                    </style>
+                </head>
+                <body>
+                    <h1>🏥 Home Exercise Program (HEP)</h1>
+                    <p><strong>Patient:</strong> ${STATE.patientData.first_name} ${STATE.patientData.last_name}</p>
+                    <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                    <p><strong>Clinician:</strong> Demo Clinician, PT, DPT</p>
+                    <p><strong>Program:</strong> 5x/week, 30 min/session, 4 weeks duration</p>
+                    <hr>
+            `;
+            
+            HEP_STATE.exercises.forEach((ex, index) => {
+                html += `
+                    <div class="exercise">
+                        <h3>${index + 1}. ${ex.name}</h3>
+                        <p><em>${ex.category} | Targets: ${ex.targets.join(', ')}</em></p>
+                        
+                        <div class="params">
+                            <div class="param">
+                                <div class="param-label">Sets</div>
+                                <div class="param-value">${ex.sets}</div>
+                            </div>
+                            <div class="param">
+                                <div class="param-label">Reps${ex.key === 'plank' ? ' (sec)' : ''}</div>
+                                <div class="param-value">${ex.reps}</div>
+                            </div>
+                            <div class="param">
+                                <div class="param-label">Intensity</div>
+                                <div class="param-value">${ex.intensity}</div>
+                            </div>
+                            <div class="param">
+                                <div class="param-label">Speed</div>
+                                <div class="param-value">${ex.speed.split('(')[0]}</div>
+                            </div>
+                        </div>
+                        
+                        <h4>Instructions:</h4>
+                        <pre>${ex.instructions}</pre>
+                        
+                        <div class="safety">
+                            <strong>⚠️ Safety:</strong> ${ex.safety}
+                        </div>
+                        
+                        <p><strong>Progressions:</strong> ${ex.progressions.join(' → ')}</p>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    <hr>
+                    <h3>Important Reminders:</h3>
+                    <ul>
+                        <li>Stop if sharp pain occurs - mild discomfort is normal</li>
+                        <li>Breathe normally - don't hold your breath</li>
+                        <li>Progress gradually - quality over quantity</li>
+                        <li>Contact clinic if pain exceeds 7/10 or new symptoms develop</li>
+                    </ul>
+                </body>
+                </html>
+            `;
+            
+            return html;
         }
     </script>
 </body>
