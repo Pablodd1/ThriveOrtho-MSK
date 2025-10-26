@@ -27,13 +27,16 @@
     <style>
         body { overflow-x: hidden; background: #f5f5f5; }
         .camera-container { position: relative; width: 100%; height: 100%; }
-        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
         #canvasElement { position: absolute; width: 100%; height: 100%; border-radius: 8px; }
         .rep-counter { font-size: 5rem; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .pain-point { cursor: crosshair; transition: all 0.2s; }
         .pain-point:hover { transform: scale(1.1); }
         @media (max-width: 768px) {
             .rep-counter { font-size: 3rem; }
+            /* Mobile: Make camera fullscreen-friendly with contain to show full body */
+            #videoElement { object-fit: contain; }
+            .camera-container { height: 100%; }
         }
         
         /* Medical Scribe Styles */
@@ -165,8 +168,8 @@
 
         <!-- Main Assessment Area -->
         <div class="flex flex-col md:flex-row h-[calc(100vh-120px)]">
-            <!-- Left: Camera Feed (60% on desktop, 100% on mobile) -->
-            <div class="w-full md:w-3/5 h-64 md:h-full bg-black relative">
+            <!-- Left: Camera Feed (60% on desktop, 100% on mobile with full height) -->
+            <div class="w-full md:w-3/5 h-[70vh] md:h-full bg-black relative">
                 <div class="camera-container">
                     <video id="videoElement" autoplay playsinline></video>
                     <canvas id="canvasElement"></canvas>
@@ -194,8 +197,8 @@
                 </div>
             </div>
 
-            <!-- Right: Instructions & Controls (40% on desktop, below camera on mobile) -->
-            <div class="w-full md:w-2/5 bg-white p-4 md:p-6 overflow-y-auto">
+            <!-- Right: Instructions & Controls (40% on desktop, collapsible on mobile) -->
+            <div class="w-full md:w-2/5 bg-white p-4 md:p-6 overflow-y-auto max-h-[30vh] md:max-h-full">
                 <!-- Medical Scribe Panel -->
                 <div id="medicalScribePanel" class="scribe-panel hidden">
                     <div class="flex justify-between items-center mb-3">
