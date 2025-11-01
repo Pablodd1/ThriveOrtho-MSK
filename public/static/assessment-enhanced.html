@@ -300,6 +300,12 @@
                         <span id="recordBtnText">Start Recording</span>
                     </button>
                     
+                    <button id="pauseBtn" onclick="togglePause()" 
+                        class="hidden w-full px-6 py-3 md:py-4 bg-yellow-600 hover:bg-yellow-700 text-white text-base md:text-lg rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-pause mr-2"></i>
+                        <span id="pauseBtnText">Pause Assessment</span>
+                    </button>
+                    
                     <button id="nextExerciseBtn" onclick="nextExercise()" 
                         class="hidden w-full px-6 py-3 md:py-4 bg-brand-blue hover:bg-blue-900 text-white text-base md:text-lg rounded-lg font-semibold transition-colors">
                         <span id="nextBtnText">Next Exercise</span>
@@ -375,6 +381,9 @@
             currentExercise: 1,
             totalExercises: 5,
             isRecording: false,
+            isPaused: false,
+            pausedTime: 0,
+            pauseStartTime: null,
             recordingStartTime: null,
             skeletonFrames: [],
             cameraType: null,
@@ -494,6 +503,11 @@
             
             // Wait for MediaPipe libraries to load
             waitForMediaPipe();
+            
+            // Check for saved progress after camera initialization (1.5s delay)
+            setTimeout(() => {
+                checkForSavedProgress();
+            }, 1500);
         });
         
         function waitForMediaPipe() {
@@ -1971,10 +1985,16 @@ END OF TRANSCRIPT
             STATE.skeletonFrames = [];
             STATE.repCount = 0;
             STATE.exerciseState = 'ready';
+            STATE.isPaused = false;
+            STATE.pausedTime = 0;
             
             document.getElementById('recordBtnText').textContent = 'Stop Recording';
             document.getElementById('recordBtn').classList.remove('bg-red-500', 'hover:bg-red-600');
             document.getElementById('recordBtn').classList.add('bg-gray-700', 'hover:bg-gray-800');
+            
+            // Show pause button
+            document.getElementById('pauseBtn').classList.remove('hidden');
+            
             updateStatusBadge('Recording...', 'red');
             
             document.getElementById('repCounter').style.display = 'block';
@@ -2013,6 +2033,122 @@ END OF TRANSCRIPT
             }
             
             updateStatusBadge('Completed', 'green');
+        }
+
+        // ============================================
+        // PAUSE/RESUME ASSESSMENT
+        // ============================================
+        
+        function togglePause() {
+            if (STATE.isPaused) {
+                resumeAssessment();
+            } else {
+                pauseAssessment();
+            }
+        }
+
+        function pauseAssessment() {
+            if (!STATE.isRecording) return;
+            
+            STATE.isPaused = true;
+            STATE.pauseStartTime = Date.now();
+            
+            // Update UI
+            document.getElementById('pauseBtnText').textContent = 'Resume Assessment';
+            document.getElementById('pauseBtn').classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
+            document.getElementById('pauseBtn').classList.add('bg-green-600', 'hover:bg-green-700');
+            document.querySelector('#pauseBtn i').className = 'fas fa-play mr-2';
+            
+            updateStatusBadge('Paused', 'yellow');
+            showStatus('⏸️ Assessment paused. Click Resume when ready to continue.', 'info');
+            
+            // Save current state to localStorage
+            saveAssessmentProgress();
+            
+            // Voice feedback
+            speakInstruction('Assessment paused. Take your time. Click resume when ready.', 'high');
+        }
+
+        function resumeAssessment() {
+            if (!STATE.isPaused) return;
+            
+            // Calculate paused duration
+            const pauseDuration = Date.now() - STATE.pauseStartTime;
+            STATE.pausedTime += pauseDuration;
+            
+            STATE.isPaused = false;
+            STATE.pauseStartTime = null;
+            
+            // Update UI
+            document.getElementById('pauseBtnText').textContent = 'Pause Assessment';
+            document.getElementById('pauseBtn').classList.remove('bg-green-600', 'hover:bg-green-700');
+            document.getElementById('pauseBtn').classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+            document.querySelector('#pauseBtn i').className = 'fas fa-pause mr-2';
+            
+            updateStatusBadge('Recording...', 'red');
+            showStatus('▶️ Assessment resumed. Continue the exercise.', 'success');
+            
+            // Voice feedback
+            speakInstruction('Resuming now. Continue the exercise.', 'high');
+        }
+
+        function saveAssessmentProgress() {
+            const progress = {
+                patientId: STATE.patientId,
+                assessmentId: STATE.assessmentId,
+                currentExercise: STATE.currentExercise,
+                repCount: STATE.repCount,
+                skeletonFrames: STATE.skeletonFrames.length,
+                timestamp: new Date().toISOString(),
+                exerciseName: STATE.exercises[STATE.currentExercise - 1].name,
+                scribeData: {
+                    transcription: STATE.transcription,
+                    complaints: STATE.patientComplaints,
+                    totalWords: STATE.totalWordsSpoken
+                }
+            };
+            
+            localStorage.setItem('assessmentProgress', JSON.stringify(progress));
+            console.log('📝 Assessment progress saved to localStorage');
+        }
+
+        function checkForSavedProgress() {
+            const progress = localStorage.getItem('assessmentProgress');
+            if (!progress) return false;
+            
+            const data = JSON.parse(progress);
+            
+            // Check if saved within last 24 hours
+            const savedTime = new Date(data.timestamp);
+            const hoursSince = (Date.now() - savedTime.getTime()) / (1000 * 60 * 60);
+            
+            if (hoursSince > 24) {
+                localStorage.removeItem('assessmentProgress');
+                return false;
+            }
+            
+            // Show resume option
+            const resume = confirm(`Found incomplete assessment from ${savedTime.toLocaleString()}.\n\nExercise: ${data.exerciseName}\nReps completed: ${data.repCount}\n\nWould you like to resume where you left off?`);
+            
+            if (resume) {
+                // Restore state
+                STATE.currentExercise = data.currentExercise;
+                STATE.repCount = data.repCount;
+                if (data.scribeData) {
+                    STATE.transcription = data.scribeData.transcription || [];
+                    STATE.patientComplaints = data.scribeData.complaints || [];
+                    STATE.totalWordsSpoken = data.scribeData.totalWords || 0;
+                }
+                
+                displayExerciseInfo();
+                document.getElementById('completedReps').textContent = STATE.repCount;
+                
+                showStatus('✅ Assessment progress restored!', 'success');
+                return true;
+            } else {
+                localStorage.removeItem('assessmentProgress');
+                return false;
+            }
         }
 
         // ============================================
