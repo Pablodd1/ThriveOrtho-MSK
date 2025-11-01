@@ -681,6 +681,132 @@ app.post('/api/rpm', async (c) => {
 })
 
 // ============================================
+// API: PATIENT PORTAL (HEP)
+// ============================================
+
+// Patient authentication
+app.post('/api/patient/auth', async (c) => {
+  try {
+    const { patientId, lastName } = await c.req.json()
+    
+    // Demo credentials (in production, query database)
+    if (patientId === 'DEMO001' && lastName.toLowerCase() === 'smith') {
+      return c.json({
+        success: true,
+        patient: {
+          id: 'DEMO001',
+          name: 'John Smith',
+          therapist: 'Dr. Sarah Johnson',
+          programStartDate: '2025-01-15',
+          loginTime: new Date().toISOString()
+        }
+      })
+    }
+    
+    // In production, query database
+    // const patient = await c.env.DB.prepare(`
+    //   SELECT p.id, p.first_name, p.last_name, pr.start_date
+    //   FROM patients p
+    //   LEFT JOIN prescriptions pr ON p.id = pr.patient_id
+    //   WHERE p.id = ? AND LOWER(p.last_name) = LOWER(?)
+    //   ORDER BY pr.start_date DESC
+    //   LIMIT 1
+    // `).bind(patientId, lastName).first()
+    
+    return c.json({
+      success: false,
+      error: 'Invalid patient ID or last name'
+    }, 401)
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get patient's exercises
+app.get('/api/patient/:id/exercises', async (c) => {
+  try {
+    const patientId = c.req.param('id')
+    
+    // Demo data (in production, query database)
+    if (patientId === 'DEMO001') {
+      return c.json({
+        success: true,
+        exercises: [
+          {
+            id: 'ex1',
+            name: 'Pelvic Tilts',
+            category: 'Core Stability',
+            sets: 3,
+            reps: 10,
+            frequency: 'Daily'
+          },
+          {
+            id: 'ex2',
+            name: 'Bird Dogs',
+            category: 'Core Stability',
+            sets: 3,
+            reps: 10,
+            frequency: 'Daily'
+          }
+        ]
+      })
+    }
+    
+    // In production:
+    // const { results } = await c.env.DB.prepare(`
+    //   SELECT pe.*, e.name, e.category, e.instructions, e.video_url
+    //   FROM prescribed_exercises pe
+    //   JOIN exercises e ON pe.exercise_id = e.id
+    //   JOIN prescriptions pr ON pe.prescription_id = pr.id
+    //   WHERE pr.patient_id = ? AND pe.status = 'active'
+    // `).bind(patientId).all()
+    
+    return c.json({ success: false, error: 'Patient not found' }, 404)
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Record exercise completion
+app.post('/api/patient/:id/complete', async (c) => {
+  try {
+    const patientId = c.req.param('id')
+    const { exerciseId, completedAt } = await c.req.json()
+    
+    // In production, store in database:
+    // await c.env.DB.prepare(`
+    //   INSERT INTO patient_activity (
+    //     patient_id, exercise_id, completed_at
+    //   ) VALUES (?, ?, ?)
+    // `).bind(patientId, exerciseId, completedAt).run()
+    
+    return c.json({ success: true })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get patient progress
+app.get('/api/patient/:id/progress', async (c) => {
+  try {
+    const patientId = c.req.param('id')
+    
+    // In production, query activity log:
+    // const { results } = await c.env.DB.prepare(`
+    //   SELECT DATE(completed_at) as date, COUNT(*) as count
+    //   FROM patient_activity
+    //   WHERE patient_id = ? AND completed_at >= date('now', '-30 days')
+    //   GROUP BY DATE(completed_at)
+    //   ORDER BY date DESC
+    // `).bind(patientId).all()
+    
+    return c.json({ success: true, progress: [] })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
 // GEMINI AI API ROUTES
 // ============================================
 
