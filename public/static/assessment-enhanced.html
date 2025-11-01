@@ -414,6 +414,7 @@
             recognizing: false,
             transcription: [],
             patientComplaints: [],
+            painRatings: [], // Pain scale ratings with context
             totalWordsSpoken: 0,
             totalComplaints: 0,
             scribeStartTime: null,
@@ -1676,6 +1677,9 @@
             // Play audio alert
             playAlertSound();
             
+            // Show pain scale modal for rating
+            showPainScaleModal(text, exerciseName);
+            
             console.log('🚨 Pain complaint detected:', complaint);
         }
         
@@ -1748,6 +1752,66 @@
             } catch (error) {
                 console.warn('Could not play alert sound:', error);
             }
+        }
+        
+        // ============================================
+        // PAIN SCALE MODAL
+        // ============================================
+        
+        function showPainScaleModal(painText, exerciseName) {
+            const modal = document.getElementById('painScaleModal');
+            const contextEl = document.getElementById('painContext');
+            
+            // Set context
+            contextEl.textContent = `During: ${exerciseName} (Rep ${STATE.repCount}) - "${painText}"`;
+            
+            // Store current context for when pain level is selected
+            STATE.currentPainContext = {
+                painText: painText,
+                exerciseName: exerciseName,
+                repCount: STATE.repCount,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            
+            // Pause recording if active (optional - comment out if you want recording to continue)
+            // if (STATE.isRecording && !STATE.isPaused) {
+            //     pauseAssessment();
+            // }
+        }
+        
+        function selectPainLevel(level) {
+            if (!STATE.currentPainContext) return;
+            
+            // Record pain rating
+            const painRating = {
+                level: level,
+                painText: STATE.currentPainContext.painText,
+                exercise: STATE.currentPainContext.exerciseName,
+                repCount: STATE.currentPainContext.repCount,
+                timestamp: STATE.currentPainContext.timestamp
+            };
+            
+            STATE.painRatings.push(painRating);
+            
+            console.log('📊 Pain rating recorded:', painRating);
+            
+            // Visual feedback
+            showStatus(`Pain level ${level}/10 recorded`, 'success');
+            
+            // Close modal
+            closePainScale();
+            
+            // Voice feedback
+            speakInstruction(`Pain level ${level} recorded. Continue when ready.`, 'high');
+        }
+        
+        function closePainScale() {
+            const modal = document.getElementById('painScaleModal');
+            modal.classList.add('hidden');
+            STATE.currentPainContext = null;
         }
         
         function updateRecordingTime() {
@@ -2564,6 +2628,7 @@ END OF TRANSCRIPT
                 sessionStorage.setItem('medical_scribe_data', JSON.stringify({
                     transcription: STATE.transcription,
                     complaints: STATE.patientComplaints,
+                    painRatings: STATE.painRatings,
                     stats: {
                         totalTranscripts: STATE.transcription.length,
                         totalWords: STATE.totalWordsSpoken,
@@ -2585,6 +2650,7 @@ END OF TRANSCRIPT
                         scribe_data: {
                             transcription: STATE.transcription,
                             complaints: STATE.patientComplaints,
+                            painRatings: STATE.painRatings,
                             totalWords: STATE.totalWordsSpoken
                         }
                     })
@@ -2635,5 +2701,103 @@ END OF TRANSCRIPT
             }, timeout);
         }
     </script>
+
+    <!-- Pain Scale Modal -->
+    <div id="painScaleModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 md:p-8 animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="inline-block p-4 bg-red-100 rounded-full mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-4xl"></i>
+                </div>
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+                    Pain Detected
+                </h2>
+                <p class="text-gray-600 mb-2">
+                    You mentioned pain. Please rate your current pain level:
+                </p>
+                <p id="painContext" class="text-sm text-gray-500 italic">
+                    <!-- Will be filled with exercise context -->
+                </p>
+            </div>
+            
+            <!-- Pain Scale 0-10 -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-semibold text-gray-700">No Pain</span>
+                    <span class="text-sm font-semibold text-gray-700">Worst Pain</span>
+                </div>
+                <div class="grid grid-cols-11 gap-1 md:gap-2">
+                    <button onclick="selectPainLevel(0)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-green-500 bg-green-50 hover:bg-green-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-green-700">0</span>
+                        <span class="text-xs text-green-600 hidden md:block">None</span>
+                    </button>
+                    <button onclick="selectPainLevel(1)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-green-600">1</span>
+                    </button>
+                    <button onclick="selectPainLevel(2)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-yellow-300 bg-yellow-50 hover:bg-yellow-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-yellow-700">2</span>
+                    </button>
+                    <button onclick="selectPainLevel(3)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-yellow-700">3</span>
+                        <span class="text-xs text-yellow-600 hidden md:block">Mild</span>
+                    </button>
+                    <button onclick="selectPainLevel(4)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-yellow-500 bg-yellow-50 hover:bg-yellow-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-yellow-800">4</span>
+                    </button>
+                    <button onclick="selectPainLevel(5)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-orange-400 bg-orange-50 hover:bg-orange-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-orange-700">5</span>
+                        <span class="text-xs text-orange-600 hidden md:block">Moderate</span>
+                    </button>
+                    <button onclick="selectPainLevel(6)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-orange-500 bg-orange-50 hover:bg-orange-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-orange-700">6</span>
+                    </button>
+                    <button onclick="selectPainLevel(7)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-red-400 bg-red-50 hover:bg-red-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-red-700">7</span>
+                        <span class="text-xs text-red-600 hidden md:block">Severe</span>
+                    </button>
+                    <button onclick="selectPainLevel(8)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-red-500 bg-red-50 hover:bg-red-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-red-700">8</span>
+                    </button>
+                    <button onclick="selectPainLevel(9)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-red-600 bg-red-50 hover:bg-red-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-red-800">9</span>
+                    </button>
+                    <button onclick="selectPainLevel(10)" 
+                        class="pain-btn aspect-square flex flex-col items-center justify-center p-2 md:p-3 rounded-lg border-2 border-red-700 bg-red-50 hover:bg-red-100 transition-all hover:scale-110">
+                        <span class="text-xl md:text-2xl font-bold text-red-900">10</span>
+                        <span class="text-xs text-red-700 hidden md:block">Worst</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Skip/Close Button -->
+            <div class="flex justify-center space-x-3">
+                <button onclick="closePainScale()" 
+                    class="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-semibold transition-colors">
+                    <i class="fas fa-times mr-2"></i>
+                    Skip
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+    </style>
 </body>
 </html>
