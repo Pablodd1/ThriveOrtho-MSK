@@ -80,6 +80,7 @@ https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 /static/dashboard.html      # Dashboard
 /static/assessment-enhanced.html  # Assessment with scribe
 /static/medical-note.html   # Medical note with MRI reader
+/static/patient-portal.html # ⭐ NEW Patient HEP Login
 /static/test-mri-reader.html  # MRI reader tests
 ```
 
@@ -103,8 +104,9 @@ npx wrangler pages deploy dist --project-name sobeairehab
 | **Phase 1 Progress** | ✅ 100% (7/7 tasks) COMPLETE! |
 | **Phase 2 Progress** | 67% (4/6 tasks) |
 | **Overall Progress** | 69% (11/13 tasks) |
-| **Lines of Code** | 9,400+ |
+| **Lines of Code** | 9,650+ |
 | **Documentation** | 12 files (130+ KB) |
+| **Git Commits** | 67 |
 | **Build Size** | 55.86 KB |
 | **Performance** | < 500ms latency |
 | **Browser Support** | Chrome, Edge, Safari, Firefox |
@@ -233,6 +235,7 @@ webapp/
 │   └── static/
 │       ├── assessment-enhanced.html # ⭐ With medical scribe
 │       ├── medical-note.html        # ⭐ With MRI reader
+│       ├── patient-portal.html      # ⭐ Patient HEP Login
 │       ├── dashboard.html
 │       ├── intake.html
 │       ├── test-scribe.html         # Scribe tests
@@ -445,9 +448,9 @@ This project is proprietary software developed for SOBEAIREHAB.
 Phase 1 Progress:      ✅ 100% (7/7 tasks) COMPLETE!
 Phase 2 Progress:      67% (4/6 tasks)
 Overall Progress:      69% (11/13 tasks)
-Lines of Code:         9,400+
+Lines of Code:         9,650+
 Documentation Files:   12 (130+ KB)
-Git Commits:           65+
+Git Commits:           67
 Browser Support:       95%+
 Mobile Support:        ✅
 Production Ready:      ✅
