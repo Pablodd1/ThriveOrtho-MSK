@@ -466,14 +466,31 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             STATE.patientId = urlParams.get('patient_id');
+            const isQuickMode = urlParams.get('quick') === 'true';
             
-            if (!STATE.patientId) {
+            if (!STATE.patientId && !isQuickMode) {
                 showStatus('Error: No patient ID provided', 'error');
                 setTimeout(() => window.location.href = '/static/dashboard.html', 2000);
                 return;
             }
 
-            loadPatientInfo();
+            if (isQuickMode) {
+                // Quick Assessment Mode - No patient registration needed
+                STATE.patientId = 'quick_' + Date.now();
+                STATE.patientData = {
+                    first_name: 'Quick',
+                    last_name: 'Assessment',
+                    date_of_birth: '1980-01-01',
+                    height_cm: 170,
+                    weight_kg: 70,
+                    gender: 'Unknown'
+                };
+                document.getElementById('patientInfo').textContent = 
+                    '⚡ Quick Assessment Mode (No Registration) | Demo/Trial';
+                showStatus('⚡ Quick Assessment Mode - Results will not be saved', 'info');
+            } else {
+                loadPatientInfo();
+            }
             
             // Wait for MediaPipe libraries to load
             waitForMediaPipe();
@@ -2293,6 +2310,13 @@ END OF TRANSCRIPT
         // ============================================
         async function createAssessment() {
             try {
+                // Quick mode: Skip database, use local ID
+                if (STATE.patientId.startsWith('quick_')) {
+                    STATE.assessmentId = 'quick_assess_' + Date.now();
+                    console.log('⚡ Quick Assessment Mode - Skipping database');
+                    return;
+                }
+                
                 const response = await fetch('/api/assessments', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2315,6 +2339,12 @@ END OF TRANSCRIPT
             const exercise = STATE.exercises[STATE.currentExercise - 1];
             
             try {
+                // Quick mode: Skip database
+                if (STATE.patientId.startsWith('quick_')) {
+                    STATE.testId = 'quick_test_' + Date.now();
+                    return;
+                }
+                
                 const response = await fetch(`/api/assessments/${STATE.assessmentId}/tests`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2336,6 +2366,24 @@ END OF TRANSCRIPT
 
         async function saveSkeletonData(analysis) {
             try {
+                // Quick mode: Skip database, store in sessionStorage
+                if (STATE.patientId.startsWith('quick_')) {
+                    const quickData = JSON.parse(sessionStorage.getItem('quickAssessmentData') || '{}');
+                    quickData[STATE.testId] = {
+                        skeleton_data: {
+                            frames: STATE.skeletonFrames,
+                            duration: analysis.duration,
+                            frame_rate: STATE.skeletonFrames.length / analysis.duration,
+                            analysis: analysis
+                        },
+                        camera_type: STATE.cameraType,
+                        exercise: STATE.exercises[STATE.currentExercise - 1].name
+                    };
+                    sessionStorage.setItem('quickAssessmentData', JSON.stringify(quickData));
+                    console.log('⚡ Quick mode: Data saved to sessionStorage');
+                    return;
+                }
+                
                 await fetch(`/api/tests/${STATE.testId}/analyze`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -2389,23 +2437,31 @@ END OF TRANSCRIPT
                 }));
             }
             
-            await fetch(`/api/assessments/${STATE.assessmentId}/complete`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    overall_score: 75,
-                    clinical_notes: '5 exercises completed successfully',
-                    recommendations: ['Continue with prescribed exercises', 'Monitor progress weekly'],
-                    scribe_data: {
-                        transcription: STATE.transcription,
-                        complaints: STATE.patientComplaints,
-                        totalWords: STATE.totalWordsSpoken
-                    }
-                })
-            });
+            // Quick mode: Skip database call
+            if (!STATE.patientId.startsWith('quick_')) {
+                await fetch(`/api/assessments/${STATE.assessmentId}/complete`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        overall_score: 75,
+                        clinical_notes: '5 exercises completed successfully',
+                        recommendations: ['Continue with prescribed exercises', 'Monitor progress weekly'],
+                        scribe_data: {
+                            transcription: STATE.transcription,
+                            complaints: STATE.patientComplaints,
+                            totalWords: STATE.totalWordsSpoken
+                        }
+                    })
+                });
+            }
             
             setTimeout(() => {
-                window.location.href = `/static/medical-note.html?assessment_id=${STATE.assessmentId}&patient_id=${STATE.patientId}`;
+                if (STATE.patientId.startsWith('quick_')) {
+                    // Quick mode: Go to medical note with quick flag
+                    window.location.href = `/static/medical-note.html?quick=true`;
+                } else {
+                    window.location.href = `/static/medical-note.html?assessment_id=${STATE.assessmentId}&patient_id=${STATE.patientId}`;
+                }
             }, 2000);
         }
 
