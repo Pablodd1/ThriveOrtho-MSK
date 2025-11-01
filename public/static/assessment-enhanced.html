@@ -194,6 +194,24 @@
                         <div><strong>Knee:</strong> <span id="angleKnee">0</span>°</div>
                         <div><strong>Shoulder:</strong> <span id="angleShoulder">0</span>°</div>
                     </div>
+
+                    <!-- Real-Time Quality Meter (Bottom Center) -->
+                    <div id="qualityMeter" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white p-3 md:p-4 rounded-xl shadow-lg" style="display:none; min-width: 280px;">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs md:text-sm font-semibold">Exercise Quality</span>
+                            <span id="qualityMeterValue" class="text-lg md:text-xl font-bold">100%</span>
+                        </div>
+                        
+                        <!-- Quality Bar -->
+                        <div class="relative w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+                            <div id="qualityMeterBar" class="absolute left-0 top-0 h-full transition-all duration-300 ease-out" style="width: 100%; background: linear-gradient(90deg, #10b981 0%, #22c55e 100%);"></div>
+                        </div>
+                        
+                        <!-- Quality Status Text -->
+                        <div class="mt-2 text-center">
+                            <span id="qualityMeterStatus" class="text-xs font-medium text-green-400">Excellent</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -851,6 +869,9 @@
                 document.getElementById('liveQuality').textContent = quality.toFixed(0);
                 STATE.qualityScore = quality;
                 
+                // Update real-time quality meter
+                updateQualityMeter(quality);
+                
                 // Show angles for current exercise
                 if (STATE.isRecording) {
                     updateAngleDisplay(angles);
@@ -993,6 +1014,61 @@
             } else {
                 display.style.display = 'none';
             }
+        }
+
+        // ============================================
+        // REAL-TIME QUALITY METER
+        // ============================================
+        function updateQualityMeter(quality) {
+            const meter = document.getElementById('qualityMeter');
+            const bar = document.getElementById('qualityMeterBar');
+            const valueText = document.getElementById('qualityMeterValue');
+            const statusText = document.getElementById('qualityMeterStatus');
+            
+            // Only show during active recording
+            if (!STATE.isRecording) {
+                meter.style.display = 'none';
+                return;
+            }
+            
+            meter.style.display = 'block';
+            
+            // Update value
+            valueText.textContent = `${quality.toFixed(0)}%`;
+            
+            // Update bar width and color based on quality ranges
+            bar.style.width = `${quality}%`;
+            
+            let color, gradientColor, status;
+            
+            if (quality >= 80) {
+                // Excellent: Green
+                color = '#10b981';
+                gradientColor = '#22c55e';
+                status = 'Excellent';
+                statusText.className = 'text-xs font-medium text-green-400';
+            } else if (quality >= 60) {
+                // Good: Yellow-Green
+                color = '#84cc16';
+                gradientColor = '#a3e635';
+                status = 'Good';
+                statusText.className = 'text-xs font-medium text-lime-400';
+            } else if (quality >= 40) {
+                // Fair: Yellow-Orange
+                color = '#f59e0b';
+                gradientColor = '#fbbf24';
+                status = 'Fair - Adjust Position';
+                statusText.className = 'text-xs font-medium text-yellow-400';
+            } else {
+                // Poor: Red
+                color = '#ef4444';
+                gradientColor = '#f87171';
+                status = 'Poor - Check Form';
+                statusText.className = 'text-xs font-medium text-red-400';
+            }
+            
+            bar.style.background = `linear-gradient(90deg, ${color} 0%, ${gradientColor} 100%)`;
+            statusText.textContent = status;
         }
 
         // ============================================
