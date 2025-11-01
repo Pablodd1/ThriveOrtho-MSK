@@ -290,6 +290,86 @@
                         Import from Medical Scribe
                     </button>
                 </div>
+
+                <!-- SOAP Templates Section -->
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 mb-4 border-2 border-indigo-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-gray-800">
+                            <i class="fas fa-file-alt mr-2 text-indigo-600"></i>
+                            SOAP Note Templates
+                        </h3>
+                        <div class="flex gap-2">
+                            <button onclick="saveCurrentAsTemplate()" 
+                                class="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
+                                <i class="fas fa-save mr-1"></i>
+                                Save as Template
+                            </button>
+                            <button onclick="toggleCustomTemplates()" 
+                                id="customTemplatesToggle"
+                                class="px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-semibold">
+                                <i class="fas fa-folder mr-1"></i>
+                                My Templates (<span id="customTemplateCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pre-built Templates Dropdown -->
+                    <div class="grid md:grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Pre-built Templates</label>
+                            <select id="templateSelect" onchange="previewTemplate()" 
+                                class="w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:border-indigo-500 focus:outline-none text-sm">
+                                <option value="">-- Select a Template --</option>
+                                <optgroup label="Musculoskeletal">
+                                    <option value="low_back_pain">Low Back Pain (Lumbar Strain)</option>
+                                    <option value="shoulder_impingement">Shoulder Impingement Syndrome</option>
+                                    <option value="knee_oa">Knee Osteoarthritis</option>
+                                    <option value="rotator_cuff">Rotator Cuff Injury</option>
+                                    <option value="cervical_strain">Cervical Strain/Neck Pain</option>
+                                    <option value="ankle_sprain">Ankle Sprain (Inversion)</option>
+                                </optgroup>
+                                <optgroup label="Post-Surgical">
+                                    <option value="hip_replacement">Hip Replacement Post-Op</option>
+                                </optgroup>
+                                <optgroup label="General">
+                                    <option value="deconditioning">General Deconditioning</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="applyTemplate()" 
+                                id="applyTemplateBtn"
+                                disabled
+                                class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold">
+                                <i class="fas fa-check mr-2"></i>
+                                Apply Template
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Template Preview (shows on select) -->
+                    <div id="templatePreview" class="hidden bg-white rounded-lg p-3 border-2 border-indigo-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">Preview:</h4>
+                            <span class="text-xs text-gray-500" id="templateCategory"></span>
+                        </div>
+                        <div class="text-xs text-gray-700 space-y-1" id="templatePreviewContent">
+                            <!-- Preview content here -->
+                        </div>
+                    </div>
+
+                    <!-- Custom Templates List (collapsible) -->
+                    <div id="customTemplatesList" class="hidden mt-3 bg-white rounded-lg p-3 border-2 border-purple-200">
+                        <h4 class="text-sm font-bold text-gray-800 mb-2">
+                            <i class="fas fa-star mr-1 text-yellow-500"></i>
+                            My Custom Templates
+                        </h4>
+                        <div id="customTemplatesContent" class="space-y-2">
+                            <p class="text-xs text-gray-500">No custom templates saved yet.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="soapNote" class="space-y-6">
                     <div>Generating comprehensive medical note...</div>
                 </div>
@@ -715,7 +795,94 @@ IMPRESSION:
             patientId: new URLSearchParams(window.location.search).get('patient_id'),
             patientData: null,
             assessmentData: null,
-            painMarkers: []
+            painMarkers: [],
+            currentTemplate: null
+        };
+
+        // ============================================
+        // SOAP NOTE TEMPLATES
+        // ============================================
+        const SOAP_TEMPLATES = {
+            low_back_pain: {
+                name: "Low Back Pain (Lumbar Strain)",
+                category: "Musculoskeletal",
+                icd10_codes: ["M54.5", "M54.50", "M54.9"],
+                subjective: "Patient reports acute/chronic low back pain, rated {PAIN_SCALE}/10. Pain described as dull/aching/sharp, worse with bending, lifting, prolonged sitting/standing. May radiate to buttocks or thighs. Denies numbness/tingling in lower extremities. Sleep disruption: {SLEEP_IMPACT}. Functional limitations: difficulty with ADLs, lifting, prolonged positions.",
+                objective: "Posture: {POSTURE_FINDINGS}. Gait: antalgic/normal. AROM lumbar spine: flexion {FLEX_ROM}°, extension {EXT_ROM}°, bilateral side-bending limited. Palpation reveals tenderness over {TENDER_AREAS}. MMT: core strength {CORE_STRENGTH}/5. Special tests: SLR negative bilaterally, no neurological deficits noted. Muscle guarding present in paraspinals.",
+                assessment: "Patient presents with mechanical low back pain consistent with lumbar strain/sprain. Decreased lumbar ROM and core stability. Pain pattern suggests {PAIN_PATTERN}. Prognosis: good with appropriate PT intervention. Expected recovery: 4-8 weeks with compliance.",
+                plan: "PT 2-3x/week for 4-6 weeks. Focus on: pain management (modalities PRN), core stabilization exercises, lumbar ROM exercises, postural education, body mechanics training, progressive strengthening program. HEP provided. Reassess in 2 weeks. Consider imaging if no improvement or red flags emerge.",
+                exercises: ["Pelvic Tilts", "Bird Dogs", "Dead Bugs", "Bridges", "Cat-Cow Stretches"]
+            },
+            shoulder_impingement: {
+                name: "Shoulder Impingement Syndrome",
+                category: "Musculoskeletal",
+                icd10_codes: ["M75.40", "M75.41", "M75.42"],
+                subjective: "Patient reports {DURATION} shoulder pain, rated {PAIN_SCALE}/10. Pain localized to anterolateral shoulder, worse with overhead activities, reaching behind back. Night pain: {NIGHT_PAIN}. Functional limitations: difficulty with dressing, reaching, lifting. Previous treatments: {PREV_TX}.",
+                objective: "Posture: forward head/rounded shoulders noted. AROM shoulder: flexion {FLEX_ROM}°, abduction {ABD_ROM}°, ER {ER_ROM}°, IR {IR_ROM}°. Pain arc present 60-120° abduction. Palpation: tenderness over {TENDER_AREAS}. MMT: rotator cuff {RC_STRENGTH}/5, scapular stabilizers {SCAP_STRENGTH}/5. Special tests: Neer's {NEER_TEST}, Hawkins-Kennedy {HAWKINS_TEST}, Empty Can {EC_TEST}.",
+                assessment: "Patient presents with shoulder impingement syndrome. Decreased shoulder ROM with painful arc. Rotator cuff weakness and scapular dyskinesis noted. Contributing factors: posture, muscle imbalances. Prognosis: good with PT. Expected recovery: 6-12 weeks.",
+                plan: "PT 2-3x/week for 6-8 weeks. Focus on: pain reduction (modalities, activity modification), ROM exercises, rotator cuff strengthening, scapular stabilization, postural correction, gradual return to overhead activities. HEP provided. Reassess in 2 weeks. Consider MD referral if no progress.",
+                exercises: ["Pendulum Exercises", "External Rotation", "Scapular Retractions", "Wall Slides", "Prone Y-T-I"]
+            },
+            knee_oa: {
+                name: "Knee Osteoarthritis",
+                category: "Musculoskeletal",
+                icd10_codes: ["M17.11", "M17.12", "M17.9"],
+                subjective: "Patient reports {DURATION} knee pain, rated {PAIN_SCALE}/10. Pain described as aching/stiffness, worse after prolonged sitting ('gelling'), with stairs, after activity. Morning stiffness: {MORNING_STIFF} minutes. Functional limitations: walking distance {WALK_DIST}, stairs difficult, squatting/kneeling painful.",
+                objective: "Gait: {GAIT_PATTERN}, stance time {L_VS_R}. AROM knee: flexion {FLEX_ROM}°, extension {EXT_ROM}° (lack {EXT_LAG}°). Palpation: joint line tenderness, effusion {EFFUSION}. MMT: quads {QUAD_STRENGTH}/5, hams {HAM_STRENGTH}/5. Special tests: varus/valgus stress {STABILITY}. Crepitus present with motion.",
+                assessment: "Patient presents with knee osteoarthritis, {SIDE} knee. Decreased ROM, quadriceps weakness, altered gait mechanics. Functional mobility limitations affecting ADLs/IADLs. Pain management and functional mobility goals appropriate. Prognosis: good for symptom management and functional improvement.",
+                plan: "PT 2x/week for 6-8 weeks. Focus on: pain management, joint mobilization, progressive strengthening (quads, hams, glutes), gait training, balance exercises, weight management education, activity modification strategies. HEP critical. Reassess every 2 weeks. May benefit from assistive device, knee brace, orthotics.",
+                exercises: ["Quad Sets", "Straight Leg Raises", "Heel Slides", "Mini Squats", "Step-Ups"]
+            },
+            rotator_cuff: {
+                name: "Rotator Cuff Injury",
+                category: "Musculoskeletal",
+                icd10_codes: ["M75.100", "M75.110", "M75.120"],
+                subjective: "Patient reports shoulder pain/weakness following {MECHANISM}. Pain rated {PAIN_SCALE}/10, located at {LOCATION}. Symptoms include difficulty with overhead activities, lifting, night pain. Functional limitations: {FUNCTIONAL_LOSS}. Previous imaging: {IMAGING_RESULTS}.",
+                objective: "Observation: {POSTURE}, atrophy noted in {MUSCLES}. AROM: limited in {LIMITED_MOTIONS}. PROM: {PROM_FINDINGS}. Strength: {STRENGTH_FINDINGS}. Special tests: Drop arm {DROP_ARM}, Lift-off {LIFT_OFF}, External rotation lag {ER_LAG}. Scapular dyskinesis present.",
+                assessment: "Rotator cuff injury, likely involving {INVOLVED_MUSCLES}. Significant weakness and functional limitations. Imaging suggests {IMAGING_INTERPRETATION}. Conservative management appropriate vs surgical consultation depending on tear severity and functional goals.",
+                plan: "PT 3x/week for 8-12 weeks if conservative. Protocol: Phase 1 (weeks 1-2) pain control, PROM, Phase 2 (weeks 3-6) AAROM, progressive strengthening, Phase 3 (weeks 7-12) functional strengthening, return to activities. MD follow-up in 4-6 weeks for surgical consideration if not improving.",
+                exercises: ["Passive ROM", "Codman Pendulums", "Wall Crawls", "Rotator Cuff Strengthening", "Scapular Exercises"]
+            },
+            cervical_strain: {
+                name: "Cervical Strain/Neck Pain",
+                category: "Musculoskeletal",
+                icd10_codes: ["M54.2", "S13.4XXA"],
+                subjective: "Patient reports neck pain, rated {PAIN_SCALE}/10, following {MECHANISM}. Pain described as {PAIN_QUALITY}, radiating to {RADIATION}. Headaches: {HEADACHE}. Numbness/tingling: {NEURO_SX}. Functional limitations: driving, computer work, sleeping.",
+                objective: "Posture: forward head posture {FHP_MEASUREMENT}. AROM cervical: flexion {FLEX}°, extension {EXT}°, rotation L/R {ROT}°, side-bending L/R {SB}°. Palpation: upper trap/levator scap tightness. MMT: neck flexors {FLEX_STR}/5, deep neck flexors weak. Neuro: sensation {SENSATION}, reflexes {REFLEXES}, UE strength {UE_STR}.",
+                assessment: "Cervical strain with postural dysfunction. Decreased cervical ROM, muscle imbalances, possible nerve irritation if radicular symptoms. Prognosis: good with PT and ergonomic modifications.",
+                plan: "PT 2-3x/week for 4-6 weeks. Focus on: pain management, cervical ROM, deep neck flexor strengthening, postural correction, ergonomic education, nerve gliding if indicated. HEP daily. Reassess in 2 weeks.",
+                exercises: ["Chin Tucks", "Cervical ROM", "Scapular Squeezes", "Nerve Glides", "Postural Exercises"]
+            },
+            ankle_sprain: {
+                name: "Ankle Sprain (Inversion)",
+                category: "Musculoskeletal",
+                icd10_codes: ["S93.401A", "S93.402A"],
+                subjective: "Patient reports ankle injury {MECHANISM}, pain rated {PAIN_SCALE}/10. Swelling: {SWELLING}. Weight-bearing status: {WB_STATUS}. Previous ankle sprains: {HISTORY}. Functional limitations: walking, stairs, uneven surfaces.",
+                objective: "Observation: {SWELLING_LOCATION}, ecchymosis {BRUISING}. AROM: DF {DF_ROM}°, PF {PF_ROM}°, inv/ev limited. Palpation: tenderness over {TENDER_STRUCTURES}. Gait: {GAIT_PATTERN}. Special tests: anterior drawer {AD_TEST}, talar tilt {TT_TEST}. Balance: {BALANCE_FINDINGS}.",
+                assessment: "Grade {GRADE} ankle sprain, lateral ligaments. Decreased ROM, proprioception deficits, gait alterations. Risk factors: {RISK_FACTORS}. Prognosis: good with appropriate rehab.",
+                plan: "PT 2-3x/week for 4-6 weeks. Protocol: Phase 1 (acute) PRICE, pain control, protected WB. Phase 2 (subacute) ROM, strengthening, proprioception. Phase 3 (functional) sport-specific training, return to activity. Brace/taping as needed. HEP critical.",
+                exercises: ["Ankle Pumps", "Alphabet Exercises", "Toe Raises", "Balance Training", "Resistive Band Exercises"]
+            },
+            hip_replacement: {
+                name: "Hip Replacement Post-Op",
+                category: "Post-Surgical",
+                icd10_codes: ["Z96.641", "Z96.642"],
+                subjective: "Patient {WEEKS} weeks post total hip replacement ({APPROACH} approach). Pain: {PAIN_SCALE}/10, managed with {PAIN_MEDS}. Ambulation: {AMBULATION_STATUS} with {DEVICE}. Following hip precautions. Goals: {PATIENT_GOALS}.",
+                objective: "Incision: {INCISION_STATUS}. AROM hip: flexion {FLEX}°, extension {EXT}°, abduction {ABD}°, adhering to precautions. Strength: hip flex {HF}/5, ext {HE}/5, abd {HA}/5. Gait: {GAIT_PATTERN} with {DEVICE}. Balance: {BALANCE}. Transfers: {TRANSFER_STATUS}.",
+                assessment: "{WEEKS}-week post-op THA, progressing {PROGRESSION}. Following precautions appropriately. ROM improving, strengthening progressing. Functional mobility advancing per protocol. Prognosis: excellent for return to ADLs/IADLs.",
+                plan: "PT per post-op protocol: Phase 1 (weeks 0-6) precautions, protected WB, gentle ROM/strengthening. Phase 2 (weeks 6-12) progressive strengthening, normalize gait. Phase 3 (3-6 months) advanced strengthening, return to activities. D/C when independent with HEP, functional goals met (typically 8-12 weeks).",
+                exercises: ["Ankle Pumps", "Quad Sets", "Glute Sets", "Hip Abduction", "Stationary Bike"]
+            },
+            deconditioning: {
+                name: "General Deconditioning",
+                category: "General",
+                icd10_codes: ["M62.81", "Z72.3"],
+                subjective: "Patient reports generalized weakness, fatigue, decreased activity tolerance. Contributing factors: {FACTORS}. Baseline activity: {BASELINE}. Goals: improve endurance, strength, return to {GOAL_ACTIVITIES}. Comorbidities: {COMORBID}.",
+                objective: "General appearance: {APPEARANCE}. Vital signs: resting HR {HR}, BP {BP}, O2 sat {O2}. Functional mobility: {MOBILITY_STATUS}. Strength: generalized weakness, MMT {OVERALL_STR}/5. Endurance: {ENDURANCE_TEST}. Balance: {BALANCE}. Posture: {POSTURE}.",
+                assessment: "Generalized deconditioning secondary to {CAUSE}. Decreased strength, endurance, functional capacity. Safety concerns: {SAFETY}. Appropriate for comprehensive conditioning program. Prognosis: good with regular participation.",
+                plan: "PT 2-3x/week for 6-8 weeks. Comprehensive program: cardiovascular conditioning, progressive resistance training (all major muscle groups), balance/coordination exercises, functional training, education on active lifestyle. HEP with home walking program. Reassess every 2 weeks, progress intensity as tolerated.",
+                exercises: ["Walking Program", "Sit-to-Stands", "Wall Push-Ups", "Resistance Band Exercises", "Balance Exercises"]
+            }
         };
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -867,6 +1034,397 @@ IMPRESSION:
                 </div>
             `;
         }
+
+        // ============================================
+        // SOAP TEMPLATE FUNCTIONS
+        // ============================================
+        
+        function previewTemplate() {
+            const select = document.getElementById('templateSelect');
+            const templateId = select.value;
+            const applyBtn = document.getElementById('applyTemplateBtn');
+            const preview = document.getElementById('templatePreview');
+            const previewContent = document.getElementById('templatePreviewContent');
+            const categorySpan = document.getElementById('templateCategory');
+            
+            if (!templateId) {
+                applyBtn.disabled = true;
+                preview.classList.add('hidden');
+                STATE.currentTemplate = null;
+                return;
+            }
+            
+            const template = SOAP_TEMPLATES[templateId];
+            STATE.currentTemplate = template;
+            applyBtn.disabled = false;
+            
+            // Show preview
+            preview.classList.remove('hidden');
+            categorySpan.textContent = template.category;
+            
+            previewContent.innerHTML = `
+                <div><strong>Subjective:</strong> ${template.subjective.substring(0, 100)}...</div>
+                <div><strong>Objective:</strong> ${template.objective.substring(0, 100)}...</div>
+                <div><strong>Assessment:</strong> ${template.assessment.substring(0, 100)}...</div>
+                <div><strong>Plan:</strong> ${template.plan.substring(0, 100)}...</div>
+                <div class="mt-2"><strong>ICD-10 Codes:</strong> ${template.icd10_codes.join(', ')}</div>
+                <div><strong>Common Exercises:</strong> ${template.exercises.join(', ')}</div>
+            `;
+        }
+        
+        function applyTemplate() {
+            if (!STATE.currentTemplate) return;
+            
+            const template = STATE.currentTemplate;
+            const patient = STATE.patientData;
+            
+            // Get current SOAP content to preserve patient-specific data
+            const painScale = patient?.pain_scale || '?';
+            const age = calculateAge(patient?.birth_date);
+            const gender = patient?.gender || 'patient';
+            
+            // Replace placeholders with patient data
+            let subjective = template.subjective
+                .replace('{PAIN_SCALE}', painScale)
+                .replace('{SLEEP_IMPACT}', 'moderate')
+                .replace('{FUNCTIONAL_LOSS}', 'dressing, lifting')
+                .replace('{DURATION}', 'chronic')
+                .replace('{NIGHT_PAIN}', 'yes')
+                .replace('{PREV_TX}', 'OTC medication, rest')
+                .replace('{MORNING_STIFF}', '30')
+                .replace('{WALK_DIST}', '2 blocks')
+                .replace('{MECHANISM}', 'gradual onset')
+                .replace('{LOCATION}', 'lateral shoulder')
+                .replace('{PAIN_QUALITY}', 'aching')
+                .replace('{RADIATION}', 'none')
+                .replace('{HEADACHE}', 'occasional')
+                .replace('{NEURO_SX}', 'none')
+                .replace('{SWELLING}', 'moderate')
+                .replace('{WB_STATUS}', 'partial weight bearing')
+                .replace('{HISTORY}', 'none')
+                .replace('{WEEKS}', '4')
+                .replace('{APPROACH}', 'posterior')
+                .replace('{PAIN_MEDS}', 'acetaminophen')
+                .replace('{AMBULATION_STATUS}', 'modified independent')
+                .replace('{DEVICE}', 'walker')
+                .replace('{PATIENT_GOALS}', 'return to independent living')
+                .replace('{FACTORS}', 'prolonged hospitalization')
+                .replace('{BASELINE}', 'sedentary')
+                .replace('{GOAL_ACTIVITIES}', 'daily walks')
+                .replace('{COMORBID}', 'see medical history');
+            
+            let objective = template.objective
+                .replace('{POSTURE_FINDINGS}', 'forward flexed')
+                .replace('{FLEX_ROM}', '45')
+                .replace('{EXT_ROM}', '10')
+                .replace('{TENDER_AREAS}', 'L4-L5 paraspinals')
+                .replace('{CORE_STRENGTH}', '3+')
+                .replace('{ABD_ROM}', '135')
+                .replace('{ER_ROM}', '45')
+                .replace('{IR_ROM}', '55')
+                .replace('{RC_STRENGTH}', '4-')
+                .replace('{SCAP_STRENGTH}', '3+')
+                .replace('{NEER_TEST}', 'positive')
+                .replace('{HAWKINS_TEST}', 'positive')
+                .replace('{EC_TEST}', 'positive')
+                .replace('{GAIT_PATTERN}', 'antalgic')
+                .replace('{L_VS_R}', 'reduced on affected side')
+                .replace('{EXT_LAG}', '5')
+                .replace('{EFFUSION}', 'trace')
+                .replace('{QUAD_STRENGTH}', '4-')
+                .replace('{HAM_STRENGTH}', '4')
+                .replace('{STABILITY}', 'stable')
+                .replace('{SIDE}', 'right')
+                .replace('{LIMITED_MOTIONS}', 'abduction, external rotation')
+                .replace('{PROM_FINDINGS}', 'full')
+                .replace('{STRENGTH_FINDINGS}', 'weakness in external rotation')
+                .replace('{DROP_ARM}', 'positive')
+                .replace('{LIFT_OFF}', 'unable')
+                .replace('{ER_LAG}', 'positive')
+                .replace('{INVOLVED_MUSCLES}', 'supraspinatus, infraspinatus')
+                .replace('{FHP_MEASUREMENT}', '2 inches')
+                .replace('{FLEX}', '50')
+                .replace('{EXT}', '40')
+                .replace('{ROT}', '60/60')
+                .replace('{SB}', '30/30')
+                .replace('{FLEX_STR}', '4')
+                .replace('{SENSATION}', 'intact')
+                .replace('{REFLEXES}', '2+ symmetrical')
+                .replace('{UE_STR}', '5/5')
+                .replace('{SWELLING_LOCATION}', 'lateral ankle')
+                .replace('{BRUISING}', 'minimal')
+                .replace('{DF_ROM}', '5')
+                .replace('{PF_ROM}', '35')
+                .replace('{TENDER_STRUCTURES}', 'ATFL, CFL')
+                .replace('{AD_TEST}', 'positive')
+                .replace('{TT_TEST}', 'negative')
+                .replace('{BALANCE_FINDINGS}', 'impaired single-leg stance')
+                .replace('{INCISION_STATUS}', 'well-healed')
+                .replace('{ABD}', '35')
+                .replace('{HF}', '4')
+                .replace('{HE}', '4+')
+                .replace('{HA}', '4')
+                .replace('{TRANSFER_STATUS}', 'modified independent')
+                .replace('{APPEARANCE}', 'well-nourished')
+                .replace('{HR}', '72')
+                .replace('{BP}', '130/80')
+                .replace('{O2}', '98%')
+                .replace('{MOBILITY_STATUS}', 'independent with AD')
+                .replace('{OVERALL_STR}', '4-')
+                .replace('{ENDURANCE_TEST}', '6-minute walk: 300 feet')
+                .replace('{BALANCE}', 'fair')
+                .replace('{POSTURE}', 'slouched');
+            
+            let assessment = template.assessment
+                .replace('{PAIN_PATTERN}', 'mechanical etiology')
+                .replace('{IMAGING_INTERPRETATION}', 'partial thickness tear')
+                .replace('{RISK_FACTORS}', 'previous injury, inadequate rehab')
+                .replace('{GRADE}', 'II')
+                .replace('{PROGRESSION}', 'appropriately per protocol')
+                .replace('{SAFETY}', 'fall risk moderate')
+                .replace('{CAUSE}', 'prolonged inactivity');
+            
+            let plan = template.plan;
+            
+            // Generate SOAP note HTML
+            const soapHTML = `
+                <div class="space-y-6">
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-3 rounded">
+                        <p class="text-xs text-blue-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Template Applied:</strong> ${template.name}. Please review and customize based on patient-specific findings.
+                        </p>
+                    </div>
+                    
+                    <!-- Subjective -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-blue mb-2">SUBJECTIVE</h3>
+                        <div class="pl-4">
+                            <textarea id="subjectiveText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-brand-blue focus:outline-none text-sm" rows="4">${subjective}</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Objective -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-orange mb-2">OBJECTIVE</h3>
+                        <div class="pl-4">
+                            <textarea id="objectiveText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-brand-orange focus:outline-none text-sm" rows="6">${objective}</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Assessment -->
+                    <div>
+                        <h3 class="text-lg font-bold text-green-600 mb-2">ASSESSMENT</h3>
+                        <div class="pl-4">
+                            <textarea id="assessmentText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-green-600 focus:outline-none text-sm" rows="4">${assessment}</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Plan -->
+                    <div>
+                        <h3 class="text-lg font-bold text-purple-600 mb-2">PLAN</h3>
+                        <div class="pl-4">
+                            <textarea id="planText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-600 focus:outline-none text-sm" rows="5">${plan}</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Exercises -->
+                    <div>
+                        <h3 class="text-md font-bold text-indigo-600 mb-2">Recommended Exercises</h3>
+                        <div class="pl-4">
+                            <ul class="list-disc list-inside text-sm space-y-1">
+                                ${template.exercises.map(ex => `<li>${ex}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('soapNote').innerHTML = soapHTML;
+            
+            // Auto-add ICD-10 codes to diagnosis list
+            template.icd10_codes.forEach(code => {
+                const codeName = getICD10Name(code);
+                if (codeName) {
+                    addToDiagnosisList(code, codeName, 'template');
+                }
+            });
+            
+            // Success message
+            alert(`Template "${template.name}" applied successfully!\n\nICD-10 codes added to diagnosis list.\n\nPlease review and customize based on specific patient findings.`);
+            
+            // Clear selection
+            document.getElementById('templateSelect').value = '';
+            document.getElementById('templatePreview').classList.add('hidden');
+            document.getElementById('applyTemplateBtn').disabled = true;
+            STATE.currentTemplate = null;
+        }
+        
+        function getICD10Name(code) {
+            const icd10Map = {
+                'M54.5': 'Low back pain',
+                'M54.50': 'Low back pain, unspecified',
+                'M54.9': 'Dorsalgia, unspecified',
+                'M75.40': 'Impingement syndrome of shoulder, unspecified',
+                'M75.41': 'Impingement syndrome of right shoulder',
+                'M75.42': 'Impingement syndrome of left shoulder',
+                'M17.11': 'Unilateral primary osteoarthritis, right knee',
+                'M17.12': 'Unilateral primary osteoarthritis, left knee',
+                'M17.9': 'Osteoarthritis of knee, unspecified',
+                'M75.100': 'Unspecified rotator cuff tear or rupture, unspecified shoulder',
+                'M75.110': 'Incomplete rotator cuff tear or rupture, unspecified shoulder',
+                'M75.120': 'Complete rotator cuff tear or rupture, unspecified shoulder',
+                'M54.2': 'Cervicalgia',
+                'S13.4XXA': 'Sprain of ligaments of cervical spine, initial encounter',
+                'S93.401A': 'Sprain of unspecified ligament of right ankle, initial encounter',
+                'S93.402A': 'Sprain of unspecified ligament of left ankle, initial encounter',
+                'Z96.641': 'Presence of right artificial hip joint',
+                'Z96.642': 'Presence of left artificial hip joint',
+                'M62.81': 'Muscle weakness (generalized)',
+                'Z72.3': 'Lack of physical exercise'
+            };
+            return icd10Map[code] || code;
+        }
+        
+        function saveCurrentAsTemplate() {
+            const templateName = prompt('Enter a name for this custom template:');
+            if (!templateName || templateName.trim() === '') return;
+            
+            // Get current SOAP content
+            const subjectiveEl = document.getElementById('subjectiveText');
+            const objectiveEl = document.getElementById('objectiveText');
+            const assessmentEl = document.getElementById('assessmentText');
+            const planEl = document.getElementById('planText');
+            
+            if (!subjectiveEl || !objectiveEl || !assessmentEl || !planEl) {
+                alert('Please apply a template or generate a SOAP note first before saving as template.');
+                return;
+            }
+            
+            const customTemplate = {
+                name: templateName.trim(),
+                category: 'Custom',
+                subjective: subjectiveEl.value,
+                objective: objectiveEl.value,
+                assessment: assessmentEl.value,
+                plan: planEl.value,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Save to localStorage
+            let customTemplates = JSON.parse(localStorage.getItem('customSOAPTemplates') || '[]');
+            customTemplates.push(customTemplate);
+            localStorage.setItem('customSOAPTemplates', JSON.stringify(customTemplates));
+            
+            alert(`Template "${templateName}" saved successfully!`);
+            loadCustomTemplates();
+        }
+        
+        function loadCustomTemplates() {
+            const customTemplates = JSON.parse(localStorage.getItem('customSOAPTemplates') || '[]');
+            const count = customTemplates.length;
+            document.getElementById('customTemplateCount').textContent = count;
+            
+            const container = document.getElementById('customTemplatesContent');
+            
+            if (count === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500">No custom templates saved yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = customTemplates.map((template, index) => `
+                <div class="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200">
+                    <div class="flex-1">
+                        <div class="font-semibold text-sm">${template.name}</div>
+                        <div class="text-xs text-gray-500">Saved: ${new Date(template.timestamp).toLocaleDateString()}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="applyCustomTemplate(${index})" 
+                            class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">
+                            <i class="fas fa-check mr-1"></i>Apply
+                        </button>
+                        <button onclick="deleteCustomTemplate(${index})" 
+                            class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function applyCustomTemplate(index) {
+            const customTemplates = JSON.parse(localStorage.getItem('customSOAPTemplates') || '[]');
+            const template = customTemplates[index];
+            
+            if (!template) return;
+            
+            const soapHTML = `
+                <div class="space-y-6">
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-3 rounded">
+                        <p class="text-xs text-purple-800">
+                            <i class="fas fa-star mr-1"></i>
+                            <strong>Custom Template Applied:</strong> ${template.name}
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-blue mb-2">SUBJECTIVE</h3>
+                        <div class="pl-4">
+                            <textarea id="subjectiveText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-brand-blue focus:outline-none text-sm" rows="4">${template.subjective}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-orange mb-2">OBJECTIVE</h3>
+                        <div class="pl-4">
+                            <textarea id="objectiveText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-brand-orange focus:outline-none text-sm" rows="6">${template.objective}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-bold text-green-600 mb-2">ASSESSMENT</h3>
+                        <div class="pl-4">
+                            <textarea id="assessmentText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-green-600 focus:outline-none text-sm" rows="4">${template.assessment}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-bold text-purple-600 mb-2">PLAN</h3>
+                        <div class="pl-4">
+                            <textarea id="planText" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-600 focus:outline-none text-sm" rows="5">${template.plan}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('soapNote').innerHTML = soapHTML;
+            alert(`Custom template "${template.name}" applied successfully!`);
+        }
+        
+        function deleteCustomTemplate(index) {
+            if (!confirm('Are you sure you want to delete this custom template?')) return;
+            
+            let customTemplates = JSON.parse(localStorage.getItem('customSOAPTemplates') || '[]');
+            customTemplates.splice(index, 1);
+            localStorage.setItem('customSOAPTemplates', JSON.stringify(customTemplates));
+            
+            loadCustomTemplates();
+            alert('Template deleted successfully.');
+        }
+        
+        function toggleCustomTemplates() {
+            const list = document.getElementById('customTemplatesList');
+            list.classList.toggle('hidden');
+            
+            if (!list.classList.contains('hidden')) {
+                loadCustomTemplates();
+            }
+        }
+        
+        // Load custom templates count on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCustomTemplates();
+        });
 
         function displayDetailedAnalysis() {
             const tests = STATE.assessmentData.tests || [];
