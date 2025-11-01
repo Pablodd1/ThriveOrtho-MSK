@@ -319,6 +319,28 @@
                     <div class="text-gray-600">Loading diagnostic suggestions...</div>
                 </div>
                 
+                <!-- AI-Powered SOAP-Based ICD-10 Suggestions -->
+                <div class="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border-2 border-purple-300">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-gray-800">
+                            <i class="fas fa-brain mr-2 text-purple-600"></i>
+                            AI Smart Suggestions (SOAP-Based)
+                        </h3>
+                        <button onclick="getSmartICD10Suggestions()" 
+                            class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 font-semibold transition-all shadow-md">
+                            <i class="fas fa-magic mr-2"></i>
+                            AI Analyze SOAP Note
+                        </button>
+                    </div>
+                    <p class="text-xs text-purple-700 mb-3">
+                        <i class="fas fa-lightbulb mr-1"></i>
+                        Click the button above to analyze your SOAP note with AI and get smart ICD-10 code suggestions based on clinical documentation.
+                    </p>
+                    <div id="smartICD10Suggestions" class="space-y-3" style="display:none;">
+                        <!-- AI suggestions will appear here -->
+                    </div>
+                </div>
+                
                 <!-- Manual Diagnosis Entry -->
                 <div class="mt-6 bg-white rounded-lg p-4 border-2 border-dashed border-gray-300">
                     <h3 class="font-bold text-gray-800 mb-3">
@@ -2122,6 +2144,151 @@ IMPRESSION:
             alert('✓ Diagnosis added to final list');
         }
 
+        // ============================================
+        // SMART ICD-10 SUGGESTIONS (AI-POWERED)
+        // ============================================
+        async function getSmartICD10Suggestions() {
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing SOAP Note...';
+            
+            try {
+                // Get SOAP note content
+                const soapElement = document.getElementById('soapNote');
+                const soapText = soapElement ? soapElement.innerText : '';
+                
+                if (!soapText || soapText.length < 50) {
+                    alert('⚠️ Please generate or write a SOAP note first before requesting AI suggestions.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    return;
+                }
+                
+                // Get patient info
+                const patient = STATE.patientData;
+                const age = calculateAge(patient.date_of_birth);
+                const bmi = calculateBMI(patient.height_cm, patient.weight_kg);
+                
+                // Call API
+                const response = await fetch('/api/ai/suggest-icd10', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        soapNote: soapText,
+                        patientInfo: {
+                            age: age,
+                            gender: patient.gender,
+                            bmi: bmi ? bmi.toFixed(1) : null
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.suggestions && data.suggestions.length > 0) {
+                    displaySmartICD10Suggestions(data.suggestions);
+                    showStatus('✅ AI generated ' + data.suggestions.length + ' smart ICD-10 suggestions!', 'success');
+                } else {
+                    throw new Error(data.error || 'No suggestions generated');
+                }
+                
+            } catch (error) {
+                console.error('Smart ICD-10 suggestion error:', error);
+                alert('❌ Error generating AI suggestions: ' + error.message + '\n\nPlease try again or use manual entry.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+
+        function displaySmartICD10Suggestions(suggestions) {
+            const container = document.getElementById('smartICD10Suggestions');
+            container.style.display = 'block';
+            
+            const html = suggestions.map((sugg, idx) => {
+                const confidencePercent = (sugg.confidence * 100).toFixed(0);
+                const confidenceColor = sugg.confidence >= 0.9 ? 'text-green-600' : 
+                                       sugg.confidence >= 0.75 ? 'text-yellow-600' : 'text-orange-600';
+                const confidenceLabel = sugg.confidence >= 0.9 ? 'High' : 
+                                       sugg.confidence >= 0.75 ? 'Medium' : 'Low';
+                
+                const priorityColors = {
+                    'primary': 'bg-purple-600 text-white',
+                    'secondary': 'bg-indigo-600 text-white',
+                    'tertiary': 'bg-gray-600 text-white'
+                };
+                
+                return `
+                    <div class="bg-white border-2 border-purple-300 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="px-3 py-1 ${priorityColors[sugg.priority]} rounded-full text-xs font-bold uppercase">
+                                        ${sugg.priority}
+                                    </span>
+                                    <span class="px-2 py-1 ${confidenceColor} bg-opacity-10 rounded text-xs font-semibold">
+                                        ${confidenceLabel} Confidence (${confidencePercent}%)
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="font-mono font-bold text-lg text-purple-700 mr-2">${sugg.code}</span>
+                                    <span class="text-gray-800 font-semibold">${sugg.description}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 italic mb-2">
+                                    <i class="fas fa-quote-left mr-1"></i>
+                                    ${sugg.reasoning}
+                                </p>
+                            </div>
+                            <button onclick="selectSmartDiagnosis('${sugg.code}', '${sugg.description}', '${sugg.priority}')" 
+                                class="ml-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all font-semibold shadow-md">
+                                <i class="fas fa-check mr-1"></i>Add
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="bg-green-50 border-2 border-green-400 rounded-lg p-3 mb-3">
+                    <p class="text-sm text-green-800">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        <strong>AI Analysis Complete!</strong> Found ${suggestions.length} relevant ICD-10 codes based on your SOAP note. 
+                        Review and select appropriate codes below.
+                    </p>
+                </div>
+                ${html}
+            `;
+        }
+
+        function selectSmartDiagnosis(code, description, priority) {
+            // Add to selected diagnoses if not already present
+            const exists = DIAGNOSIS_STATE.selectedDiagnoses.find(d => d.code === code);
+            if (exists) {
+                alert('This diagnosis is already in your final list.');
+                return;
+            }
+            
+            DIAGNOSIS_STATE.selectedDiagnoses.push({
+                code: code,
+                description: description,
+                source: 'ai-smart',
+                category: 'AI SOAP Analysis',
+                priority: priority
+            });
+            
+            updateFinalDiagnosisList();
+            
+            // Visual feedback
+            const btn = event.target.closest('button');
+            btn.innerHTML = '<i class="fas fa-check-double mr-1"></i>Added';
+            btn.classList.remove('from-purple-600', 'to-indigo-600', 'hover:from-purple-700', 'hover:to-indigo-700');
+            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btn.disabled = true;
+            
+            showStatus(`✅ ICD-10 code ${code} added to final diagnosis list!`, 'success');
+        }
+
         function updateFinalDiagnosisList() {
             if (DIAGNOSIS_STATE.selectedDiagnoses.length === 0) {
                 document.getElementById('finalDiagnosisList').innerHTML = 
@@ -2129,14 +2296,23 @@ IMPRESSION:
                 return;
             }
             
-            const html = DIAGNOSIS_STATE.selectedDiagnoses.map((dx, idx) => `
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded border-l-4 ${dx.source === 'ai-suggested' ? 'border-purple-500' : 'border-brand-orange'}">
+            const html = DIAGNOSIS_STATE.selectedDiagnoses.map((dx, idx) => {
+                const borderColor = dx.source === 'ai-smart' ? 'border-indigo-500' : 
+                                   dx.source === 'ai-suggested' ? 'border-purple-500' : 'border-brand-orange';
+                const badgeBg = dx.source === 'ai-smart' ? 'bg-indigo-100 text-indigo-700' :
+                               dx.source === 'ai-suggested' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700';
+                const badgeText = dx.source === 'ai-smart' ? 'AI SOAP Analysis' :
+                                 dx.source === 'ai-suggested' ? 'AI Assessment' : 'Provider Added';
+                
+                return `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded border-l-4 ${borderColor}">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-1">
                             <span class="font-mono font-bold text-lg text-brand-blue">${dx.code}</span>
-                            <span class="px-2 py-0.5 text-xs rounded ${dx.source === 'ai-suggested' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}">
-                                ${dx.source === 'ai-suggested' ? 'AI Suggested' : 'Provider Added'}
+                            <span class="px-2 py-0.5 text-xs rounded ${badgeBg}">
+                                ${badgeText}
                             </span>
+                            ${dx.priority ? `<span class="px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-700 uppercase">${dx.priority}</span>` : ''}
                         </div>
                         <p class="text-sm text-gray-700">${dx.description}</p>
                         <p class="text-xs text-gray-500 mt-1">Category: ${dx.category}</p>
@@ -2146,7 +2322,8 @@ IMPRESSION:
                         <i class="fas fa-times mr-1"></i>Remove
                     </button>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             
             const summary = `
                 <div class="bg-brand-blue text-white p-3 rounded-lg mb-3">

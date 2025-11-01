@@ -904,4 +904,102 @@ Output ONLY valid JSON in this exact format:
   }
 })
 
+// Smart ICD-10 Suggestions based on SOAP note
+app.post('/api/ai/suggest-icd10', async (c) => {
+  try {
+    const { soapNote, patientInfo } = await c.req.json()
+    
+    const prompt = `You are an expert medical coder analyzing a physical therapy SOAP note to suggest appropriate ICD-10 diagnosis codes.
+
+Patient Information:
+- Age: ${patientInfo?.age || 'N/A'}
+- Gender: ${patientInfo?.gender || 'N/A'}
+- BMI: ${patientInfo?.bmi || 'N/A'}
+
+SOAP Note:
+${soapNote}
+
+Based on this SOAP note, suggest the 3 most appropriate ICD-10 diagnosis codes for billing and documentation purposes.
+
+For each code, provide:
+1. ICD-10 code (e.g., "M54.5")
+2. Full description (e.g., "Low back pain")
+3. Confidence score (0.0 to 1.0, where 1.0 is most confident)
+4. Clinical reasoning (brief explanation of why this code is appropriate)
+5. Billing priority (primary, secondary, or tertiary)
+
+Focus on:
+- Movement dysfunction codes (M codes)
+- Pain codes (M25.5xx series)
+- ROM limitation codes
+- Weakness codes (M62.81)
+- Balance/gait codes (R26.xx series)
+- Age-related codes if applicable (R54)
+
+Output ONLY valid JSON in this exact format (no markdown, no extra text):
+{
+  "suggestions": [
+    {
+      "code": "M54.5",
+      "description": "Low back pain",
+      "confidence": 0.95,
+      "reasoning": "Patient reports chronic low back pain with movement limitations",
+      "priority": "primary"
+    },
+    {
+      "code": "M62.81",
+      "description": "Muscle weakness (generalized)",
+      "confidence": 0.85,
+      "reasoning": "Assessment shows bilateral weakness in hip extensors and core musculature",
+      "priority": "secondary"
+    },
+    {
+      "code": "R26.81",
+      "description": "Unsteadiness on feet",
+      "confidence": 0.75,
+      "reasoning": "Balance testing reveals reduced postural stability",
+      "priority": "tertiary"
+    }
+  ]
+}`
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.2, // Low temperature for consistent medical coding
+          maxOutputTokens: 800
+        }
+      })
+    })
+
+    const data = await response.json() as any
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Gemini API error')
+    }
+    
+    let jsonText = data.candidates[0].content.parts[0].text
+    
+    // Clean JSON (remove markdown code blocks if present)
+    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    
+    const result = JSON.parse(jsonText)
+    
+    return c.json({ success: true, suggestions: result.suggestions })
+  } catch (error: any) {
+    console.error('Gemini ICD-10 suggestion error:', error)
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      fallback: true,
+      suggestions: [] // Return empty array on error
+    }, 500)
+  }
+})
+
 export default app
