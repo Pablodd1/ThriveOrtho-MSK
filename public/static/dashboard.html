@@ -67,6 +67,18 @@
                 </div>
             </div>
 
+            <!-- Recent Patients Quick Access -->
+            <div id="recentPatientsSection" class="glass-card-solid p-6 mb-8 fade-in-up" style="display:none;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-history mr-2 text-brand-blue"></i>
+                        Recent Patients
+                    </h3>
+                    <span class="text-xs text-gray-500">Last 5 accessed</span>
+                </div>
+                <div id="recentPatientsContainer" class="grid md:grid-cols-5 gap-3"></div>
+            </div>
+
             <!-- Stats -->
             <div class="grid md:grid-cols-4 gap-6 mb-8">
                 <div class="stat-card fade-in-up">
@@ -114,6 +126,34 @@
                     Patient List
                 </h2>
                 
+                <!-- Search & Filter Controls -->
+                <div class="mb-6 flex flex-col md:flex-row gap-3">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input 
+                            type="text" 
+                            id="patientSearch" 
+                            placeholder="Search by name, DOB, or ID..." 
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            oninput="debounceSearch()"
+                        />
+                    </div>
+                    <select id="sortBy" onchange="sortAndDisplayPatients()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue">
+                        <option value="name">Sort by Name</option>
+                        <option value="dob_asc">Sort by DOB (Oldest)</option>
+                        <option value="dob_desc">Sort by DOB (Youngest)</option>
+                        <option value="last_visit">Sort by Last Visit</option>
+                    </select>
+                    <button onclick="clearSearch()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
+                        <i class="fas fa-times mr-2"></i>Clear
+                    </button>
+                </div>
+                
+                <!-- Results Count -->
+                <div class="mb-3 text-sm text-gray-600">
+                    Showing <span id="filteredCount" class="font-bold">0</span> of <span id="totalCount" class="font-bold">0</span> patients
+                </div>
+                
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-100">
@@ -139,8 +179,14 @@
     </div>
 
     <script>
+        // Global state for patient data
+        let allPatients = [];
+        let filteredPatients = [];
+        let searchTimeout;
+
         window.addEventListener('DOMContentLoaded', async () => {
             await loadDashboardData();
+            displayRecentPatients();
         });
 
         async function loadDashboardData() {
@@ -150,8 +196,11 @@
                 const patientsResult = await patientsResponse.json();
                 
                 if (patientsResult.success) {
-                    displayPatients(patientsResult.data);
-                    document.getElementById('statPatients').textContent = patientsResult.data.length;
+                    allPatients = patientsResult.data;
+                    filteredPatients = [...allPatients];
+                    displayPatients(filteredPatients);
+                    updateCounts();
+                    document.getElementById('statPatients').textContent = allPatients.length;
                 }
 
                 // Load exercises count
@@ -193,7 +242,7 @@
                         <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Active</span>
                     </td>
                     <td class="px-4 py-3">
-                        <a href="/static/assessment-enhanced.html?patient_id=${patient.id}" class="text-brand-blue hover:text-brand-orange mr-3" title="Start Assessment">
+                        <a href="#" onclick="startAssessment(${patient.id}); return false;" class="text-brand-blue hover:text-brand-orange mr-3" title="Start Assessment">
                             <i class="fas fa-video"></i>
                         </a>
                         <a href="#" onclick="viewPatient(${patient.id}); return false;" class="text-gray-600 hover:text-gray-800" title="View Details">
@@ -211,6 +260,168 @@
 
         async function viewPatient(patientId) {
             alert(`Patient details view coming soon! Patient ID: ${patientId}`);
+        }
+
+        // ============================================
+        // SEARCH & FILTER FUNCTIONS
+        // ============================================
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                filterPatients();
+            }, 300); // Wait 300ms after user stops typing
+        }
+
+        function filterPatients() {
+            const searchTerm = document.getElementById('patientSearch').value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                filteredPatients = [...allPatients];
+            } else {
+                filteredPatients = allPatients.filter(p => {
+                    const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
+                    const dob = p.date_of_birth || '';
+                    const email = p.email || '';
+                    const id = p.id.toString();
+                    
+                    return fullName.includes(searchTerm) ||
+                           dob.includes(searchTerm) ||
+                           email.toLowerCase().includes(searchTerm) ||
+                           id.includes(searchTerm);
+                });
+            }
+            
+            sortAndDisplayPatients();
+        }
+
+        function sortAndDisplayPatients() {
+            const sortBy = document.getElementById('sortBy').value;
+            
+            const sorted = [...filteredPatients].sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+                        const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+                        return nameA.localeCompare(nameB);
+                    
+                    case 'dob_asc':
+                        return new Date(a.date_of_birth) - new Date(b.date_of_birth);
+                    
+                    case 'dob_desc':
+                        return new Date(b.date_of_birth) - new Date(a.date_of_birth);
+                    
+                    case 'last_visit':
+                        const dateA = new Date(a.created_at || 0);
+                        const dateB = new Date(b.created_at || 0);
+                        return dateB - dateA; // Most recent first
+                    
+                    default:
+                        return 0;
+                }
+            });
+            
+            displayPatients(sorted);
+            updateCounts();
+        }
+
+        function clearSearch() {
+            document.getElementById('patientSearch').value = '';
+            document.getElementById('sortBy').value = 'name';
+            filteredPatients = [...allPatients];
+            sortAndDisplayPatients();
+        }
+
+        function updateCounts() {
+            document.getElementById('filteredCount').textContent = filteredPatients.length;
+            document.getElementById('totalCount').textContent = allPatients.length;
+        }
+
+        // ============================================
+        // RECENT PATIENTS FUNCTIONS
+        // ============================================
+        
+        function saveRecentPatient(patientId) {
+            const patient = allPatients.find(p => p.id === patientId);
+            if (!patient) return;
+            
+            let recent = JSON.parse(localStorage.getItem('recentPatients') || '[]');
+            
+            // Remove if exists
+            recent = recent.filter(p => p.id !== patientId);
+            
+            // Add to beginning with timestamp
+            recent.unshift({
+                id: patient.id,
+                first_name: patient.first_name,
+                last_name: patient.last_name,
+                date_of_birth: patient.date_of_birth,
+                accessed_at: new Date().toISOString()
+            });
+            
+            // Keep only 5
+            recent = recent.slice(0, 5);
+            
+            localStorage.setItem('recentPatients', JSON.stringify(recent));
+        }
+
+        function displayRecentPatients() {
+            const recent = JSON.parse(localStorage.getItem('recentPatients') || '[]');
+            const container = document.getElementById('recentPatientsContainer');
+            const section = document.getElementById('recentPatientsSection');
+            
+            if (recent.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            
+            container.innerHTML = recent.map(p => {
+                const age = calculateAge(p.date_of_birth);
+                const accessed = formatTimeAgo(p.accessed_at);
+                
+                return `
+                    <div class="flex flex-col p-4 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 rounded-lg hover:shadow-lg hover:border-brand-blue transition-all cursor-pointer group"
+                         onclick="startAssessment(${p.id})">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-user-circle text-3xl text-brand-blue group-hover:text-brand-orange transition-colors"></i>
+                            <i class="fas fa-arrow-right text-gray-400 group-hover:text-brand-blue transition-colors"></i>
+                        </div>
+                        <div class="font-bold text-gray-800 text-sm mb-1 truncate">${p.first_name} ${p.last_name}</div>
+                        <div class="text-xs text-gray-600">Age ${age}</div>
+                        <div class="text-xs text-gray-500 mt-2">${accessed}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateAge(dateOfBirth) {
+            const today = new Date();
+            const birthDate = new Date(dateOfBirth);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+            if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
+            return date.toLocaleDateString();
+        }
+
+        function startAssessment(patientId) {
+            saveRecentPatient(patientId);
+            window.location.href = `/static/assessment-enhanced.html?patient_id=${patientId}`;
         }
     </script>
 </body>

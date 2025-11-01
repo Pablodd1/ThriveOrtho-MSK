@@ -274,10 +274,17 @@
 
             <!-- SOAP Note -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
-                    <i class="fas fa-notes-medical mr-2 text-brand-blue"></i>
-                    SOAP Note
-                </h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 border-b-2 border-brand-blue pb-2">
+                        <i class="fas fa-notes-medical mr-2 text-brand-blue"></i>
+                        SOAP Note
+                    </h2>
+                    <button onclick="importFromScribe()" 
+                            class="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-semibold shadow-lg">
+                        <i class="fas fa-file-import mr-2"></i>
+                        Import from Medical Scribe
+                    </button>
+                </div>
                 <div id="soapNote" class="space-y-6">
                     <div>Generating comprehensive medical note...</div>
                 </div>
@@ -3075,6 +3082,78 @@ IMPRESSION:
             `;
             
             return html;
+        }
+
+        // ============================================
+        // MEDICAL SCRIBE IMPORT FUNCTION
+        // ============================================
+        
+        function importFromScribe() {
+            const scribeData = JSON.parse(sessionStorage.getItem('medical_scribe_data') || '{}');
+            
+            if (!scribeData.complaints || scribeData.complaints.length === 0) {
+                showStatus('⚠️ No scribe data found. Complete an assessment with medical scribe first.', 'warning');
+                return;
+            }
+            
+            // Format complaints as SOAP Subjective
+            let soapText = '<div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300 mb-4">';
+            soapText += '<div class="flex items-center mb-2">';
+            soapText += '<i class="fas fa-microphone text-blue-600 mr-2"></i>';
+            soapText += '<strong class="text-blue-800">SUBJECTIVE (Imported from Medical Scribe)</strong>';
+            soapText += '</div>';
+            soapText += '<div class="text-sm text-gray-700">';
+            
+            soapText += '<p class="mb-2"><strong>Patient Chief Complaints:</strong></p>';
+            soapText += '<ul class="list-disc ml-6 space-y-2">';
+            
+            scribeData.complaints.forEach((c, i) => {
+                const painType = c.type || 'pain';
+                soapText += `<li><strong>${painType.toUpperCase()}:</strong> "${c.complaint}"<br/>`;
+                soapText += `<span class="text-xs text-gray-600">During: ${c.exercise} (Rep ${c.rep_count}) at ${c.timestamp}</span></li>`;
+            });
+            
+            soapText += '</ul>';
+            
+            if (scribeData.stats) {
+                soapText += '<p class="mt-3 text-xs text-gray-600">';
+                soapText += `<strong>Session Summary:</strong> ${scribeData.stats.totalComplaints} complaints recorded, `;
+                soapText += `${scribeData.stats.totalTranscripts} transcripts, `;
+                soapText += `${scribeData.stats.totalWords} words spoken, `;
+                soapText += `${Math.floor(scribeData.stats.duration / 60)} minutes duration`;
+                soapText += '</p>';
+            }
+            
+            soapText += '</div></div>';
+            
+            // Insert at the beginning of SOAP note
+            const soapNoteDiv = document.getElementById('soapNote');
+            const existingContent = soapNoteDiv.innerHTML;
+            
+            // Check if already imported
+            if (existingContent.includes('Imported from Medical Scribe')) {
+                if (!confirm('Scribe data already imported. Import again (will duplicate)?')) {
+                    return;
+                }
+            }
+            
+            soapNoteDiv.innerHTML = soapText + existingContent;
+            
+            showStatus('✅ Medical scribe data imported successfully!', 'success');
+            
+            // Scroll to SOAP note
+            soapNoteDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showStatus(message, type) {
+            // Simple alert for now - can be enhanced with toast notifications
+            const icons = {
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            alert((icons[type] || '') + ' ' + message);
         }
     </script>
 </body>
