@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Data Generator - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-7xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-database mr-2 text-brand-blue"></i>
+                Demo Assessment Data Generator
+            </h1>
+            <p class="text-gray-600 mb-6">
+                Generate realistic assessment reports for 3 dummy patients: Sarah Johnson, Robert Martinez, and Linda Chen.
+            </p>
+            
+            <button onclick="generateAllReports()" class="px-6 py-3 bg-brand-blue hover:bg-blue-700 text-white rounded-lg font-semibold">
+                <i class="fas fa-magic mr-2"></i>
+                Generate All Demo Reports
+            </button>
+        </div>
+
+        <div id="results" class="space-y-4"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // DEMO PATIENT DATA
+        // ============================================
+        const DEMO_PATIENTS = [
+            {
+                id: 'PT002',
+                first_name: 'Sarah',
+                last_name: 'Johnson',
+                date_of_birth: '1978-05-15',
+                gender: 'female',
+                chief_complaint: 'Right knee pain post-TKR',
+                assessment_profile: {
+                    fms_score: 2,
+                    compensations: ['Forward Lean', 'Hip Asymmetry'],
+                    severity: 'moderate',
+                    notes: '6 weeks post-op total knee replacement. Good progress but some compensatory patterns developing.'
+                }
+            },
+            {
+                id: 'PT003',
+                first_name: 'Robert',
+                last_name: 'Martinez',
+                date_of_birth: '1955-09-22',
+                gender: 'male',
+                chief_complaint: 'Chronic low back pain with left leg radiculopathy',
+                assessment_profile: {
+                    fms_score: 1,
+                    compensations: ['Excessive Forward Lean', 'Severe Hip Asymmetry', 'Limited ROM'],
+                    severity: 'severe',
+                    notes: 'Significant movement dysfunction. Forward lean >65°, unable to achieve full depth.'
+                }
+            },
+            {
+                id: 'PT004',
+                first_name: 'Linda',
+                last_name: 'Chen',
+                date_of_birth: '1990-03-08',
+                gender: 'female',
+                chief_complaint: 'Right shoulder impingement, overhead activities limited',
+                assessment_profile: {
+                    fms_score: 3,
+                    compensations: [],
+                    severity: 'none',
+                    notes: 'Excellent functional movement. No compensations detected. Full ROM achieved bilaterally.'
+                }
+            }
+        ];
+
+        // ============================================
+        // SYNTHETIC DATA GENERATION
+        // ============================================
+        function generateJointAngles(patient, frameCount = 150) {
+            const angles = {
+                hip_left: [],
+                hip_right: [],
+                knee_left: [],
+                knee_right: []
+            };
+            
+            // Base patterns for squat movement
+            for (let i = 0; i < frameCount; i++) {
+                const t = i / frameCount;
+                
+                // Simulate 5 reps (each rep ~30 frames)
+                const repPhase = (i % 30) / 30;
+                
+                // Squat pattern: standing (160°) -> deep (90°) -> standing
+                let kneeAngle = 160;
+                if (repPhase < 0.4) {
+                    // Descending
+                    kneeAngle = 160 - (70 * (repPhase / 0.4));
+                } else if (repPhase < 0.6) {
+                    // Bottom hold
+                    kneeAngle = 90;
+                } else {
+                    // Ascending
+                    kneeAngle = 90 + (70 * ((repPhase - 0.6) / 0.4));
+                }
+                
+                // Hip follows knee with offset
+                let hipAngle = kneeAngle - 20;
+                
+                // Add patient-specific variations
+                if (patient.id === 'PT002') {
+                    // Sarah: Right side weakness
+                    angles.knee_right.push(kneeAngle - 10);
+                    angles.knee_left.push(kneeAngle);
+                    angles.hip_right.push(hipAngle - 12);
+                    angles.hip_left.push(hipAngle);
+                } else if (patient.id === 'PT003') {
+                    // Robert: Severe asymmetry and limited ROM
+                    angles.knee_right.push(Math.min(kneeAngle, 120)); // Can't go deep
+                    angles.knee_left.push(Math.min(kneeAngle - 15, 120));
+                    angles.hip_right.push(Math.min(hipAngle, 100));
+                    angles.hip_left.push(Math.min(hipAngle - 18, 100));
+                } else {
+                    // Linda: Perfect symmetry
+                    angles.knee_right.push(kneeAngle + (Math.random() * 2 - 1));
+                    angles.knee_left.push(kneeAngle + (Math.random() * 2 - 1));
+                    angles.hip_right.push(hipAngle + (Math.random() * 2 - 1));
+                    angles.hip_left.push(hipAngle + (Math.random() * 2 - 1));
+                }
+            }
+            
+            return angles;
+        }
+
+        function generateSymmetryIndices(jointAngles) {
+            const hipSymmetry = [];
+            const kneeSymmetry = [];
+            
+            for (let i = 0; i < jointAngles.hip_left.length; i++) {
+                const hipAvg = (jointAngles.hip_left[i] + jointAngles.hip_right[i]) / 2;
+                const kneeAvg = (jointAngles.knee_left[i] + jointAngles.knee_right[i]) / 2;
+                
+                hipSymmetry.push(((jointAngles.hip_left[i] - jointAngles.hip_right[i]) / hipAvg) * 100);
+                kneeSymmetry.push(((jointAngles.knee_left[i] - jointAngles.knee_right[i]) / kneeAvg) * 100);
+            }
+            
+            return { hip: hipSymmetry, knee: kneeSymmetry };
+        }
+
+        function generateVelocity(jointAngles) {
+            const velocity = [];
+            
+            for (let i = 1; i < jointAngles.knee_left.length; i++) {
+                const dt = 0.033; // 30 FPS
+                const dAngle = Math.abs(jointAngles.knee_left[i] - jointAngles.knee_left[i-1]);
+                velocity.push(dAngle / dt);
+            }
+            
+            // Add first frame with 0 velocity
+            velocity.unshift(0);
+            
+            return velocity;
+        }
+
+        function generateCompensations(patient) {
+            const compensations = [];
+            
+            if (patient.assessment_profile.compensations.includes('Forward Lean')) {
+                compensations.push({
+                    pattern: 'Excessive Forward Lean',
+                    severity: 'high',
+                    implication: 'Hip mobility limitation or weak glutes. Forward lean angle measured at 62°.'
+                });
+            }
+            
+            if (patient.assessment_profile.compensations.includes('Hip Asymmetry')) {
+                compensations.push({
+                    pattern: 'Hip Asymmetry',
+                    severity: 'moderate',
+                    implication: 'Right hip demonstrates 12-15% reduced ROM compared to left. Likely post-surgical compensation.'
+                });
+            }
+            
+            if (patient.assessment_profile.compensations.includes('Severe Hip Asymmetry')) {
+                compensations.push({
+                    pattern: 'Severe Hip Asymmetry',
+                    severity: 'high',
+                    implication: 'Left hip shows 18-22% asymmetry. Indicates significant weakness or pain avoidance.'
+                });
+            }
+            
+            if (patient.assessment_profile.compensations.includes('Limited ROM')) {
+                compensations.push({
+                    pattern: 'Limited Range of Motion',
+                    severity: 'high',
+                    implication: 'Unable to achieve knee flexion beyond 120°. Indicates flexibility limitations or pain restriction.'
+                });
+            }
+            
+            return compensations;
+        }
+
+        function generateClinicalNotes(patient) {
+            const score = patient.assessment_profile.fms_score;
+            const notes = [];
+            
+            if (score === 3) {
+                notes.push('Patient demonstrates excellent functional movement capacity.');
+                notes.push('No significant compensations or asymmetries detected.');
+                notes.push('Full range of motion achieved bilaterally with good control.');
+                notes.push('Recommend maintaining current exercise program and monitoring progress.');
+            } else if (score === 2) {
+                notes.push('Patient completes movement with minor to moderate compensations.');
+                notes.push(patient.assessment_profile.notes);
+                notes.push('Compensations detected: ' + patient.assessment_profile.compensations.join(', '));
+                notes.push('Recommend: Unilateral strengthening exercises, hip mobility work, and progressive loading.');
+                notes.push('Focus on correcting forward lean through hip flexor stretching and glute activation.');
+            } else {
+                notes.push('Significant movement dysfunction identified.');
+                notes.push(patient.assessment_profile.notes);
+                notes.push('Unable to complete movement with acceptable form.');
+                notes.push('Major issues: ' + patient.assessment_profile.compensations.join(', '));
+                notes.push('Recommend: Comprehensive mobility assessment, pain management consultation.');
+                notes.push('Consider modified exercise program with reduced intensity and assisted movements.');
+                notes.push('Follow-up assessment in 2-3 weeks to monitor progress.');
+            }
+            
+            return notes;
+        }
+
+        // ============================================
+        // REPORT GENERATION
+        // ============================================
+        function generateAssessmentReport(patient) {
+            const jointAngles = generateJointAngles(patient);
+            const symmetryIndices = generateSymmetryIndices(jointAngles);
+            const velocity = generateVelocity(jointAngles);
+            const compensations = generateCompensations(patient);
+            const clinicalNotes = generateClinicalNotes(patient);
+            
+            // Determine reps completed based on FMS score
+            let repsCompleted = 5;
+            if (patient.assessment_profile.fms_score === 1) {
+                repsCompleted = 3; // Couldn't complete all reps
+            }
+            
+            const report = {
+                patient_id: patient.id,
+                patient_name: `${patient.first_name} ${patient.last_name}`,
+                assessment_date: new Date().toISOString(),
+                camera_angle: 'front',
+                test_name: 'Deep Overhead Squat',
+                fms_score: patient.assessment_profile.fms_score,
+                reps_completed: repsCompleted,
+                target_reps: 5,
+                duration: (jointAngles.hip_left.length * 0.033).toFixed(1),
+                
+                joint_angles: jointAngles,
+                symmetry_indices: symmetryIndices,
+                angular_velocity: velocity,
+                compensations: compensations,
+                clinical_notes: clinicalNotes,
+                
+                // Additional patient info
+                patient_info: {
+                    date_of_birth: patient.date_of_birth,
+                    gender: patient.gender,
+                    chief_complaint: patient.chief_complaint
+                }
+            };
+            
+            return report;
+        }
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+        function generateAllReports() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-4xl text-brand-blue"></i><p class="mt-4 text-gray-600">Generating reports...</p></div>';
+            
+            setTimeout(() => {
+                resultsDiv.innerHTML = '';
+                
+                DEMO_PATIENTS.forEach(patient => {
+                    const report = generateAssessmentReport(patient);
+                    
+                    // Store in sessionStorage with unique key
+                    const storageKey = `demo_report_${patient.id}`;
+                    sessionStorage.setItem(storageKey, JSON.stringify(report));
+                    
+                    // Display result card
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow p-6';
+                    
+                    const scoreColor = 
+                        report.fms_score === 3 ? 'text-green-600' :
+                        report.fms_score === 2 ? 'text-yellow-600' : 'text-red-600';
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">
+                                    ${report.patient_name}
+                                    <span class="text-sm text-gray-500">(${patient.id})</span>
+                                </h3>
+                                <p class="text-sm text-gray-600">${patient.chief_complaint}</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-4xl font-bold ${scoreColor}">${report.fms_score}/3</div>
+                                <div class="text-xs text-gray-500">FMS Score</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div class="text-center p-3 bg-gray-50 rounded">
+                                <div class="text-2xl font-bold text-gray-800">${report.reps_completed}/5</div>
+                                <div class="text-xs text-gray-600">Reps</div>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded">
+                                <div class="text-2xl font-bold text-gray-800">${report.duration}s</div>
+                                <div class="text-xs text-gray-600">Duration</div>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded">
+                                <div class="text-2xl font-bold text-gray-800">${report.compensations.length}</div>
+                                <div class="text-xs text-gray-600">Issues</div>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded">
+                                <div class="text-2xl font-bold text-gray-800">${report.joint_angles.hip_left.length}</div>
+                                <div class="text-xs text-gray-600">Frames</div>
+                            </div>
+                        </div>
+                        
+                        ${report.compensations.length > 0 ? `
+                            <div class="mb-4">
+                                <div class="text-sm font-bold text-gray-700 mb-2">Detected Issues:</div>
+                                ${report.compensations.map(c => `
+                                    <div class="text-xs bg-yellow-50 border-l-4 border-yellow-500 p-2 mb-2">
+                                        <strong>${c.pattern}</strong> - ${c.implication}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="text-sm text-green-600 font-semibold mb-4">✓ No compensations detected</div>'}
+                        
+                        <div class="flex gap-3">
+                            <button onclick="viewReport('${patient.id}')" 
+                                class="flex-1 px-4 py-2 bg-brand-blue hover:bg-blue-700 text-white rounded-lg font-semibold">
+                                <i class="fas fa-file-medical mr-2"></i>
+                                View Full Report
+                            </button>
+                            <button onclick="downloadReport('${patient.id}')" 
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    resultsDiv.appendChild(card);
+                });
+                
+                // Add success message
+                const successMsg = document.createElement('div');
+                successMsg.className = 'bg-green-50 border-l-4 border-green-500 p-4 rounded';
+                successMsg.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 text-2xl mr-3"></i>
+                        <div>
+                            <div class="font-bold text-green-800">Success!</div>
+                            <div class="text-sm text-green-700">
+                                Generated ${DEMO_PATIENTS.length} complete assessment reports with full biomechanical data.
+                                Click "View Full Report" to see detailed analysis with graphs.
+                            </div>
+                        </div>
+                    </div>
+                `;
+                resultsDiv.appendChild(successMsg);
+                
+            }, 1000);
+        }
+
+        function viewReport(patientId) {
+            const storageKey = `demo_report_${patientId}`;
+            const report = sessionStorage.getItem(storageKey);
+            
+            if (report) {
+                // Store as latestAssessmentReport for report viewer
+                sessionStorage.setItem('latestAssessmentReport', report);
+                window.open('/static/assessment-report.html?demo=true', '_blank');
+            } else {
+                alert('Report not found. Please generate reports first.');
+            }
+        }
+
+        function downloadReport(patientId) {
+            const storageKey = `demo_report_${patientId}`;
+            const reportData = sessionStorage.getItem(storageKey);
+            
+            if (reportData) {
+                const report = JSON.parse(reportData);
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `assessment_report_${patientId}_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // Auto-generate on page load for convenience
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if reports already exist
+            const existingReport = sessionStorage.getItem('demo_report_PT002');
+            if (!existingReport) {
+                console.log('Auto-generating demo reports...');
+                setTimeout(generateAllReports, 500);
+            } else {
+                console.log('Demo reports already exist. Click button to regenerate.');
+            }
+        });
+    </script>
+</body>
+</html>
