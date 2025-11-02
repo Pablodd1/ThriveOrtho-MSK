@@ -1,5 +1,5 @@
 # 🚀 PRODUCTION DEPLOYMENT GUIDE
-**Project:** SOBEAIREHAB Physical Therapy Platform  
+**Project:** ThriveOrtho Physical Therapy Platform  
 **Date:** November 2, 2025  
 **Status:** ✅ READY FOR PRODUCTION
 
@@ -143,7 +143,7 @@ ls -lh dist/
 cd /home/user/webapp
 
 # Create Pages project (first time only)
-npx wrangler pages project create sobeairehab \
+npx wrangler pages project create thriveortho \
   --production-branch main \
   --compatibility-date 2025-10-21
 
@@ -159,13 +159,13 @@ npx wrangler pages project create sobeairehab \
 cd /home/user/webapp
 
 # Deploy to Cloudflare Pages
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # Output will show:
 # ✨ Success! Uploaded 12 files (X.XX sec)
 # ✨ Deployment complete! Take a peek at your page:
-#    https://XXXXXXXX.sobeairehab.pages.dev (Production)
-#    https://main.sobeairehab.pages.dev (Branch preview)
+#    https://XXXXXXXX.thriveortho.pages.dev (Production)
+#    https://main.thriveortho.pages.dev (Branch preview)
 ```
 
 ---
@@ -175,7 +175,7 @@ npx wrangler pages deploy dist --project-name sobeairehab
 **Test All Pages:**
 ```bash
 # Replace with your actual production URL
-PROD_URL="https://sobeairehab.pages.dev"
+PROD_URL="https://thriveortho.pages.dev"
 
 # Test homepage
 curl -s -o /dev/null -w "Homepage: %{http_code}\n" "$PROD_URL/"
@@ -195,7 +195,7 @@ curl -s -o /dev/null -w "Medical Notes: %{http_code}\n" "$PROD_URL/static/medica
 
 **Test API Endpoints:**
 ```bash
-PROD_URL="https://sobeairehab.pages.dev"
+PROD_URL="https://thriveortho.pages.dev"
 
 # Test patient authentication
 curl -X POST "$PROD_URL/api/patient/auth" \
@@ -349,11 +349,11 @@ If issues occur after deployment:
 
 ```bash
 # List recent deployments
-npx wrangler pages deployments list --project-name sobeairehab
+npx wrangler pages deployments list --project-name thriveortho
 
 # Rollback to previous deployment
 npx wrangler pages deployments rollback \
-  --project-name sobeairehab \
+  --project-name thriveortho \
   --deployment-id PREVIOUS_DEPLOYMENT_ID
 ```
 
@@ -366,11 +366,11 @@ npx wrangler pages deployments rollback \
 # Set via Cloudflare Dashboard or wrangler
 
 # Gemini API Key (for AI features)
-npx wrangler pages secret put GEMINI_API_KEY --project-name sobeairehab
+npx wrangler pages secret put GEMINI_API_KEY --project-name thriveortho
 # Enter your Gemini API key when prompted
 
 # Verify secrets
-npx wrangler pages secret list --project-name sobeairehab
+npx wrangler pages secret list --project-name thriveortho
 ```
 
 ---
@@ -380,14 +380,14 @@ npx wrangler pages secret list --project-name sobeairehab
 ### Add Custom Domain:
 ```bash
 # Add your domain to Cloudflare Pages
-npx wrangler pages domain add sobeairehab.com --project-name sobeairehab
+npx wrangler pages domain add thriveortho.com --project-name thriveortho
 
 # Verify DNS is configured correctly
-npx wrangler pages domain list --project-name sobeairehab
+npx wrangler pages domain list --project-name thriveortho
 ```
 
 ### DNS Configuration:
-- Add CNAME record: `www` → `sobeairehab.pages.dev`
+- Add CNAME record: `www` → `thriveortho.pages.dev`
 - Add A records for apex domain (if needed)
 
 ---
@@ -403,10 +403,10 @@ npx wrangler pages domain list --project-name sobeairehab
 ### Quick Commands:
 ```bash
 # Check deployment status
-npx wrangler pages deployments list --project-name sobeairehab
+npx wrangler pages deployments list --project-name thriveortho
 
 # View logs
-npx wrangler tail --project-name sobeairehab
+npx wrangler tail --project-name thriveortho
 
 # Execute database query
 npx wrangler d1 execute webapp-production --command="YOUR_SQL_HERE"
@@ -489,4 +489,4 @@ Password: (demo only, change in production)
 **Last Updated:** November 2, 2025  
 **Version:** 1.0.0  
 **Author:** AI Assistant  
-**Project:** SOBEAIREHAB
+**Project:** ThriveOrtho

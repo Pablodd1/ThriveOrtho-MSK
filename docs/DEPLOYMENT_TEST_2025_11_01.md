@@ -250,10 +250,10 @@ dist/
 
 # 2. Build and deploy
 npm run build
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # 3. Verify production
-curl https://sobeairehab.pages.dev/static/patient-portal
+curl https://thriveortho.pages.dev/static/patient-portal
 ```
 
 ---

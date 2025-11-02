@@ -142,7 +142,7 @@ Response: {
 <div class="login-container">
   <div class="logo">
     <i class="fas fa-heartbeat"></i>
-    <h1>SOBEAIREHAB</h1>
+    <h1>ThriveOrtho</h1>
     <p>Patient Exercise Portal</p>
   </div>
   
@@ -790,4 +790,4 @@ This comprehensive plan provides everything needed to build the Patient HEP App 
 **Document Version:** 1.0  
 **Last Updated:** November 1, 2025  
 **Status:** Ready for Implementation  
-**Project:** SOBEAIREHAB - Patient HEP App
+**Project:** ThriveOrtho - Patient HEP App

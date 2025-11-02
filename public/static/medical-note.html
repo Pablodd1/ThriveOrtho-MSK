@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical Note - SOBEAIREHAB</title>
+    <title>Medical Note - ThriveOrtho</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'brand-blue': '#003D7A',
-              'brand-yellow': '#FFD700'
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
             }
           }
         }
@@ -49,7 +49,7 @@
                     <button onclick="window.print()" class="px-4 py-2 bg-white text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
                         <i class="fas fa-print mr-2"></i>Print
                     </button>
-                    <button onclick="downloadPDF()" class="px-4 py-2 bg-brand-yellow text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
+                    <button onclick="downloadPDF()" class="px-4 py-2 bg-brand-green text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
                         <i class="fas fa-file-pdf mr-2"></i>PDF
                     </button>
                 </div>
@@ -2091,7 +2091,7 @@ IMPRESSION:
                 doc.setTextColor(255, 255, 255);
                 doc.setFontSize(24);
                 doc.setFont('helvetica', 'bold');
-                doc.text('SOBEAIREHAB', pageWidth / 2, 15, { align: 'center' });
+                doc.text('ThriveOrtho', pageWidth / 2, 15, { align: 'center' });
                 
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'normal');
@@ -2332,13 +2332,13 @@ IMPRESSION:
                     doc.setPage(i);
                     doc.setFontSize(8);
                     doc.setTextColor(128, 128, 128);
-                    doc.text(`SOBEAIREHAB Physical Therapy Assessment Report`, margin, pageHeight - 10);
+                    doc.text(`ThriveOrtho Physical Therapy Assessment Report`, margin, pageHeight - 10);
                     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, pageHeight - 10);
                     doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
                 }
                 
                 // Save PDF
-                const fileName = `SOBEAIREHAB_Assessment_${patient.last_name}_${patient.first_name}_${assessmentDate.toISOString().split('T')[0]}.pdf`;
+                const fileName = `ThriveOrtho_Assessment_${patient.last_name}_${patient.first_name}_${assessmentDate.toISOString().split('T')[0]}.pdf`;
                 doc.save(fileName);
                 
                 // Reset button
@@ -3987,7 +3987,7 @@ IMPRESSION:
         function exportHEP() {
             let text = '═══════════════════════════════════════\n';
             text += '   HOME EXERCISE PROGRAM (HEP)\n';
-            text += '   SOBEAIREHAB - Mobile Car & Home Therapy\n';
+            text += '   ThriveOrtho - Made by Humans, Powered by AI\n';
             text += '═══════════════════════════════════════\n\n';
             text += `Patient: ${STATE.patientData.first_name} ${STATE.patientData.last_name}\n`;
             text += `Date: ${new Date().toLocaleDateString()}\n`;

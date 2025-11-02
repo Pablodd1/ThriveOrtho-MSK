@@ -450,7 +450,7 @@ const duration = activeTime / 1000;
 - ✅ Advanced project progress to 35% overall
 
 **Why This Matters:**
-This pause/resume feature transforms SOBEAIREHAB from a rigid assessment tool into a flexible clinical solution that handles real-world interruptions gracefully. Clinicians can now:
+This pause/resume feature transforms ThriveOrtho from a rigid assessment tool into a flexible clinical solution that handles real-world interruptions gracefully. Clinicians can now:
 - Answer urgent phone calls mid-assessment
 - Handle patient emergencies without losing progress
 - Take breaks without re-doing work

@@ -1,4 +1,4 @@
-# 🏥 SOBEAIREHAB - Mobile Car & Home Therapy Platform
+# 🏥 ThriveOrtho - Made by Humans, Powered by AI Platform
 
 **Complete Physical Therapy Assessment Platform with AI-Powered Features**
 
@@ -11,7 +11,7 @@
 
 ## 🎯 What Is This?
 
-SOBEAIREHAB is a comprehensive physical therapy assessment platform that combines:
+ThriveOrtho is a comprehensive physical therapy assessment platform that combines:
 - 🎥 **Real-time AI pose detection** (33-point skeleton tracking)
 - 🎤 **Medical scribe system** (automatic pain complaint detection)
 - 🧠 **MRI report interpreter** (AI-powered analysis with dual explanations)
@@ -103,10 +103,10 @@ https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 # 1. Setup Cloudflare API key (Deploy tab)
 # 2. Build and deploy
 npm run build
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # Your site will be live at:
-# https://sobeairehab.pages.dev
+# https://thriveortho.pages.dev
 ```
 
 ---
@@ -182,8 +182,8 @@ http://localhost:3000/static/test-scribe.html
 http://localhost:3000/static/test-mri-reader.html
 
 # Or visit deployed URLs
-https://sobeairehab.pages.dev/static/test-scribe.html
-https://sobeairehab.pages.dev/static/test-mri-reader.html
+https://thriveortho.pages.dev/static/test-scribe.html
+https://thriveortho.pages.dev/static/test-mri-reader.html
 ```
 
 ### **Test Results**
@@ -272,8 +272,8 @@ webapp/
 ## 🎨 Branding
 
 **Colors:**
-- Primary: `#003D7A` (brand-blue)
-- Accent: `#FFD700` (brand-yellow)
+- Primary: `#0066CC` (brand-blue)
+- Accent: `#00C851` (brand-yellow)
 
 **Style:**
 - Minimalistic medical professional
@@ -298,10 +298,10 @@ webapp/
 npm run build
 
 # 3. Deploy to Cloudflare Pages
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # 4. Verify deployment
-curl https://sobeairehab.pages.dev
+curl https://thriveortho.pages.dev
 ```
 
 See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.
@@ -456,7 +456,7 @@ See [TESTING_GUIDE.md](TESTING_GUIDE.md) for more troubleshooting.
 
 ## 📜 License
 
-This project is proprietary software developed for SOBEAIREHAB.
+This project is proprietary software developed for ThriveOrtho.
 
 ---
 
@@ -504,8 +504,8 @@ Visit: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 
 ### **Production Deployment**
 1. Configure Cloudflare API key (Deploy tab)
-2. Run `npm run build && npx wrangler pages deploy dist --project-name sobeairehab`
-3. Visit https://sobeairehab.pages.dev
+2. Run `npm run build && npx wrangler pages deploy dist --project-name thriveortho`
+3. Visit https://thriveortho.pages.dev
 
 ---
 

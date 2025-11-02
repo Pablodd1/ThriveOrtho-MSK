@@ -2,7 +2,7 @@
 
 ## ✅ **INTEGRATION COMPLETE - ALL THREE SYSTEMS UPGRADED!**
 
-Your SOBEAIREHAB app now uses **Google's Gemini 2.5 Flash AI** for intelligent medical analysis across three core features.
+Your ThriveOrtho app now uses **Google's Gemini 2.5 Flash AI** for intelligent medical analysis across three core features.
 
 ---
 
@@ -505,14 +505,14 @@ cd /home/user/webapp
 npm run build
 
 # Deploy to Cloudflare
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 ```
 
 ### **Step 2: Set Gemini API Key (REQUIRED)**
 
 ```bash
 # Set as Cloudflare secret
-npx wrangler secret put GEMINI_API_KEY --project-name sobeairehab
+npx wrangler secret put GEMINI_API_KEY --project-name thriveortho
 
 # Paste your API key when prompted:
 # AIzaSyAbc123YourActualKeyHere
@@ -522,7 +522,7 @@ npx wrangler secret put GEMINI_API_KEY --project-name sobeairehab
 
 ```bash
 # Test AI endpoints
-curl -X POST https://sobeairehab.pages.dev/api/ai/generate-soap \
+curl -X POST https://thriveortho.pages.dev/api/ai/generate-soap \
   -H "Content-Type: application/json" \
   -d '{"complaints": [{"text": "shoulder pain", "timestamp": "14:00"}], "patientInfo": {"age": 45}}'
 

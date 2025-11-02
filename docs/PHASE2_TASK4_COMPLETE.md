@@ -15,7 +15,7 @@ Implemented professional PDF generation for patient assessment reports using jsP
 ## ✅ Features Implemented
 
 ### 1. Branded Header
-- **SOBEAIREHAB** branding in brand-blue (#003D7A)
+- **ThriveOrtho** branding in brand-blue (#003D7A)
 - White text on colored background
 - Subtitle: "Physical Therapy Assessment Report"
 - Professional first impression
@@ -60,14 +60,14 @@ Implemented professional PDF generation for patient assessment reports using jsP
 - Maintains formatting and structure
 
 ### 7. Professional Footers (All Pages)
-- Left: "SOBEAIREHAB Physical Therapy Assessment Report"
+- Left: "ThriveOrtho Physical Therapy Assessment Report"
 - Center: Generated timestamp
 - Right: Page X of Y
 - Gray text for subtle appearance
 
 ### 8. Smart Filename
-- Format: `SOBEAIREHAB_Assessment_LastName_FirstName_YYYY-MM-DD.pdf`
-- Example: `SOBEAIREHAB_Assessment_Smith_John_2025-11-01.pdf`
+- Format: `ThriveOrtho_Assessment_LastName_FirstName_YYYY-MM-DD.pdf`
+- Example: `ThriveOrtho_Assessment_Smith_John_2025-11-01.pdf`
 - Automatically includes patient name and date
 
 ---
@@ -112,7 +112,7 @@ Implemented professional PDF generation for patient assessment reports using jsP
 ### Page 1: Overview
 ```
 ┌─────────────────────────────────────────┐
-│  SOBEAIREHAB (Blue Header)              │
+│  ThriveOrtho (Blue Header)              │
 │  Physical Therapy Assessment Report     │
 ├─────────────────────────────────────────┤
 │                                         │
@@ -141,7 +141,7 @@ Implemented professional PDF generation for patient assessment reports using jsP
 │  - Average Speed: 70.0% (Fair)          │
 │  - Total Exercises: 5 (Complete)        │
 └─────────────────────────────────────────┘
-Footer: SOBEAIREHAB | Generated: Date | Page 1 of 3
+Footer: ThriveOrtho | Generated: Date | Page 1 of 3
 ```
 
 ### Page 2: Detailed Analysis
@@ -163,7 +163,7 @@ Footer: SOBEAIREHAB | Generated: Date | Page 1 of 3
 │                                         │
 │  ... (continues for all exercises)      │
 └─────────────────────────────────────────┘
-Footer: SOBEAIREHAB | Generated: Date | Page 2 of 3
+Footer: ThriveOrtho | Generated: Date | Page 2 of 3
 ```
 
 ### Page 3+: SOAP Notes
@@ -187,7 +187,7 @@ Footer: SOBEAIREHAB | Generated: Date | Page 2 of 3
 │  PLAN:                                  │
 │  Treatment recommendations...           │
 └─────────────────────────────────────────┘
-Footer: SOBEAIREHAB | Generated: Date | Page 3 of 3
+Footer: ThriveOrtho | Generated: Date | Page 3 of 3
 ```
 
 ---

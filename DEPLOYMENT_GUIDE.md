@@ -1,4 +1,4 @@
-# 🚀 Cloudflare Pages Deployment Guide - SOBEAIREHAB
+# 🚀 Cloudflare Pages Deployment Guide - ThriveOrtho
 
 ## 📦 All Three Steps Complete!
 
@@ -20,7 +20,7 @@
 - [x] Project built successfully (dist/ directory)
 - [x] Service tested locally on port 3000
 - [x] Documentation complete
-- [x] Cloudflare project name configured: `sobeairehab`
+- [x] Cloudflare project name configured: `thriveortho`
 
 ### **⏳ Required Before Deployment:**
 - [ ] Cloudflare API key configured
@@ -70,7 +70,7 @@ setup_github_environment
 ### **Push Code to GitHub:**
 ```bash
 # Add remote repository
-git remote add origin https://github.com/YOUR_USERNAME/sobeairehab.git
+git remote add origin https://github.com/YOUR_USERNAME/thriveortho.git
 
 # Push to GitHub (force push for first time)
 git push -f origin main
@@ -89,15 +89,15 @@ git push -f origin main
 npm run build
 
 # 2. Create Cloudflare Pages project (first time only)
-npx wrangler pages project create sobeairehab \
+npx wrangler pages project create thriveortho \
   --production-branch main \
   --compatibility-date 2024-01-01
 
 # 3. Deploy to production
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # 4. Save project name to meta info
-meta_info(action="write", key="cloudflare_project_name", value="sobeairehab")
+meta_info(action="write", key="cloudflare_project_name", value="thriveortho")
 ```
 
 ### **Expected Output:**
@@ -107,8 +107,8 @@ meta_info(action="write", key="cloudflare_project_name", value="sobeairehab")
 ✨ Deployment complete!
 
 Your site is live at:
-  https://sobeairehab.pages.dev
-  https://main.sobeairehab.pages.dev
+  https://thriveortho.pages.dev
+  https://main.thriveortho.pages.dev
 ```
 
 ---
@@ -119,7 +119,7 @@ Your site is live at:
 ```jsonc
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sobeairehab",
+  "name": "thriveortho",
   "compatibility_date": "2024-01-01",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
@@ -141,7 +141,7 @@ Your site is live at:
   "scripts": {
     "build": "vite build",
     "deploy": "npm run build && wrangler pages deploy dist",
-    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name sobeairehab"
+    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name thriveortho"
   }
 }
 ```
@@ -178,8 +178,8 @@ webapp/
 ### **1. Verify Deployment**
 ```bash
 # Test the deployed URLs
-curl https://sobeairehab.pages.dev
-curl https://sobeairehab.pages.dev/static/assessment-enhanced.html
+curl https://thriveortho.pages.dev
+curl https://thriveortho.pages.dev/static/assessment-enhanced.html
 ```
 
 ### **2. Test All Features**
@@ -193,7 +193,7 @@ curl https://sobeairehab.pages.dev/static/assessment-enhanced.html
 ### **3. Configure Custom Domain (Optional)**
 ```bash
 # Add custom domain
-npx wrangler pages domain add yourdomain.com --project-name sobeairehab
+npx wrangler pages domain add yourdomain.com --project-name thriveortho
 
 # Verify DNS settings at your domain registrar
 ```
@@ -247,10 +247,10 @@ git push origin main
 ### **Check Deployment Status:**
 ```bash
 # List all deployments
-npx wrangler pages deployment list --project-name sobeairehab
+npx wrangler pages deployment list --project-name thriveortho
 
 # View deployment logs
-npx wrangler pages deployment tail --project-name sobeairehab
+npx wrangler pages deployment tail --project-name thriveortho
 ```
 
 ### **Rollback to Previous Version:**
@@ -259,7 +259,7 @@ npx wrangler pages deployment tail --project-name sobeairehab
 npx wrangler pages deployment list
 
 # Promote specific deployment to production
-npx wrangler pages deployment promote DEPLOYMENT_ID --project-name sobeairehab
+npx wrangler pages deployment promote DEPLOYMENT_ID --project-name thriveortho
 ```
 
 ---
@@ -280,7 +280,7 @@ npx wrangler pages deployment promote DEPLOYMENT_ID --project-name sobeairehab
 rm -rf dist node_modules
 npm install
 npm run build
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 ```
 
 ### **Problem: Static Files Not Loading**
@@ -316,13 +316,13 @@ DEBUG_MODE=true
 ### **For Production (Cloudflare Secrets):**
 ```bash
 # Set production secrets
-npx wrangler pages secret put API_KEY --project-name sobeairehab
+npx wrangler pages secret put API_KEY --project-name thriveortho
 
 # List secrets
-npx wrangler pages secret list --project-name sobeairehab
+npx wrangler pages secret list --project-name thriveortho
 
 # Delete secret
-npx wrangler pages secret delete API_KEY --project-name sobeairehab
+npx wrangler pages secret delete API_KEY --project-name thriveortho
 ```
 
 ---
@@ -370,13 +370,13 @@ sleep 3
 curl http://localhost:3000
 
 # 4. Deploy to Cloudflare
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # 5. Test production
-curl https://sobeairehab.pages.dev
+curl https://thriveortho.pages.dev
 
 # 6. Update meta info with final project name
-meta_info(action="write", key="cloudflare_project_name", value="sobeairehab")
+meta_info(action="write", key="cloudflare_project_name", value="thriveortho")
 ```
 
 ---
@@ -393,7 +393,7 @@ meta_info(action="write", key="cloudflare_project_name", value="sobeairehab")
 
 ### **During Deployment:**
 - [ ] Cloudflare API key configured
-- [ ] Project name confirmed: sobeairehab
+- [ ] Project name confirmed: thriveortho
 - [ ] Build command: `npm run build`
 - [ ] Output directory: `dist`
 - [ ] Deploy command executed
@@ -431,8 +431,8 @@ meta_info(action="write", key="cloudflare_project_name", value="sobeairehab")
 ## 🎉 Success Criteria
 
 **Your deployment is successful when:**
-1. ✅ URL is accessible: https://sobeairehab.pages.dev
-2. ✅ Homepage displays SOBEAIREHAB branding
+1. ✅ URL is accessible: https://thriveortho.pages.dev
+2. ✅ Homepage displays ThriveOrtho branding
 3. ✅ Dashboard loads and shows patient list
 4. ✅ Assessment page activates camera
 5. ✅ Medical scribe starts automatically
@@ -488,5 +488,5 @@ meta_info(action="write", key="cloudflare_project_name", value="sobeairehab")
 
 **Deployment Guide Version:** 1.0  
 **Last Updated:** October 23, 2025  
-**Project:** SOBEAIREHAB Mobile Car & Home Therapy  
+**Project:** ThriveOrtho Mobile Car & Home Therapy  
 **Status:** Ready for Production 🚀

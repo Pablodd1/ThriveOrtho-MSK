@@ -481,7 +481,7 @@ npx wrangler d1 migrations apply webapp-production --local
 npm run build
 
 # Deploy to production (after API key setup)
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thriveortho
 
 # Check logs
 pm2 logs webapp --nostream
@@ -563,7 +563,7 @@ Production Ready:          ✅ YES
 
 ## 🎊 CONCLUSION
 
-**SOBEAIREHAB is now a complete, production-ready physical therapy platform with:**
+**ThriveOrtho is now a complete, production-ready physical therapy platform with:**
 
 - ✅ AI-powered camera assessments
 - ✅ Medical scribe with pain detection
@@ -588,6 +588,6 @@ Production Ready:          ✅ YES
 
 **Session Date:** November 2, 2025  
 **Developer:** AI Assistant  
-**Project:** SOBEAIREHAB  
+**Project:** ThriveOrtho  
 **Version:** 1.0.0  
 **Status:** ✅ PRODUCTION READY

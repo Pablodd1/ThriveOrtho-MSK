@@ -12,7 +12,7 @@
 | Component | Status | Details |
 |-----------|--------|---------|
 | Service Running | ✅ PASS | PM2 online, uptime 52+ minutes |
-| Homepage | ✅ PASS | SOBEAIREHAB branding displayed |
+| Homepage | ✅ PASS | ThriveOrtho branding displayed |
 | Assessment Page | ✅ PASS | Contains medical scribe code |
 | Build Process | ✅ PASS | Vite builds successfully |
 | Static Files | ✅ PASS | All files in dist/static/ |

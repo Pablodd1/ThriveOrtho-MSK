@@ -1,4 +1,4 @@
-# 🚀 SOBEAIREHAB Improvements - Quick Summary
+# 🚀 ThriveOrtho Improvements - Quick Summary
 
 ## 📋 47 Improvements Identified Across 8 Categories
 

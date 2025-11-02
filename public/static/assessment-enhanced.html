@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Medical Assessment - SOBEAIREHAB</title>
+    <title>Medical Assessment - ThriveOrtho</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'brand-blue': '#003D7A',
-              'brand-yellow': '#FFD700'
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
             }
           }
         }
@@ -136,7 +136,7 @@
                     <h3 class="font-bold text-gray-800 text-base md:text-lg">Phone</h3>
                 </button>
                 <button onclick="initCamera('webcam')" class="bg-white border-2 border-gray-200 rounded-lg p-6 md:p-8 hover:border-brand-blue hover:shadow-lg transition-all text-center">
-                    <i class="fas fa-laptop text-4xl md:text-5xl text-brand-yellow mb-3 md:mb-4"></i>
+                    <i class="fas fa-laptop text-4xl md:text-5xl text-brand-green mb-3 md:mb-4"></i>
                     <h3 class="font-bold text-gray-800 text-base md:text-lg">Laptop</h3>
                 </button>
                 <button onclick="initCamera('external')" class="bg-white border-2 border-gray-200 rounded-lg p-6 md:p-8 hover:border-brand-blue hover:shadow-lg transition-all text-center">
@@ -144,7 +144,7 @@
                     <h3 class="font-bold text-gray-800 text-base md:text-lg">External</h3>
                 </button>
                 <button onclick="initCamera('femto_mega')" class="bg-white border-2 border-gray-200 rounded-lg p-6 md:p-8 hover:border-brand-blue hover:shadow-lg transition-all text-center">
-                    <i class="fas fa-cube text-4xl md:text-5xl text-brand-yellow mb-3 md:mb-4"></i>
+                    <i class="fas fa-cube text-4xl md:text-5xl text-brand-green mb-3 md:mb-4"></i>
                     <h3 class="font-bold text-gray-800 text-base md:text-lg">Pro</h3>
                 </button>
             </div>
@@ -160,7 +160,7 @@
                     <h1 class="text-lg md:text-2xl font-bold">Exercise <span id="currentExerciseCount">1</span> of 5</h1>
                     <p id="patientInfo" class="text-xs md:text-sm opacity-90"></p>
                 </div>
-                <div id="statusBadge" class="px-3 py-1 md:px-4 md:py-2 bg-brand-yellow text-brand-blue rounded-lg text-xs md:text-sm font-semibold">
+                <div id="statusBadge" class="px-3 py-1 md:px-4 md:py-2 bg-brand-green text-brand-blue rounded-lg text-xs md:text-sm font-semibold">
                     Ready
                 </div>
             </div>
@@ -302,7 +302,7 @@
                             <div class="text-xs md:text-sm text-gray-600">Target Reps</div>
                             <div class="text-xl md:text-2xl font-bold text-brand-blue" id="targetReps">10</div>
                         </div>
-                        <div class="bg-yellow-50 p-2 md:p-3 rounded-lg text-center border-2 border-brand-yellow">
+                        <div class="bg-yellow-50 p-2 md:p-3 rounded-lg text-center border-2 border-brand-green">
                             <div class="text-xs md:text-sm text-gray-600">Completed</div>
                             <div class="text-xl md:text-2xl font-bold text-brand-blue" id="completedReps">0</div>
                         </div>

@@ -7,7 +7,7 @@
 
 ## 🎯 Camera Workflow Overview
 
-The SOBEAIREHAB platform uses a robust camera initialization system that:
+The ThriveOrtho platform uses a robust camera initialization system that:
 1. Requests camera permissions
 2. Attempts multiple camera configurations (mobile/desktop fallbacks)
 3. Initializes MediaPipe Pose detection (33-point skeleton)

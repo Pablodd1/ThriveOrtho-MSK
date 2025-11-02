@@ -1,4 +1,4 @@
-# 🚀 SOBEAIREHAB - Investor Demo Guide
+# 🚀 ThriveOrtho - Investor Demo Guide
 
 ## 📱 Live Demo URL
 **Primary:** https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
@@ -7,7 +7,7 @@
 
 ## 🎯 Executive Summary
 
-**SOBEAIREHAB** is a mobile-first physical therapy platform that brings professional medical assessments to patients anywhere - in their car, at home, or on-the-go.
+**ThriveOrtho** is a mobile-first physical therapy platform that brings professional medical assessments to patients anywhere - in their car, at home, or on-the-go.
 
 ### Key Innovation
 - ✅ **AI-Powered Motion Tracking** - MediaPipe computer vision (33-point skeleton)
@@ -187,7 +187,7 @@ MRI of the right shoulder demonstrates:
 ### **Q: How is this different from traditional telehealth?**
 **A:** 
 - Traditional telehealth = video call with doctor
-- SOBEAIREHAB = AI-powered motion analysis + automatic documentation
+- ThriveOrtho = AI-powered motion analysis + automatic documentation
 - We capture objective biomechanical data, not just subjective reports
 - Medical scribe saves 10-15 min/patient in documentation time
 

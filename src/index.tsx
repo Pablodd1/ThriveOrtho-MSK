@@ -26,15 +26,15 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SOBEAIREHAB - Mobile Car & Home Therapy</title>
+        <title>ThriveOrtho - Made by Humans, Powered by AI</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
           tailwind.config = {
             theme: {
               extend: {
                 colors: {
-                  'brand-blue': '#003D7A',
-                  'brand-yellow': '#FFD700'
+                  'brand-blue': '#0066CC',
+                  'brand-green': '#00C851'
                 }
               }
             }
@@ -49,10 +49,10 @@ app.get('/', (c) => {
             <header class="bg-brand-blue text-white shadow-lg">
                 <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
                     <h1 class="text-3xl md:text-5xl font-bold">
-                        <i class="fas fa-stethoscope mr-2 md:mr-3 text-brand-yellow"></i>
-                        SOBEAIREHAB
+                        <i class="fas fa-stethoscope mr-2 md:mr-3 text-brand-green"></i>
+                        ThriveOrtho
                     </h1>
-                    <p class="mt-2 md:mt-3 text-base md:text-xl text-white/90">Mobile Car & Home Therapy</p>
+                    <p class="mt-2 md:mt-3 text-base md:text-xl text-white/90">Made by Humans, Powered by AI</p>
                 </div>
             </header>
 
@@ -63,7 +63,7 @@ app.get('/', (c) => {
                     <!-- Patient Intake -->
                     <a href="/static/intake.html" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
                         <div class="flex items-center mb-4">
-                            <div class="bg-brand-yellow w-12 h-12 rounded-lg flex items-center justify-center text-xl">
+                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-xl">
                                 <i class="fas fa-user-plus text-brand-blue"></i>
                             </div>
                             <h2 class="ml-4 text-2xl font-bold text-gray-800">New Patient</h2>
@@ -91,7 +91,7 @@ app.get('/', (c) => {
                     <!-- Reports -->
                     <a href="/static/dashboard.html" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
                         <div class="flex items-center mb-4">
-                            <div class="bg-brand-yellow w-12 h-12 rounded-lg flex items-center justify-center text-xl">
+                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-xl">
                                 <i class="fas fa-chart-line text-brand-blue"></i>
                             </div>
                             <h2 class="ml-4 text-2xl font-bold text-gray-800">RPM Monitoring</h2>
@@ -119,7 +119,7 @@ app.get('/', (c) => {
                             </div>
                         </div>
                         <div class="flex items-start">
-                            <div class="bg-brand-yellow w-12 h-12 rounded-lg flex items-center justify-center text-brand-blue text-xl flex-shrink-0">
+                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-brand-blue text-xl flex-shrink-0">
                                 <i class="fas fa-dumbbell"></i>
                             </div>
                             <div class="ml-5">
@@ -137,7 +137,7 @@ app.get('/', (c) => {
                             </div>
                         </div>
                         <div class="flex items-start">
-                            <div class="bg-brand-yellow w-12 h-12 rounded-lg flex items-center justify-center text-brand-blue text-xl flex-shrink-0">
+                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-brand-blue text-xl flex-shrink-0">
                                 <i class="fas fa-file-medical"></i>
                             </div>
                             <div class="ml-5">
@@ -161,7 +161,7 @@ app.get('/', (c) => {
                         </div>
                         <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
                         <div class="text-center flex-1">
-                            <div class="bg-brand-yellow w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-brand-blue font-bold">2</div>
+                            <div class="bg-brand-green w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-brand-blue font-bold">2</div>
                             <h4 class="font-bold mt-3 text-gray-800 text-base">Movement Assessment</h4>
                             <p class="text-sm text-gray-600 mt-1">Camera-based Tracking</p>
                         </div>
@@ -173,7 +173,7 @@ app.get('/', (c) => {
                         </div>
                         <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
                         <div class="text-center flex-1">
-                            <div class="bg-brand-yellow w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-brand-blue font-bold">4</div>
+                            <div class="bg-brand-green w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-brand-blue font-bold">4</div>
                             <h4 class="font-bold mt-3 text-gray-800 text-base">Exercise Prescription</h4>
                             <p class="text-sm text-gray-600 mt-1">Personalized Programs</p>
                         </div>
@@ -190,12 +190,12 @@ app.get('/', (c) => {
             <!-- Footer -->
             <footer class="bg-gray-100 mt-20 py-10">
                 <div class="max-w-7xl mx-auto px-4 text-center">
-                    <p class="text-lg font-semibold text-gray-800">&copy; 2025 SOBEAIREHAB. All rights reserved.</p>
-                    <p class="text-gray-600 text-sm mt-2">Mobile Car & Home Therapy</p>
+                    <p class="text-lg font-semibold text-gray-800">&copy; 2025 ThriveOrtho. All rights reserved.</p>
+                    <p class="text-gray-600 text-sm mt-2">Made by Humans, Powered by AI</p>
                     <div class="mt-4 flex justify-center space-x-6">
                         <i class="fas fa-shield-alt text-brand-blue text-xl"></i>
                         <i class="fas fa-lock text-brand-blue text-xl"></i>
-                        <i class="fas fa-check-circle text-brand-yellow text-xl"></i>
+                        <i class="fas fa-check-circle text-brand-green text-xl"></i>
                     </div>
                 </div>
             </footer>

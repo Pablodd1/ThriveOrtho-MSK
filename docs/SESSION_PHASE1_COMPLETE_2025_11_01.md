@@ -269,8 +269,8 @@ PM2 Status: online (restart #32-33)
 
 ### Time Savings Per Assessment
 ```
-Before SOBEAIREHAB:   48 minutes per assessment
-After SOBEAIREHAB:    5.5 minutes per assessment
+Before ThriveOrtho:   48 minutes per assessment
+After ThriveOrtho:    5.5 minutes per assessment
 Time Saved:           42.5 minutes (88% reduction)
 ```
 
@@ -434,5 +434,5 @@ The platform is now ready for either production deployment or continued Phase 2 
 
 **Document Version:** 1.0  
 **Author:** AI Development Team  
-**Project:** SOBEAIREHAB  
+**Project:** ThriveOrtho  
 **Date:** November 1, 2025

@@ -243,7 +243,7 @@ For each exercise in Final HEP, adjust:
 ```
 ═══════════════════════════════════════
    HOME EXERCISE PROGRAM (HEP)
-   SOBEAIREHAB - Mobile Car & Home Therapy
+   ThriveOrtho - Mobile Car & Home Therapy
 ═══════════════════════════════════════
 
 Patient: John Smith

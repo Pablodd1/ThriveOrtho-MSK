@@ -1,18 +1,18 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "thriveortho",
   "compatibility_date": "2025-10-21",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  // D1 Database for F-AI bian Assessment System
-  // IMPORTANT: Create production database first: npx wrangler d1 create webapp-production
+  // D1 Database for ThriveOrtho - Made by Humans, Powered by AI
+  // IMPORTANT: Create production database first: npx wrangler d1 create thriveortho-production
   // Local development automatically uses local SQLite with --local flag
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "webapp-production",
+      "database_name": "thriveortho-production",
       "database_id": "placeholder-will-be-replaced-after-d1-create"
     }
   ]
