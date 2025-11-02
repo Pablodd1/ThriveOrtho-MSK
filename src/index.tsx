@@ -143,8 +143,9 @@ app.get('/', (c) => {
                             </div>
                             <h2 class="text-2xl font-bold text-white mb-2">Analytics</h2>
                             <p class="text-white/70 mb-4">Track patient engagement and outcomes</p>
-                        <div class="text-brand-blue font-semibold flex items-center">
-                            View Reports <i class="fas fa-arrow-right ml-2"></i>
+                            <button class="glass-btn glass-btn-primary glass-btn-sm w-full">
+                                View Reports <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
                         </div>
                     </a>
                 </div>
