@@ -63,10 +63,6 @@ app.get('/', (c) => {
                                 <i class="fas fa-user mr-2"></i>
                                 <span class="hidden md:inline">Patient</span> Login
                             </a>
-                            <a href="/static/glassmorphism-demo.html" class="glass-btn glass-btn-primary glass-btn-sm">
-                                <i class="fas fa-palette mr-2"></i>
-                                <span class="hidden md:inline">Design</span> Demo
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -77,17 +73,12 @@ app.get('/', (c) => {
                 
                 <!-- Hero Section -->
                 <div class="text-center mb-12">
-                    <div class="glass-card inline-block mb-8">
-                        <div class="glass-badge glass-badge-success mb-4">
-                            ✨ v2.0.0 - NEW GLASSMORPHISM DESIGN
-                        </div>
-                        <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-                            Physical Therapy Platform
-                        </h1>
-                        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                            AI-powered assessments, automated documentation, and patient engagement
-                        </p>
-                    </div>
+                    <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+                        Physical Therapy Platform
+                    </h1>
+                    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+                        AI-powered assessments, automated documentation, and patient engagement
+                    </p>
                 </div>
                 
                 <!-- Quick Actions -->
