@@ -809,7 +809,7 @@ app.get('/api/patient/:id/exercises', async (c) => {
       name: ex.exercise_name,
       category: ex.category,
       description: ex.description,
-      instructions: ex.instructions ? JSON.parse(ex.instructions) : [],
+      instructions: ex.instructions || 'No instructions available',
       sets: ex.sets,
       reps: ex.reps,
       holdTime: ex.hold_time,
