@@ -44,27 +44,12 @@ app.get('/', (c) => {
         <link href="/static/glassmorphism.css" rel="stylesheet">
         <style>
             body {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-                background-attachment: fixed;
+                background: #ffffff;
                 min-height: 100vh;
-            }
-            .animated-bg {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: -1;
-                background: linear-gradient(135deg, 
-                    rgba(0, 102, 204, 0.3) 0%, 
-                    rgba(0, 153, 255, 0.2) 50%, 
-                    rgba(0, 200, 81, 0.3) 100%
-                );
             }
         </style>
     </head>
     <body>
-        <div class="animated-bg"></div>
         <div class="min-h-screen">
             <!-- Header with Glassmorphism -->
             <header class="glass-header sticky top-0 z-50">
@@ -96,10 +81,10 @@ app.get('/', (c) => {
                         <div class="glass-badge glass-badge-success mb-4">
                             ✨ v2.0.0 - NEW GLASSMORPHISM DESIGN
                         </div>
-                        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                        <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
                             Physical Therapy Platform
                         </h1>
-                        <p class="text-xl text-white/80 max-w-2xl mx-auto">
+                        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
                             AI-powered assessments, automated documentation, and patient engagement
                         </p>
                     </div>
@@ -113,8 +98,8 @@ app.get('/', (c) => {
                             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
                                 <i class="fas fa-user-plus text-2xl text-white"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-white mb-2">New Patient</h2>
-                            <p class="text-white/70 mb-4">Start patient intake and demographic information</p>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">New Patient</h2>
+                            <p class="text-gray-600 mb-4">Start patient intake and demographic information</p>
                             <button class="glass-btn glass-btn-success glass-btn-sm w-full">
                                 Get Started <i class="fas fa-arrow-right ml-2"></i>
                             </button>
@@ -127,8 +112,8 @@ app.get('/', (c) => {
                             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                                 <i class="fas fa-video text-2xl text-white"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-white mb-2">Dashboard</h2>
-                            <p class="text-white/70 mb-4">View all patients and manage assessments</p>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h2>
+                            <p class="text-gray-600 mb-4">View all patients and manage assessments</p>
                             <button class="glass-btn glass-btn-primary glass-btn-sm w-full">
                                 View Dashboard <i class="fas fa-arrow-right ml-2"></i>
                             </button>
@@ -141,8 +126,8 @@ app.get('/', (c) => {
                             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                                 <i class="fas fa-chart-line text-2xl text-white"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-white mb-2">Analytics</h2>
-                            <p class="text-white/70 mb-4">Track patient engagement and outcomes</p>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Analytics</h2>
+                            <p class="text-gray-600 mb-4">Track patient engagement and outcomes</p>
                             <button class="glass-btn glass-btn-primary glass-btn-sm w-full">
                                 View Reports <i class="fas fa-arrow-right ml-2"></i>
                             </button>
