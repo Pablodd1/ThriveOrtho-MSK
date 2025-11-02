@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Report - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none; }
+            .print-break { page-break-after: always; }
+        }
+        .report-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .data-table th {
+            background: #f9fafb;
+            font-weight: bold;
+        }
+        .fms-score-display {
+            font-size: 6rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div class="bg-brand-blue text-white p-6 shadow-lg no-print">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">Functional Movement Assessment Report</h1>
+                <p class="text-sm opacity-90">Medical-Grade Biomechanical Analysis</p>
+            </div>
+            <div class="space-x-3">
+                <button onclick="window.print()" class="px-4 py-2 bg-white text-brand-blue rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-print mr-2"></i>
+                    Print Report
+                </button>
+                <button onclick="exportPDF()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors">
+                    <i class="fas fa-file-pdf mr-2"></i>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Report Content -->
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Patient & Assessment Info -->
+        <div class="report-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-user-circle mr-2 text-brand-blue"></i>
+                        Patient Information
+                    </h2>
+                    <table class="data-table">
+                        <tr>
+                            <th>Patient ID</th>
+                            <td id="patientId">-</td>
+                        </tr>
+                        <tr>
+                            <th>Assessment Date</th>
+                            <td id="assessmentDate">-</td>
+                        </tr>
+                        <tr>
+                            <th>Test Name</th>
+                            <td id="testName">-</td>
+                        </tr>
+                        <tr>
+                            <th>Camera Angle</th>
+                            <td id="cameraAngle">-</td>
+                        </tr>
+                        <tr>
+                            <th>Duration</th>
+                            <td id="duration">-</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-star mr-2 text-yellow-500"></i>
+                        FMS Score
+                    </h2>
+                    <div class="fms-score-display mb-4" id="fmsScoreDisplay">-</div>
+                    <div class="text-xl font-semibold mb-2" id="fmsInterpretation">-</div>
+                    <div class="text-sm text-gray-600" id="fmsDescription">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movement Summary -->
+        <div class="report-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-running mr-2 text-brand-green"></i>
+                Movement Summary
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-3xl font-bold text-brand-blue" id="repsCompleted">-</div>
+                    <div class="text-sm text-gray-600">Reps Completed</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <div class="text-3xl font-bold text-brand-green" id="avgHipAngle">-</div>
+                    <div class="text-sm text-gray-600">Avg Hip Flexion</div>
+                </div>
+                <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                    <div class="text-3xl font-bold text-yellow-600" id="avgKneeAngle">-</div>
+                    <div class="text-sm text-gray-600">Avg Knee Flexion</div>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <div class="text-3xl font-bold text-purple-600" id="avgSymmetry">-</div>
+                    <div class="text-sm text-gray-600">Avg Asymmetry</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Biomechanical Data Graphs -->
+        <div class="report-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-line mr-2 text-brand-blue"></i>
+                Biomechanical Data Graphs
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="font-bold text-gray-700 mb-2">Joint Angle Timeline</h3>
+                    <canvas id="reportAngleChart" height="250"></canvas>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-700 mb-2">Bilateral Symmetry</h3>
+                    <canvas id="reportSymmetryChart" height="250"></canvas>
+                </div>
+            </div>
+            <div>
+                <h3 class="font-bold text-gray-700 mb-2">Movement Velocity</h3>
+                <canvas id="reportVelocityChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Joint Angle Data Table -->
+        <div class="report-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-table mr-2 text-brand-blue"></i>
+                Joint Angle Data Summary
+            </h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Joint</th>
+                        <th>Left Avg</th>
+                        <th>Left Max</th>
+                        <th>Left Min</th>
+                        <th>Right Avg</th>
+                        <th>Right Max</th>
+                        <th>Right Min</th>
+                        <th>Symmetry</th>
+                    </tr>
+                </thead>
+                <tbody id="angleDataTable">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Compensation Patterns -->
+        <div class="report-section" id="compensationSection">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-exclamation-triangle mr-2 text-yellow-500"></i>
+                Compensation Patterns Detected
+            </h2>
+            <div id="compensationList">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Clinical Findings & Recommendations -->
+        <div class="report-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-notes-medical mr-2 text-brand-green"></i>
+                Clinical Findings & Recommendations
+            </h2>
+            <div id="clinicalNotes" class="space-y-3">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-500 mt-8 pb-8">
+            <p>Generated by ThriveOrtho Physical Therapy Platform</p>
+            <p>Medical-Grade Functional Movement Assessment System</p>
+            <p class="mt-2">
+                <i class="fas fa-info-circle mr-1"></i>
+                This report uses MediaPipe Pose Detection and FMS scoring protocols
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // LOAD REPORT DATA
+        // ============================================
+        window.addEventListener('DOMContentLoaded', () => {
+            const reportData = JSON.parse(sessionStorage.getItem('latestAssessmentReport'));
+            
+            if (!reportData) {
+                alert('No assessment data found. Please complete an assessment first.');
+                window.location.href = '/static/assessment-realtime.html';
+                return;
+            }
+            
+            populateReport(reportData);
+            generateGraphs(reportData);
+        });
+
+        // ============================================
+        // POPULATE REPORT
+        // ============================================
+        function populateReport(data) {
+            // Patient & Assessment Info
+            document.getElementById('patientId').textContent = data.patient_id;
+            document.getElementById('assessmentDate').textContent = new Date(data.assessment_date).toLocaleString();
+            document.getElementById('testName').textContent = data.test_name;
+            document.getElementById('cameraAngle').textContent = 
+                data.camera_angle === 'front' ? 'Front View (0°)' :
+                data.camera_angle === 'side' ? 'Side View (90°)' : 'Back View (180°)';
+            document.getElementById('duration').textContent = data.duration + ' seconds';
+            
+            // FMS Score
+            const fmsScore = data.fms_score;
+            document.getElementById('fmsScoreDisplay').textContent = fmsScore + '/3';
+            
+            let fmsColor, fmsInterp, fmsDesc;
+            if (fmsScore === 3) {
+                fmsColor = 'text-green-600';
+                fmsInterp = 'Excellent';
+                fmsDesc = 'Perfect functional movement pattern with no compensations';
+            } else if (fmsScore === 2) {
+                fmsColor = 'text-yellow-600';
+                fmsInterp = 'Good (Minor Compensations)';
+                fmsDesc = 'Completes movement with some compensations or asymmetries';
+            } else if (fmsScore === 1) {
+                fmsColor = 'text-red-600';
+                fmsInterp = 'Poor (Major Dysfunction)';
+                fmsDesc = 'Unable to complete movement with acceptable form';
+            } else {
+                fmsColor = 'text-red-800';
+                fmsInterp = 'Pain Present';
+                fmsDesc = 'Movement produces pain - immediate evaluation required';
+            }
+            
+            document.getElementById('fmsScoreDisplay').className = `fms-score-display mb-4 ${fmsColor}`;
+            document.getElementById('fmsInterpretation').textContent = fmsInterp;
+            document.getElementById('fmsInterpretation').className = `text-xl font-semibold mb-2 ${fmsColor}`;
+            document.getElementById('fmsDescription').textContent = fmsDesc;
+            
+            // Movement Summary
+            document.getElementById('repsCompleted').textContent = 
+                `${data.reps_completed}/${data.target_reps}`;
+            
+            // Calculate averages
+            const avgHipLeft = average(data.joint_angles.hip_left);
+            const avgHipRight = average(data.joint_angles.hip_right);
+            const avgKneeLeft = average(data.joint_angles.knee_left);
+            const avgKneeRight = average(data.joint_angles.knee_right);
+            
+            document.getElementById('avgHipAngle').textContent = 
+                Math.round((avgHipLeft + avgHipRight) / 2) + '°';
+            document.getElementById('avgKneeAngle').textContent = 
+                Math.round((avgKneeLeft + avgKneeRight) / 2) + '°';
+            
+            const avgHipSym = average(data.symmetry_indices.hip.map(Math.abs));
+            const avgKneeSym = average(data.symmetry_indices.knee.map(Math.abs));
+            document.getElementById('avgSymmetry').textContent = 
+                ((avgHipSym + avgKneeSym) / 2).toFixed(1) + '%';
+            
+            // Joint Angle Data Table
+            populateAngleTable(data.joint_angles, data.symmetry_indices);
+            
+            // Compensation Patterns
+            if (data.compensations && data.compensations.length > 0) {
+                let html = '<div class="space-y-3">';
+                data.compensations.forEach(comp => {
+                    const severityColor = comp.severity === 'high' ? 'red' : 'yellow';
+                    html += `
+                        <div class="border-l-4 border-${severityColor}-500 bg-${severityColor}-50 p-4 rounded">
+                            <div class="font-bold text-${severityColor}-700">${comp.pattern}</div>
+                            <div class="text-sm text-gray-700 mt-1">${comp.implication}</div>
+                            <div class="text-xs text-gray-600 mt-1">
+                                <span class="px-2 py-1 bg-${severityColor}-200 rounded-full font-semibold">
+                                    ${comp.severity.toUpperCase()} SEVERITY
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('compensationList').innerHTML = html;
+            } else {
+                document.getElementById('compensationSection').innerHTML = `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                        No Compensation Patterns Detected
+                    </h2>
+                    <p class="text-gray-700">Movement performed with excellent form and no significant compensations.</p>
+                `;
+            }
+            
+            // Clinical Notes
+            let notesHtml = '';
+            if (data.clinical_notes && data.clinical_notes.length > 0) {
+                data.clinical_notes.forEach(note => {
+                    notesHtml += `
+                        <div class="border-l-4 border-brand-blue bg-blue-50 p-4 rounded">
+                            <i class="fas fa-chevron-right mr-2 text-brand-blue"></i>
+                            <span class="text-gray-800">${note}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                notesHtml = '<p class="text-gray-700">No additional clinical notes.</p>';
+            }
+            document.getElementById('clinicalNotes').innerHTML = notesHtml;
+        }
+
+        function populateAngleTable(angles, symmetry) {
+            const tbody = document.getElementById('angleDataTable');
+            
+            const joints = [
+                { name: 'Hip', left: angles.hip_left, right: angles.hip_right, sym: symmetry.hip },
+                { name: 'Knee', left: angles.knee_left, right: angles.knee_right, sym: symmetry.knee }
+            ];
+            
+            let html = '';
+            joints.forEach(joint => {
+                const leftAvg = average(joint.left);
+                const leftMax = Math.max(...joint.left);
+                const leftMin = Math.min(...joint.left);
+                const rightAvg = average(joint.right);
+                const rightMax = Math.max(...joint.right);
+                const rightMin = Math.min(...joint.right);
+                const symAvg = average(joint.sym.map(Math.abs));
+                
+                const symColor = symAvg < 10 ? 'text-green-600' : symAvg < 20 ? 'text-yellow-600' : 'text-red-600';
+                
+                html += `
+                    <tr>
+                        <td class="font-semibold">${joint.name}</td>
+                        <td>${Math.round(leftAvg)}°</td>
+                        <td>${Math.round(leftMax)}°</td>
+                        <td>${Math.round(leftMin)}°</td>
+                        <td>${Math.round(rightAvg)}°</td>
+                        <td>${Math.round(rightMax)}°</td>
+                        <td>${Math.round(rightMin)}°</td>
+                        <td class="${symColor} font-semibold">${symAvg.toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        // ============================================
+        // GENERATE GRAPHS
+        // ============================================
+        function generateGraphs(data) {
+            const timeLabels = data.joint_angles.hip_left.map((_, i) => (i * 0.033).toFixed(2));
+            
+            // Graph 1: Joint Angles
+            const angleCtx = document.getElementById('reportAngleChart').getContext('2d');
+            new Chart(angleCtx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [
+                        {
+                            label: 'Hip Left',
+                            data: data.joint_angles.hip_left,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Hip Right',
+                            data: data.joint_angles.hip_right,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Knee Left',
+                            data: data.joint_angles.knee_left,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Knee Right',
+                            data: data.joint_angles.knee_right,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 180,
+                            title: { display: true, text: 'Angle (degrees)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+            
+            // Graph 2: Symmetry
+            const symmetryCtx = document.getElementById('reportSymmetryChart').getContext('2d');
+            new Chart(symmetryCtx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [
+                        {
+                            label: 'Hip Symmetry',
+                            data: data.symmetry_indices.hip,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Knee Symmetry',
+                            data: data.symmetry_indices.knee,
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: -30,
+                            max: 30,
+                            title: { display: true, text: 'Symmetry Index (%)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+            
+            // Graph 3: Velocity
+            const velocityCtx = document.getElementById('reportVelocityChart').getContext('2d');
+            new Chart(velocityCtx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [
+                        {
+                            label: 'Angular Velocity',
+                            data: data.angular_velocity,
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6, 182, 212, 0.2)',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            title: { display: true, text: 'Velocity (deg/sec)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function average(arr) {
+            if (!arr || arr.length === 0) return 0;
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+
+        function exportPDF() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
