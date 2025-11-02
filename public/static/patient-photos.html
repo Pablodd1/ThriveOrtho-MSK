@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Photos - SOBEAIREHAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#003D7A',
+              'brand-yellow': '#FFD700'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-brand-blue text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="history.back()" class="text-white hover:text-brand-yellow transition">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-camera mr-2 text-brand-yellow"></i>
+                        Progress Photos
+                    </h1>
+                </div>
+                <div id="patientName" class="text-sm text-white/80"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-upload mr-2 text-brand-blue"></i>
+                Upload New Photo
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Photo Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Select Photo
+                    </label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-brand-blue transition cursor-pointer" id="photoDropZone">
+                        <input type="file" id="photoInput" accept="image/*" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-600">Click or drag photo here</p>
+                        <p class="text-sm text-gray-400 mt-1">JPG, PNG up to 10MB</p>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div id="photoPreview" class="mt-4 hidden">
+                        <img id="previewImage" class="rounded-lg max-h-64 mx-auto">
+                    </div>
+                </div>
+
+                <!-- Photo Details -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Photo Type *
+                        </label>
+                        <select id="photoType" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue">
+                            <option value="">Select type...</option>
+                            <option value="before">Before Treatment</option>
+                            <option value="during">During Treatment</option>
+                            <option value="after">After Treatment</option>
+                            <option value="exercise_demo">Exercise Demo</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Body Area
+                        </label>
+                        <select id="bodyArea" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue">
+                            <option value="">Select area...</option>
+                            <option value="neck">Neck</option>
+                            <option value="shoulder">Shoulder</option>
+                            <option value="back">Back</option>
+                            <option value="hip">Hip</option>
+                            <option value="knee">Knee</option>
+                            <option value="ankle">Ankle</option>
+                            <option value="wrist">Wrist</option>
+                            <option value="elbow">Elbow</option>
+                            <option value="full_body">Full Body</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Category
+                        </label>
+                        <select id="photoCategory" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue">
+                            <option value="">Select category...</option>
+                            <option value="posture">Posture</option>
+                            <option value="range_of_motion">Range of Motion</option>
+                            <option value="mobility">Mobility</option>
+                            <option value="injury_site">Injury Site</option>
+                            <option value="swelling">Swelling/Inflammation</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Notes (Optional)
+                        </label>
+                        <textarea id="photoNotes" rows="3" 
+                                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue"
+                                  placeholder="Add any notes about this photo..."></textarea>
+                    </div>
+
+                    <button onclick="uploadPhoto()" 
+                            class="w-full bg-brand-blue text-white px-6 py-3 rounded-lg hover:bg-blue-900 transition">
+                        <i class="fas fa-upload mr-2"></i>
+                        Upload Photo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-lg shadow-md mb-8">
+            <div class="border-b">
+                <div class="flex flex-wrap">
+                    <button onclick="filterPhotos('all')" 
+                            class="filter-tab px-6 py-3 font-medium border-b-2 border-brand-blue text-brand-blue"
+                            data-filter="all">
+                        All Photos
+                    </button>
+                    <button onclick="filterPhotos('before')" 
+                            class="filter-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-brand-blue"
+                            data-filter="before">
+                        Before
+                    </button>
+                    <button onclick="filterPhotos('during')" 
+                            class="filter-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-brand-blue"
+                            data-filter="during">
+                        During
+                    </button>
+                    <button onclick="filterPhotos('after')" 
+                            class="filter-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-brand-blue"
+                            data-filter="after">
+                        After
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photos Grid -->
+        <div id="photosGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Photos will be loaded here -->
+            <div class="col-span-full text-center py-12 text-gray-400">
+                <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+                <p>Loading photos...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Photo Modal -->
+    <div id="photoModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Photo Details</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <img id="modalImage" class="w-full rounded-lg mb-4">
+                
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="font-semibold text-gray-700">Type:</span>
+                        <span id="modalType" class="ml-2 text-gray-600"></span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700">Date:</span>
+                        <span id="modalDate" class="ml-2 text-gray-600"></span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700">Body Area:</span>
+                        <span id="modalBodyArea" class="ml-2 text-gray-600"></span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700">Category:</span>
+                        <span id="modalCategory" class="ml-2 text-gray-600"></span>
+                    </div>
+                </div>
+                
+                <div class="mt-4" id="modalNotesSection">
+                    <span class="font-semibold text-gray-700">Notes:</span>
+                    <p id="modalNotes" class="text-gray-600 mt-1"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script>
+        let currentPatient = null;
+        let allPhotos = [];
+        let currentFilter = 'all';
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = JSON.parse(localStorage.getItem('patientSession') || 'null');
+            if (!session) {
+                window.location.href = '/static/patient-login.html';
+                return;
+            }
+
+            currentPatient = session;
+            document.getElementById('patientName').textContent = session.name;
+            
+            loadPhotos();
+            setupPhotoUpload();
+        });
+
+        // Setup photo upload interactions
+        function setupPhotoUpload() {
+            const dropZone = document.getElementById('photoDropZone');
+            const input = document.getElementById('photoInput');
+
+            dropZone.addEventListener('click', () => input.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-brand-blue', 'bg-blue-50');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-brand-blue', 'bg-blue-50');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-brand-blue', 'bg-blue-50');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handlePhotoSelect(files[0]);
+                }
+            });
+
+            input.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handlePhotoSelect(e.target.files[0]);
+                }
+            });
+        }
+
+        // Handle photo selection
+        function handlePhotoSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Photo must be less than 10MB');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('photoPreview');
+                const img = document.getElementById('previewImage');
+                img.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Upload photo
+        async function uploadPhoto() {
+            const input = document.getElementById('photoInput');
+            const photoType = document.getElementById('photoType').value;
+            const bodyArea = document.getElementById('bodyArea').value;
+            const category = document.getElementById('photoCategory').value;
+            const notes = document.getElementById('photoNotes').value;
+
+            if (!input.files || input.files.length === 0) {
+                alert('Please select a photo');
+                return;
+            }
+
+            if (!photoType) {
+                alert('Please select a photo type');
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                try {
+                    const response = await axios.post(`/api/patient/${currentPatient.id}/photos`, {
+                        photoData: e.target.result,
+                        photoType,
+                        photoCategory: category || null,
+                        bodyArea: bodyArea || null,
+                        notes: notes || null
+                    });
+
+                    if (response.data.success) {
+                        alert('Photo uploaded successfully!');
+                        
+                        // Reset form
+                        input.value = '';
+                        document.getElementById('photoType').value = '';
+                        document.getElementById('bodyArea').value = '';
+                        document.getElementById('photoCategory').value = '';
+                        document.getElementById('photoNotes').value = '';
+                        document.getElementById('photoPreview').classList.add('hidden');
+                        
+                        // Reload photos
+                        loadPhotos();
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Failed to upload photo. Please try again.');
+                }
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // Load all photos
+        async function loadPhotos() {
+            try {
+                const response = await axios.get(`/api/patient/${currentPatient.id}/photos`);
+                
+                if (response.data.success) {
+                    allPhotos = response.data.photos;
+                    displayPhotos();
+                }
+            } catch (error) {
+                console.error('Error loading photos:', error);
+                document.getElementById('photosGrid').innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
+                        <p>Failed to load photos</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Filter photos
+        function filterPhotos(filter) {
+            currentFilter = filter;
+            
+            // Update tab styles
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                if (tab.dataset.filter === filter) {
+                    tab.classList.add('border-brand-blue', 'text-brand-blue');
+                    tab.classList.remove('border-transparent', 'text-gray-600');
+                } else {
+                    tab.classList.remove('border-brand-blue', 'text-brand-blue');
+                    tab.classList.add('border-transparent', 'text-gray-600');
+                }
+            });
+            
+            displayPhotos();
+        }
+
+        // Display photos
+        function displayPhotos() {
+            const grid = document.getElementById('photosGrid');
+            const filtered = currentFilter === 'all' 
+                ? allPhotos 
+                : allPhotos.filter(p => p.photo_type === currentFilter);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-400">
+                        <i class="fas fa-images text-4xl mb-4"></i>
+                        <p>No photos yet</p>
+                        <p class="text-sm mt-2">Upload your first progress photo above</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(photo => `
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition cursor-pointer"
+                     onclick='showPhotoModal(${JSON.stringify(photo).replace(/'/g, "&apos;")})'>
+                    <div class="aspect-w-4 aspect-h-3 bg-gray-100">
+                        <img src="${photo.photo_data}" 
+                             alt="${photo.photo_type}" 
+                             class="w-full h-48 object-cover">
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full ${getTypeColor(photo.photo_type)}">
+                                ${formatPhotoType(photo.photo_type)}
+                            </span>
+                            <span class="text-xs text-gray-500">
+                                ${formatDate(photo.photo_date)}
+                            </span>
+                        </div>
+                        ${photo.body_area ? `
+                            <p class="text-sm text-gray-600">
+                                <i class="fas fa-bullseye mr-1"></i>
+                                ${formatBodyArea(photo.body_area)}
+                            </p>
+                        ` : ''}
+                        ${photo.photo_category ? `
+                            <p class="text-xs text-gray-500 mt-1">
+                                ${formatCategory(photo.photo_category)}
+                            </p>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show photo modal
+        function showPhotoModal(photo) {
+            document.getElementById('modalTitle').textContent = formatPhotoType(photo.photo_type);
+            document.getElementById('modalImage').src = photo.photo_data;
+            document.getElementById('modalType').textContent = formatPhotoType(photo.photo_type);
+            document.getElementById('modalDate').textContent = formatDate(photo.photo_date);
+            document.getElementById('modalBodyArea').textContent = photo.body_area ? formatBodyArea(photo.body_area) : 'Not specified';
+            document.getElementById('modalCategory').textContent = photo.photo_category ? formatCategory(photo.photo_category) : 'Not specified';
+            
+            const notesSection = document.getElementById('modalNotesSection');
+            if (photo.notes) {
+                document.getElementById('modalNotes').textContent = photo.notes;
+                notesSection.classList.remove('hidden');
+            } else {
+                notesSection.classList.add('hidden');
+            }
+            
+            document.getElementById('photoModal').classList.remove('hidden');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('photoModal').classList.add('hidden');
+        }
+
+        // Helper functions
+        function getTypeColor(type) {
+            const colors = {
+                'before': 'bg-red-100 text-red-800',
+                'during': 'bg-yellow-100 text-yellow-800',
+                'after': 'bg-green-100 text-green-800',
+                'exercise_demo': 'bg-blue-100 text-blue-800'
+            };
+            return colors[type] || 'bg-gray-100 text-gray-800';
+        }
+
+        function formatPhotoType(type) {
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function formatBodyArea(area) {
+            return area.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function formatCategory(category) {
+            return category.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('photoModal').addEventListener('click', (e) => {
+            if (e.target.id === 'photoModal') closeModal();
+        });
+    </script>
+</body>
+</html>

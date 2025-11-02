@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Goals & Appointments - SOBEAIREHAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#003D7A',
+              'brand-yellow': '#FFD700'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-brand-blue text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center space-x-4">
+                <button onclick="history.back()" class="text-white hover:text-brand-yellow transition">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <h1 class="text-2xl font-bold">
+                    <i class="fas fa-bullseye mr-2 text-brand-yellow"></i>
+                    My Goals & Appointments
+                </h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        
+        <!-- Treatment Goals -->
+        <div class="bg-white rounded-lg shadow-md">
+            <div class="border-b p-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-target mr-2 text-brand-blue"></i>
+                    Treatment Goals
+                </h2>
+                <p class="text-gray-600 mt-1">Track your progress toward your treatment objectives</p>
+            </div>
+
+            <div id="goalsContainer" class="p-6">
+                <div class="text-center text-gray-400 py-8">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+                    <p>Loading goals...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Appointments -->
+        <div class="bg-white rounded-lg shadow-md">
+            <div class="border-b p-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-calendar-check mr-2 text-brand-blue"></i>
+                    Upcoming Appointments
+                </h2>
+                <p class="text-gray-600 mt-1">Your scheduled therapy sessions</p>
+            </div>
+
+            <div id="upcomingAppointments" class="p-6">
+                <div class="text-center text-gray-400 py-8">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+                    <p>Loading appointments...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Past Appointments -->
+        <div class="bg-white rounded-lg shadow-md">
+            <div class="border-b p-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-history mr-2 text-brand-blue"></i>
+                    Past Appointments
+                </h2>
+            </div>
+
+            <div id="pastAppointments" class="p-6">
+                <div class="text-center text-gray-400 py-8">
+                    <p>No past appointments</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script>
+        let currentPatient = null;
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = JSON.parse(localStorage.getItem('patientSession') || 'null');
+            if (!session) {
+                window.location.href = '/static/patient-login.html';
+                return;
+            }
+
+            currentPatient = session;
+            loadGoals();
+            loadAppointments();
+        });
+
+        // Load goals
+        async function loadGoals() {
+            try {
+                const response = await axios.get(`/api/patient/${currentPatient.id}/goals`);
+                
+                if (response.data.success) {
+                    displayGoals(response.data.goals);
+                }
+            } catch (error) {
+                console.error('Error loading goals:', error);
+                document.getElementById('goalsContainer').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-exclamation-circle text-3xl mb-3"></i>
+                        <p>Failed to load goals</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display goals
+        function displayGoals(goals) {
+            const container = document.getElementById('goalsContainer');
+
+            if (goals.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-bullseye text-4xl mb-3"></i>
+                        <p>No goals set yet</p>
+                        <p class="text-sm mt-2">Your therapist will set treatment goals during your sessions</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = goals.map(goal => `
+                <div class="border rounded-lg p-6 mb-4 ${goal.status === 'achieved' ? 'bg-green-50 border-green-200' : ''}">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full ${getGoalTypeColor(goal.goal_type)}">
+                                    ${formatGoalType(goal.goal_type)}
+                                </span>
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(goal.status)}">
+                                    ${goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
+                                </span>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">${goal.goal_description}</h3>
+                        </div>
+                        ${goal.status === 'achieved' ? '<i class="fas fa-check-circle text-3xl text-green-500"></i>' : ''}
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                            <span>Progress</span>
+                            <span class="font-semibold">${goal.progress_percentage}%</span>
+                        </div>
+                        <div class="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-brand-blue to-blue-500 transition-all"
+                                 style="width: ${goal.progress_percentage}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Goal Details -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Baseline:</span>
+                            <p class="font-semibold text-gray-800">${goal.baseline_value} ${goal.measurement_unit}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Current:</span>
+                            <p class="font-semibold text-gray-800">${goal.current_value} ${goal.measurement_unit}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Target:</span>
+                            <p class="font-semibold text-gray-800">${goal.target_value} ${goal.measurement_unit}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Target Date:</span>
+                            <p class="font-semibold text-gray-800">${formatDate(goal.target_date)}</p>
+                        </div>
+                    </div>
+
+                    ${goal.achievement_date ? `
+                        <div class="mt-3 p-3 bg-green-100 rounded-lg">
+                            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                            <span class="text-sm font-semibold text-green-800">
+                                Goal achieved on ${formatDate(goal.achievement_date)}!
+                            </span>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Load appointments
+        async function loadAppointments() {
+            try {
+                const response = await axios.get(`/api/patient/${currentPatient.id}/appointments`);
+                
+                if (response.data.success) {
+                    displayAppointments(response.data.upcoming, response.data.past);
+                }
+            } catch (error) {
+                console.error('Error loading appointments:', error);
+                document.getElementById('upcomingAppointments').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-exclamation-circle text-3xl mb-3"></i>
+                        <p>Failed to load appointments</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display appointments
+        function displayAppointments(upcoming, past) {
+            // Upcoming appointments
+            const upcomingContainer = document.getElementById('upcomingAppointments');
+            if (upcoming.length === 0) {
+                upcomingContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-calendar-times text-4xl mb-3"></i>
+                        <p>No upcoming appointments</p>
+                    </div>
+                `;
+            } else {
+                upcomingContainer.innerHTML = upcoming.map(apt => `
+                    <div class="border border-brand-blue rounded-lg p-6 mb-4 bg-blue-50">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="px-3 py-1 text-xs font-semibold rounded-full bg-brand-blue text-white">
+                                        ${formatAppointmentType(apt.appointment_type)}
+                                    </span>
+                                    <span class="px-3 py-1 text-xs font-semibold rounded-full ${getAppointmentStatusColor(apt.status)}">
+                                        ${apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                                    </span>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                    <div>
+                                        <i class="fas fa-calendar mr-2 text-brand-blue"></i>
+                                        <span class="font-semibold">${formatDate(apt.appointment_date)}</span>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-clock mr-2 text-brand-blue"></i>
+                                        <span class="font-semibold">${apt.appointment_time} (${apt.duration_minutes} min)</span>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-user-md mr-2 text-brand-blue"></i>
+                                        <span>${apt.clinician_name}</span>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-map-marker-alt mr-2 text-brand-blue"></i>
+                                        <span>${formatLocationType(apt.location_type)}</span>
+                                    </div>
+                                </div>
+
+                                ${apt.location_address ? `
+                                    <div class="mt-3 text-sm text-gray-600">
+                                        <i class="fas fa-home mr-2"></i>
+                                        ${apt.location_address}
+                                    </div>
+                                ` : ''}
+
+                                ${apt.notes ? `
+                                    <div class="mt-3 p-3 bg-white rounded-lg">
+                                        <p class="text-sm text-gray-600">${apt.notes}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Past appointments
+            const pastContainer = document.getElementById('pastAppointments');
+            if (past.length === 0) {
+                pastContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <p>No past appointments</p>
+                    </div>
+                `;
+            } else {
+                pastContainer.innerHTML = past.slice(0, 5).map(apt => `
+                    <div class="border rounded-lg p-4 mb-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="font-semibold text-gray-800">${formatAppointmentType(apt.appointment_type)}</span>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    ${formatDate(apt.appointment_date)} at ${apt.appointment_time}
+                                </p>
+                            </div>
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full ${getAppointmentStatusColor(apt.status)}">
+                                ${apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Helper functions
+        function getGoalTypeColor(type) {
+            const colors = {
+                'pain_reduction': 'bg-red-100 text-red-800',
+                'rom_improvement': 'bg-blue-100 text-blue-800',
+                'strength_gain': 'bg-purple-100 text-purple-800',
+                'function_restoration': 'bg-green-100 text-green-800',
+                'independence': 'bg-yellow-100 text-yellow-800',
+                'return_to_sport': 'bg-orange-100 text-orange-800'
+            };
+            return colors[type] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'active': 'bg-blue-100 text-blue-800',
+                'achieved': 'bg-green-100 text-green-800',
+                'modified': 'bg-yellow-100 text-yellow-800',
+                'cancelled': 'bg-gray-100 text-gray-800'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getAppointmentStatusColor(status) {
+            const colors = {
+                'scheduled': 'bg-blue-100 text-blue-800',
+                'confirmed': 'bg-green-100 text-green-800',
+                'completed': 'bg-gray-100 text-gray-800',
+                'cancelled': 'bg-red-100 text-red-800',
+                'no_show': 'bg-red-100 text-red-800',
+                'rescheduled': 'bg-yellow-100 text-yellow-800'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function formatGoalType(type) {
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function formatAppointmentType(type) {
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function formatLocationType(type) {
+            return type.charAt(0).toUpperCase() + type.slice(1);
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+    </script>
+</body>
+</html>

@@ -996,6 +996,458 @@ app.get('/api/patient/:id/progress', async (c) => {
 })
 
 // ============================================
+// PROGRESS PHOTOS API
+// ============================================
+
+// Get patient progress photos
+app.get('/api/patient/:id/photos', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    
+    // Get patient's database ID from portal ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Get all photos for this patient
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        id,
+        photo_type,
+        photo_category,
+        photo_data,
+        photo_format,
+        thumbnail_data,
+        body_area,
+        notes,
+        taken_by,
+        photo_date,
+        created_at
+      FROM progress_photos
+      WHERE patient_id = ?
+      ORDER BY photo_date DESC, created_at DESC
+    `).bind(patient.id).all()
+    
+    // Log view activity
+    await c.env.DB.prepare(`
+      INSERT INTO patient_activity_log (patient_id, activity_type)
+      VALUES (?, 'photo_view')
+    `).bind(patient.id).run()
+    
+    return c.json({ success: true, photos: results })
+  } catch (error: any) {
+    console.error('Error fetching photos:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Upload new progress photo
+app.post('/api/patient/:id/photos', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    const { photoData, photoType, photoCategory, bodyArea, notes } = await c.req.json()
+    
+    // Validate required fields
+    if (!photoData || !photoType) {
+      return c.json({ success: false, error: 'Photo data and type required' }, 400)
+    }
+    
+    // Get patient's database ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Determine format from data URL
+    const formatMatch = photoData.match(/^data:image\/(\w+);base64,/)
+    const photoFormat = formatMatch ? formatMatch[1] : 'jpeg'
+    
+    // Create thumbnail (first 1000 chars of base64 as a simple approach)
+    const thumbnailData = photoData.substring(0, Math.min(photoData.length, 1000))
+    
+    // Insert photo
+    const result = await c.env.DB.prepare(`
+      INSERT INTO progress_photos (
+        patient_id, photo_type, photo_category, photo_data, photo_format,
+        thumbnail_data, body_area, notes, taken_by, visible_to_patient
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'patient', 1)
+    `).bind(
+      patient.id,
+      photoType,
+      photoCategory || null,
+      photoData,
+      photoFormat,
+      thumbnailData,
+      bodyArea || null,
+      notes || null
+    ).run()
+    
+    // Log upload activity
+    await c.env.DB.prepare(`
+      INSERT INTO patient_activity_log (patient_id, activity_type)
+      VALUES (?, 'photo_upload')
+    `).bind(patient.id).run()
+    
+    return c.json({ 
+      success: true, 
+      photoId: result.meta.last_row_id,
+      message: 'Photo uploaded successfully'
+    })
+  } catch (error: any) {
+    console.error('Error uploading photo:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
+// MESSAGING API
+// ============================================
+
+// Get patient messages
+app.get('/api/patient/:id/messages', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    
+    // Get patient's database ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Get messages with clinician info
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        pm.id,
+        pm.sender_type,
+        pm.message_subject,
+        pm.message_text,
+        pm.is_read,
+        pm.is_priority,
+        pm.sent_at,
+        pm.thread_id,
+        pm.parent_message_id,
+        c.first_name || ' ' || c.last_name as clinician_name
+      FROM patient_messages pm
+      JOIN clinicians c ON pm.clinician_id = c.id
+      WHERE pm.patient_id = ?
+      ORDER BY pm.thread_id, pm.sent_at ASC
+    `).bind(patient.id).all()
+    
+    // Group by threads
+    const threads: any = {}
+    results.forEach((msg: any) => {
+      const threadId = msg.thread_id || msg.id
+      if (!threads[threadId]) {
+        threads[threadId] = []
+      }
+      threads[threadId].push(msg)
+    })
+    
+    return c.json({ success: true, messages: results, threads })
+  } catch (error: any) {
+    console.error('Error fetching messages:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Send message to therapist
+app.post('/api/patient/:id/messages', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    const { subject, message, parentMessageId } = await c.req.json()
+    
+    if (!message) {
+      return c.json({ success: false, error: 'Message text required' }, 400)
+    }
+    
+    // Get patient and clinician IDs
+    const patient = await c.env.DB.prepare(`
+      SELECT 
+        p.id as patient_id,
+        pr.clinician_id
+      FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      JOIN prescriptions pr ON p.id = pr.patient_id
+      WHERE ppa.portal_patient_id = ? AND pr.status = 'active'
+      LIMIT 1
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found or no active prescription' }, 404)
+    }
+    
+    // Get thread_id from parent if replying
+    let threadId = null
+    if (parentMessageId) {
+      const parentMsg = await c.env.DB.prepare(`
+        SELECT thread_id FROM patient_messages WHERE id = ?
+      `).bind(parentMessageId).first()
+      threadId = parentMsg?.thread_id || parentMessageId
+    }
+    
+    // Insert message
+    const result = await c.env.DB.prepare(`
+      INSERT INTO patient_messages (
+        patient_id, clinician_id, sender_type, message_subject, 
+        message_text, parent_message_id, thread_id
+      ) VALUES (?, ?, 'patient', ?, ?, ?, ?)
+    `).bind(
+      patient.patient_id,
+      patient.clinician_id,
+      subject || 'Message from patient',
+      message,
+      parentMessageId || null,
+      threadId
+    ).run()
+    
+    // If this is a new thread, update thread_id to be the message id
+    const messageId = result.meta.last_row_id
+    if (!threadId) {
+      await c.env.DB.prepare(`
+        UPDATE patient_messages SET thread_id = ? WHERE id = ?
+      `).bind(messageId, messageId).run()
+    }
+    
+    // Log activity
+    await c.env.DB.prepare(`
+      INSERT INTO patient_activity_log (patient_id, activity_type)
+      VALUES (?, 'message_sent')
+    `).bind(patient.patient_id).run()
+    
+    return c.json({ 
+      success: true, 
+      messageId,
+      message: 'Message sent to your therapist'
+    })
+  } catch (error: any) {
+    console.error('Error sending message:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Mark message as read
+app.put('/api/patient/:id/messages/:messageId/read', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    const messageId = c.req.param('messageId')
+    
+    // Get patient ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Mark as read
+    await c.env.DB.prepare(`
+      UPDATE patient_messages 
+      SET is_read = 1, read_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND patient_id = ?
+    `).bind(messageId, patient.id).run()
+    
+    return c.json({ success: true })
+  } catch (error: any) {
+    console.error('Error marking message as read:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
+// APPOINTMENTS API
+// ============================================
+
+// Get patient appointments
+app.get('/api/patient/:id/appointments', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    
+    // Get patient ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Get appointments with clinician info
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        a.id,
+        a.appointment_type,
+        a.appointment_date,
+        a.appointment_time,
+        a.duration_minutes,
+        a.location_type,
+        a.location_address,
+        a.status,
+        a.notes,
+        c.first_name || ' ' || c.last_name as clinician_name
+      FROM appointments a
+      JOIN clinicians c ON a.clinician_id = c.id
+      WHERE a.patient_id = ?
+      ORDER BY a.appointment_date DESC, a.appointment_time DESC
+    `).bind(patient.id).all()
+    
+    // Separate upcoming and past
+    const today = new Date().toISOString().split('T')[0]
+    const upcoming = results.filter((apt: any) => apt.appointment_date >= today && apt.status !== 'cancelled')
+    const past = results.filter((apt: any) => apt.appointment_date < today || apt.status === 'completed')
+    
+    return c.json({ success: true, upcoming, past, all: results })
+  } catch (error: any) {
+    console.error('Error fetching appointments:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
+// PATIENT GOALS API
+// ============================================
+
+// Get patient goals
+app.get('/api/patient/:id/goals', async (c) => {
+  try {
+    const portalPatientId = c.req.param('id')
+    
+    // Get patient ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Get all goals
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        id,
+        goal_type,
+        goal_description,
+        baseline_value,
+        target_value,
+        current_value,
+        measurement_unit,
+        target_date,
+        status,
+        progress_percentage,
+        achievement_date,
+        created_at
+      FROM patient_goals
+      WHERE patient_id = ?
+      ORDER BY 
+        CASE status 
+          WHEN 'active' THEN 1 
+          WHEN 'achieved' THEN 2 
+          ELSE 3 
+        END,
+        target_date ASC
+    `).bind(patient.id).all()
+    
+    return c.json({ success: true, goals: results })
+  } catch (error: any) {
+    console.error('Error fetching goals:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
+// ENHANCED ANALYTICS API
+// ============================================
+
+// Get patient engagement metrics
+app.get('/api/analytics/engagement', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT * FROM vw_patient_engagement
+      ORDER BY days_active_7d DESC, exercises_completed_30d DESC
+    `).all()
+    
+    return c.json({ success: true, patients: results })
+  } catch (error: any) {
+    console.error('Error fetching engagement metrics:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get clinician dashboard summary
+app.get('/api/analytics/clinician/:id', async (c) => {
+  try {
+    const clinicianId = c.req.param('id')
+    
+    const result = await c.env.DB.prepare(`
+      SELECT * FROM vw_clinician_dashboard
+      WHERE clinician_id = ?
+    `).bind(clinicianId).first()
+    
+    if (!result) {
+      return c.json({ success: false, error: 'Clinician not found' }, 404)
+    }
+    
+    // Get detailed patient engagement for this clinician
+    const { results: patients } = await c.env.DB.prepare(`
+      SELECT 
+        pe.*,
+        p.first_name || ' ' || p.last_name as patient_name
+      FROM vw_patient_engagement pe
+      JOIN patients p ON pe.patient_id = p.id
+      JOIN prescriptions pr ON p.id = pr.patient_id
+      WHERE pr.clinician_id = ? AND pr.status = 'active'
+      ORDER BY pe.days_active_7d DESC
+    `).bind(clinicianId).all()
+    
+    return c.json({ 
+      success: true, 
+      summary: result,
+      patients
+    })
+  } catch (error: any) {
+    console.error('Error fetching clinician dashboard:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get exercise effectiveness metrics
+app.get('/api/analytics/exercises', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT * FROM vw_exercise_effectiveness
+      ORDER BY effectiveness_score DESC, total_completions DESC
+    `).all()
+    
+    return c.json({ success: true, exercises: results })
+  } catch (error: any) {
+    console.error('Error fetching exercise effectiveness:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
 // GEMINI AI API ROUTES
 // ============================================
 
