@@ -689,35 +689,72 @@ app.post('/api/patient/auth', async (c) => {
   try {
     const { patientId, lastName } = await c.req.json()
     
-    // Demo credentials (in production, query database)
-    if (patientId === 'DEMO001' && lastName.toLowerCase() === 'smith') {
+    // Query database for patient with portal access
+    const result = await c.env.DB.prepare(`
+      SELECT 
+        p.id,
+        p.first_name,
+        p.last_name,
+        ppa.portal_patient_id,
+        ppa.last_name_hash,
+        pr.start_date as program_start_date,
+        pr.program_name,
+        cl.first_name || ' ' || cl.last_name as therapist_name
+      FROM patient_portal_access ppa
+      JOIN patients p ON ppa.patient_id = p.id
+      LEFT JOIN prescriptions pr ON p.id = pr.patient_id AND pr.status = 'active'
+      LEFT JOIN clinicians cl ON pr.clinician_id = cl.id
+      WHERE ppa.portal_patient_id = ? 
+        AND ppa.portal_enabled = 1
+        AND LOWER(ppa.last_name_hash) = LOWER(?)
+      ORDER BY pr.start_date DESC
+      LIMIT 1
+    `).bind(patientId, lastName).first()
+    
+    if (!result) {
+      // Log failed login attempt
+      await c.env.DB.prepare(`
+        INSERT INTO patient_activity_log (patient_id, activity_type, notes)
+        SELECT p.id, 'login_failed', 'Invalid credentials'
+        FROM patients p
+        JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+        WHERE ppa.portal_patient_id = ?
+      `).bind(patientId).run().catch(() => {})
+      
       return c.json({
-        success: true,
-        patient: {
-          id: 'DEMO001',
-          name: 'John Smith',
-          therapist: 'Dr. Sarah Johnson',
-          programStartDate: '2025-01-15',
-          loginTime: new Date().toISOString()
-        }
-      })
+        success: false,
+        error: 'Invalid patient ID or last name'
+      }, 401)
     }
     
-    // In production, query database
-    // const patient = await c.env.DB.prepare(`
-    //   SELECT p.id, p.first_name, p.last_name, pr.start_date
-    //   FROM patients p
-    //   LEFT JOIN prescriptions pr ON p.id = pr.patient_id
-    //   WHERE p.id = ? AND LOWER(p.last_name) = LOWER(?)
-    //   ORDER BY pr.start_date DESC
-    //   LIMIT 1
-    // `).bind(patientId, lastName).first()
+    // Update last login time and count
+    await c.env.DB.prepare(`
+      UPDATE patient_portal_access 
+      SET last_login = CURRENT_TIMESTAMP,
+          login_count = login_count + 1
+      WHERE portal_patient_id = ?
+    `).bind(patientId).run()
+    
+    // Log successful login
+    await c.env.DB.prepare(`
+      INSERT INTO patient_activity_log (patient_id, activity_type)
+      VALUES (?, 'login')
+    `).bind(result.id).run()
     
     return c.json({
-      success: false,
-      error: 'Invalid patient ID or last name'
-    }, 401)
+      success: true,
+      patient: {
+        id: result.portal_patient_id,
+        patientDbId: result.id,
+        name: `${result.first_name} ${result.last_name}`,
+        therapist: result.therapist_name || 'Your Physical Therapist',
+        programStartDate: result.program_start_date || new Date().toISOString().split('T')[0],
+        programName: result.program_name || 'Exercise Program',
+        loginTime: new Date().toISOString()
+      }
+    })
   } catch (error: any) {
+    console.error('Patient auth error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
@@ -725,44 +762,68 @@ app.post('/api/patient/auth', async (c) => {
 // Get patient's exercises
 app.get('/api/patient/:id/exercises', async (c) => {
   try {
-    const patientId = c.req.param('id')
+    const portalPatientId = c.req.param('id')
     
-    // Demo data (in production, query database)
-    if (patientId === 'DEMO001') {
-      return c.json({
-        success: true,
-        exercises: [
-          {
-            id: 'ex1',
-            name: 'Pelvic Tilts',
-            category: 'Core Stability',
-            sets: 3,
-            reps: 10,
-            frequency: 'Daily'
-          },
-          {
-            id: 'ex2',
-            name: 'Bird Dogs',
-            category: 'Core Stability',
-            sets: 3,
-            reps: 10,
-            frequency: 'Daily'
-          }
-        ]
-      })
+    // Get patient's database ID from portal ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id
+      FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
+    
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
     }
     
-    // In production:
-    // const { results } = await c.env.DB.prepare(`
-    //   SELECT pe.*, e.name, e.category, e.instructions, e.video_url
-    //   FROM prescribed_exercises pe
-    //   JOIN exercises e ON pe.exercise_id = e.id
-    //   JOIN prescriptions pr ON pe.prescription_id = pr.id
-    //   WHERE pr.patient_id = ? AND pe.status = 'active'
-    // `).bind(patientId).all()
+    // Get assigned exercises using the view
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        prescribed_exercise_id,
+        exercise_id,
+        exercise_name,
+        category,
+        description,
+        instructions,
+        sets,
+        reps,
+        hold_time,
+        frequency_per_week,
+        clinical_reason,
+        target_deficiency
+      FROM vw_patient_active_exercises
+      WHERE patient_id = ?
+      ORDER BY category, exercise_name
+    `).bind(patient.id).all()
     
-    return c.json({ success: false, error: 'Patient not found' }, 404)
+    // Log view activity
+    await c.env.DB.prepare(`
+      INSERT INTO patient_activity_log (patient_id, activity_type)
+      VALUES (?, 'exercise_view')
+    `).bind(patient.id).run()
+    
+    // Transform to match frontend format
+    const exercises = results.map((ex: any) => ({
+      id: `ex${ex.exercise_id}`,
+      prescribedId: ex.prescribed_exercise_id,
+      name: ex.exercise_name,
+      category: ex.category,
+      description: ex.description,
+      instructions: ex.instructions ? JSON.parse(ex.instructions) : [],
+      sets: ex.sets,
+      reps: ex.reps,
+      holdTime: ex.hold_time,
+      frequency: `${ex.frequency_per_week}x weekly`,
+      clinicalReason: ex.clinical_reason,
+      targetDeficiency: ex.target_deficiency
+    }))
+    
+    return c.json({
+      success: true,
+      exercises
+    })
   } catch (error: any) {
+    console.error('Get exercises error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
@@ -770,18 +831,97 @@ app.get('/api/patient/:id/exercises', async (c) => {
 // Record exercise completion
 app.post('/api/patient/:id/complete', async (c) => {
   try {
-    const patientId = c.req.param('id')
-    const { exerciseId, completedAt } = await c.req.json()
+    const portalPatientId = c.req.param('id')
+    const { prescribedExerciseId, exerciseName, sets, reps, duration, painLevel, difficulty, notes } = await c.req.json()
     
-    // In production, store in database:
-    // await c.env.DB.prepare(`
-    //   INSERT INTO patient_activity (
-    //     patient_id, exercise_id, completed_at
-    //   ) VALUES (?, ?, ?)
-    // `).bind(patientId, exerciseId, completedAt).run()
+    // Get patient's database ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id
+      FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
     
-    return c.json({ success: true })
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Log completion in activity log
+    await c.env.DB.prepare(`
+      INSERT INTO patient_activity_log (
+        patient_id,
+        prescribed_exercise_id,
+        activity_type,
+        exercise_name,
+        sets_completed,
+        reps_completed,
+        duration_seconds,
+        pain_level,
+        difficulty_rating,
+        notes
+      ) VALUES (?, ?, 'exercise_complete', ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      patient.id,
+      prescribedExerciseId || null,
+      exerciseName,
+      sets || null,
+      reps || null,
+      duration || null,
+      painLevel || null,
+      difficulty || null,
+      notes || null
+    ).run()
+    
+    // Calculate streak and today's progress
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Get today's completions
+    const todayStats = await c.env.DB.prepare(`
+      SELECT COUNT(DISTINCT exercise_name) as completed_today
+      FROM patient_activity_log
+      WHERE patient_id = ?
+        AND activity_type = 'exercise_complete'
+        AND DATE(activity_date) = ?
+    `).bind(patient.id, today).first()
+    
+    // Get total assigned exercises
+    const totalExercises = await c.env.DB.prepare(`
+      SELECT COUNT(*) as total
+      FROM vw_patient_active_exercises
+      WHERE patient_id = ?
+    `).bind(patient.id).first()
+    
+    // Calculate streak (consecutive days with activity)
+    const streakResult = await c.env.DB.prepare(`
+      WITH RECURSIVE dates AS (
+        SELECT DATE('now') as date
+        UNION ALL
+        SELECT DATE(date, '-1 day')
+        FROM dates
+        WHERE date > DATE('now', '-30 days')
+      ),
+      daily_activity AS (
+        SELECT DISTINCT DATE(activity_date) as activity_date
+        FROM patient_activity_log
+        WHERE patient_id = ?
+          AND activity_type = 'exercise_complete'
+      )
+      SELECT COUNT(*) as streak
+      FROM dates d
+      LEFT JOIN daily_activity da ON d.date = da.activity_date
+      WHERE da.activity_date IS NOT NULL
+        AND d.date <= DATE('now')
+      ORDER BY d.date DESC
+    `).bind(patient.id).first()
+    
+    return c.json({
+      success: true,
+      streak: streakResult?.streak || 0,
+      todayCompleted: todayStats?.completed_today || 0,
+      todayTotal: totalExercises?.total || 0
+    })
   } catch (error: any) {
+    console.error('Complete exercise error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
@@ -789,19 +929,68 @@ app.post('/api/patient/:id/complete', async (c) => {
 // Get patient progress
 app.get('/api/patient/:id/progress', async (c) => {
   try {
-    const patientId = c.req.param('id')
+    const portalPatientId = c.req.param('id')
+    const days = parseInt(c.req.query('days') || '30')
     
-    // In production, query activity log:
-    // const { results } = await c.env.DB.prepare(`
-    //   SELECT DATE(completed_at) as date, COUNT(*) as count
-    //   FROM patient_activity
-    //   WHERE patient_id = ? AND completed_at >= date('now', '-30 days')
-    //   GROUP BY DATE(completed_at)
-    //   ORDER BY date DESC
-    // `).bind(patientId).all()
+    // Get patient's database ID
+    const patient = await c.env.DB.prepare(`
+      SELECT p.id
+      FROM patients p
+      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
+      WHERE ppa.portal_patient_id = ?
+    `).bind(portalPatientId).first()
     
-    return c.json({ success: true, progress: [] })
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+    
+    // Get daily progress for specified period
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        DATE(activity_date) as date,
+        COUNT(DISTINCT exercise_name) as completed,
+        COUNT(*) as total_sessions,
+        AVG(pain_level) as avg_pain,
+        AVG(difficulty_rating) as avg_difficulty
+      FROM patient_activity_log
+      WHERE patient_id = ?
+        AND activity_type = 'exercise_complete'
+        AND activity_date >= DATE('now', '-' || ? || ' days')
+      GROUP BY DATE(activity_date)
+      ORDER BY date DESC
+    `).bind(patient.id, days).all()
+    
+    // Get total assigned exercises
+    const totalEx = await c.env.DB.prepare(`
+      SELECT COUNT(*) as total
+      FROM vw_patient_active_exercises
+      WHERE patient_id = ?
+    `).bind(patient.id).first()
+    
+    const total = totalEx?.total || 1
+    
+    // Format progress data
+    const progress = results.map((row: any) => ({
+      date: row.date,
+      completed: row.completed,
+      total: total,
+      percentage: Math.round((row.completed / total) * 100),
+      avgPain: row.avg_pain ? Math.round(row.avg_pain * 10) / 10 : null,
+      avgDifficulty: row.avg_difficulty ? Math.round(row.avg_difficulty * 10) / 10 : null,
+      sessions: row.total_sessions
+    }))
+    
+    return c.json({
+      success: true,
+      progress,
+      summary: {
+        totalAssignedExercises: total,
+        activeDays: results.length,
+        periodDays: days
+      }
+    })
   } catch (error: any) {
+    console.error('Get progress error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
