@@ -41,62 +41,108 @@ app.get('/', (c) => {
           }
         </script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <link href="/static/modern-design.css" rel="stylesheet">
+        <link href="/static/glassmorphism.css" rel="stylesheet">
+        <style>
+            body {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+                background-attachment: fixed;
+                min-height: 100vh;
+            }
+            .animated-bg {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                background: linear-gradient(135deg, 
+                    rgba(0, 102, 204, 0.3) 0%, 
+                    rgba(0, 153, 255, 0.2) 50%, 
+                    rgba(0, 200, 81, 0.3) 100%
+                );
+            }
+        </style>
     </head>
-    <body class="bg-white">
+    <body>
+        <div class="animated-bg"></div>
         <div class="min-h-screen">
-            <!-- Header -->
-            <header class="bg-brand-blue text-white shadow-lg">
-                <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
-                    <h1 class="text-3xl md:text-5xl font-bold">
-                        <i class="fas fa-stethoscope mr-2 md:mr-3 text-brand-green"></i>
-                        ThriveOrtho
-                    </h1>
-                    <p class="mt-2 md:mt-3 text-base md:text-xl text-white/90">Made by Humans, Powered by AI</p>
+            <!-- Header with Glassmorphism -->
+            <header class="glass-header sticky top-0 z-50">
+                <div class="max-w-7xl mx-auto px-4 py-4 md:py-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <img src="/static/logo.svg" alt="ThriveOrtho" class="h-12 md:h-14 logo-glow">
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <a href="/static/patient-portal.html" class="glass-btn glass-btn-secondary glass-btn-sm">
+                                <i class="fas fa-user mr-2"></i>
+                                <span class="hidden md:inline">Patient</span> Login
+                            </a>
+                            <a href="/static/glassmorphism-demo.html" class="glass-btn glass-btn-primary glass-btn-sm">
+                                <i class="fas fa-palette mr-2"></i>
+                                <span class="hidden md:inline">Design</span> Demo
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </header>
 
             <!-- Main Content -->
             <main class="max-w-7xl mx-auto px-4 py-8 md:py-16">
+                
+                <!-- Hero Section -->
+                <div class="text-center mb-12">
+                    <div class="glass-card inline-block mb-8">
+                        <div class="glass-badge glass-badge-success mb-4">
+                            ✨ v2.0.0 - NEW GLASSMORPHISM DESIGN
+                        </div>
+                        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                            Physical Therapy Platform
+                        </h1>
+                        <p class="text-xl text-white/80 max-w-2xl mx-auto">
+                            AI-powered assessments, automated documentation, and patient engagement
+                        </p>
+                    </div>
+                </div>
+                
                 <!-- Quick Actions -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                     <!-- Patient Intake -->
-                    <a href="/static/intake.html" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-xl">
-                                <i class="fas fa-user-plus text-brand-blue"></i>
+                    <a href="/static/intake.html" class="glass-card glass-lift block">
+                        <div class="text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                                <i class="fas fa-user-plus text-2xl text-white"></i>
                             </div>
-                            <h2 class="ml-4 text-2xl font-bold text-gray-800">New Patient</h2>
-                        </div>
-                        <p class="text-gray-600 text-base mb-4">Start patient intake and demographic information collection</p>
-                        <div class="text-brand-blue font-semibold flex items-center">
-                            Get Started <i class="fas fa-arrow-right ml-2"></i>
+                            <h2 class="text-2xl font-bold text-white mb-2">New Patient</h2>
+                            <p class="text-white/70 mb-4">Start patient intake and demographic information</p>
+                            <button class="glass-btn glass-btn-success glass-btn-sm w-full">
+                                Get Started <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
                         </div>
                     </a>
 
-                    <!-- Assessment -->
-                    <a href="/static/dashboard.html" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-brand-blue w-12 h-12 rounded-lg flex items-center justify-center text-xl">
-                                <i class="fas fa-video text-white"></i>
+                    <!-- Dashboard -->
+                    <a href="/static/dashboard.html" class="glass-card glass-lift block">
+                        <div class="text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                                <i class="fas fa-video text-2xl text-white"></i>
                             </div>
-                            <h2 class="ml-4 text-2xl font-bold text-gray-800">Dashboard</h2>
-                        </div>
-                        <p class="text-gray-600 text-base mb-4">View all patients and manage assessments</p>
-                        <div class="text-brand-blue font-semibold flex items-center">
-                            View Dashboard <i class="fas fa-arrow-right ml-2"></i>
+                            <h2 class="text-2xl font-bold text-white mb-2">Dashboard</h2>
+                            <p class="text-white/70 mb-4">View all patients and manage assessments</p>
+                            <button class="glass-btn glass-btn-primary glass-btn-sm w-full">
+                                View Dashboard <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
                         </div>
                     </a>
 
-                    <!-- Reports -->
-                    <a href="/static/dashboard.html" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-xl">
-                                <i class="fas fa-chart-line text-brand-blue"></i>
+                    <!-- RPM Monitoring -->
+                    <a href="/static/clinician-analytics.html" class="glass-card glass-lift block">
+                        <div class="text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                                <i class="fas fa-chart-line text-2xl text-white"></i>
                             </div>
-                            <h2 class="ml-4 text-2xl font-bold text-gray-800">RPM Monitoring</h2>
-                        </div>
-                        <p class="text-gray-600 text-base mb-4">Track remote patient monitoring and billing</p>
+                            <h2 class="text-2xl font-bold text-white mb-2">Analytics</h2>
+                            <p class="text-white/70 mb-4">Track patient engagement and outcomes</p>
                         <div class="text-brand-blue font-semibold flex items-center">
                             View Reports <i class="fas fa-arrow-right ml-2"></i>
                         </div>

@@ -1,0 +1,76 @@
+<svg width="240" height="60" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Glow -->
+  <defs>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0066CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099FF;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00C851;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00E676;stop-opacity:1" />
+    </linearGradient>
+    
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="glass">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0"/>
+      <feComponentTransfer>
+        <feFuncA type="discrete" tableValues="0.1"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  
+  <!-- Logo Icon - Medical Cross with Motion -->
+  <g transform="translate(10, 10)">
+    <!-- Outer Glass Circle -->
+    <circle cx="20" cy="20" r="20" fill="url(#blueGradient)" opacity="0.15" filter="url(#glass)"/>
+    <circle cx="20" cy="20" r="20" fill="none" stroke="white" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Inner Medical Symbol -->
+    <g filter="url(#glow)">
+      <!-- Cross/Plus Symbol -->
+      <rect x="18" y="10" width="4" height="20" rx="2" fill="white"/>
+      <rect x="10" y="18" width="20" height="4" rx="2" fill="white"/>
+      
+      <!-- Motion Lines (suggesting movement/progress) -->
+      <path d="M 5 8 L 8 8" stroke="url(#greenGradient)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      <path d="M 3 14 L 7 14" stroke="url(#greenGradient)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+      <path d="M 4 20 L 7 20" stroke="url(#greenGradient)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      
+      <!-- Sparkle/Tech dots -->
+      <circle cx="32" cy="12" r="1.5" fill="url(#greenGradient)"/>
+      <circle cx="35" cy="18" r="1" fill="url(#greenGradient)" opacity="0.7"/>
+      <circle cx="33" cy="26" r="1.5" fill="url(#greenGradient)"/>
+    </g>
+  </g>
+  
+  <!-- ThriveOrtho Text -->
+  <g transform="translate(60, 20)">
+    <!-- "Thrive" in bold -->
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="url(#blueGradient)" filter="url(#glow)">
+      Thrive
+    </text>
+    
+    <!-- "Ortho" in medium weight -->
+    <text x="76" y="15" font-family="Arial, sans-serif" font-size="22" font-weight="600" fill="#0066CC">
+      Ortho
+    </text>
+  </g>
+  
+  <!-- Tagline -->
+  <g transform="translate(60, 36)">
+    <text x="0" y="10" font-family="Arial, sans-serif" font-size="9" font-weight="500" fill="#00C851" opacity="0.9">
+      Made by Humans
+    </text>
+    <text x="0" y="10" font-family="Arial, sans-serif" font-size="9" font-weight="500" fill="#666" opacity="0.9">
+      <tspan dx="78">, Powered by AI</tspan>
+    </text>
+  </g>
+</svg>
