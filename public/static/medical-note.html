@@ -23,14 +23,9 @@
     <!-- jsPDF Library for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="/static/pdf-export-enhanced.js"></script>
     
     <style>
-        .body-map { position: relative; max-width: 300px; margin: 0 auto; }
-        .pain-marker { position: absolute; width: 20px; height: 20px; background: red; border-radius: 50%; 
-                       border: 2px solid white; cursor: pointer; transform: translate(-50%, -50%); 
-                       animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); } 
-                          50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } }
         @media print {
             .no-print { display: none; }
             body { background: white; }
@@ -50,8 +45,8 @@
                     <button onclick="window.print()" class="px-4 py-2 bg-white text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
                         <i class="fas fa-print mr-2"></i>Print
                     </button>
-                    <button onclick="downloadPDF()" class="px-4 py-2 bg-brand-green text-brand-blue rounded-lg hover:shadow-lg font-semibold transition-shadow">
-                        <i class="fas fa-file-pdf mr-2"></i>PDF
+                    <button onclick="downloadEnhancedPDF()" class="px-4 py-2 bg-brand-green text-white rounded-lg hover:shadow-lg font-semibold transition-shadow">
+                        <i class="fas fa-file-pdf mr-2"></i>Enhanced PDF
                     </button>
                 </div>
             </div>
@@ -69,181 +64,7 @@
                 </div>
             </div>
 
-            <!-- Pain Location Map -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-map-marked-alt mr-2 text-brand-orange"></i>
-                    Pain Location Assessment
-                </h2>
-                <p class="text-sm text-gray-600 mb-4">Click on the body diagram to mark pain locations. Size indicates severity (1-10).</p>
-                
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Front View -->
-                    <div>
-                        <h3 class="text-center font-bold mb-2 text-brand-orange"><i class="fas fa-user mr-1"></i>Front View</h3>
-                        <div class="body-map relative" id="bodyMapFront">
-                            <svg viewBox="0 0 300 600" class="w-full border-2 border-brand-orange rounded-lg cursor-crosshair shadow-md hover:shadow-lg transition-shadow" onclick="addPainMarker(event, 'front')">
-                                <!-- Head -->
-                                <ellipse cx="150" cy="50" rx="35" ry="42" fill="#FFE4C4" stroke="#8B4513" stroke-width="2"/>
-                                <circle cx="140" cy="45" r="3" fill="#000"/>
-                                <circle cx="160" cy="45" r="3" fill="#000"/>
-                                <text x="150" y="25" text-anchor="middle" font-size="12" font-weight="bold" fill="#666">Head</text>
-                                
-                                <!-- Neck -->
-                                <rect x="140" y="85" width="20" height="20" fill="#FFE4C4" stroke="#8B4513" stroke-width="1.5"/>
-                                
-                                <!-- Torso/Chest -->
-                                <ellipse cx="150" cy="160" rx="50" ry="70" fill="#E6D5B8" stroke="#8B4513" stroke-width="2"/>
-                                <text x="150" y="145" text-anchor="middle" font-size="14" font-weight="bold" fill="#666">Chest</text>
-                                
-                                <!-- Abdomen -->
-                                <ellipse cx="150" cy="250" rx="45" ry="50" fill="#F5E6D3" stroke="#8B4513" stroke-width="2"/>
-                                <text x="150" y="250" text-anchor="middle" font-size="13" fill="#666">Abdomen</text>
-                                
-                                <!-- Pelvis -->
-                                <ellipse cx="150" cy="320" rx="48" ry="30" fill="#E6D5B8" stroke="#8B4513" stroke-width="2"/>
-                                
-                                <!-- Left Shoulder Joint -->
-                                <circle cx="103" cy="115" r="6" fill="#FF6B35" opacity="0.8"/>
-                                <text x="103" y="105" text-anchor="middle" font-size="9" fill="#FF6B35" font-weight="bold">Shoulder</text>
-                                
-                                <!-- Left Arm -->
-                                <line x1="103" y1="115" x2="70" y2="160" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <circle cx="70" cy="165" r="5" fill="#FF6B35" opacity="0.7"/>
-                                <text x="60" y="168" text-anchor="end" font-size="8" fill="#666">Elbow</text>
-                                <line x1="70" y1="165" x2="60" y2="230" stroke="#8B4513" stroke-width="7" stroke-linecap="round"/>
-                                <ellipse cx="63" cy="245" rx="8" ry="10" fill="#FFE4C4" stroke="#8B4513" stroke-width="1.5"/>
-                                <text x="35" y="190" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">L Arm</text>
-                                
-                                <!-- Right Shoulder Joint -->
-                                <circle cx="197" cy="115" r="6" fill="#FF6B35" opacity="0.8"/>
-                                <text x="197" y="105" text-anchor="middle" font-size="9" fill="#FF6B35" font-weight="bold">Shoulder</text>
-                                
-                                <!-- Right Arm -->
-                                <line x1="197" y1="115" x2="230" y2="160" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <circle cx="230" cy="165" r="5" fill="#FF6B35" opacity="0.7"/>
-                                <text x="240" y="168" text-anchor="start" font-size="8" fill="#666">Elbow</text>
-                                <line x1="230" y1="165" x2="240" y2="230" stroke="#8B4513" stroke-width="7" stroke-linecap="round"/>
-                                <ellipse cx="237" cy="245" rx="8" ry="10" fill="#FFE4C4" stroke="#8B4513" stroke-width="1.5"/>
-                                <text x="265" y="190" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">R Arm</text>
-                                
-                                <!-- Left Hip Joint -->
-                                <circle cx="130" cy="345" r="7" fill="#FF6B35" opacity="0.8"/>
-                                <text x="115" y="348" text-anchor="end" font-size="9" fill="#FF6B35" font-weight="bold">Hip</text>
-                                
-                                <!-- Left Leg -->
-                                <line x1="130" y1="345" x2="125" y2="420" stroke="#8B4513" stroke-width="10" stroke-linecap="round"/>
-                                <circle cx="125" cy="425" r="6" fill="#FF6B35" opacity="0.8"/>
-                                <text x="110" y="428" text-anchor="end" font-size="9" fill="#FF6B35" font-weight="bold">Knee</text>
-                                <line x1="125" y1="425" x2="120" y2="520" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <circle cx="120" cy="525" r="5" fill="#FF6B35" opacity="0.7"/>
-                                <text x="105" y="528" text-anchor="end" font-size="8" fill="#666">Ankle</text>
-                                <ellipse cx="120" cy="565" rx="15" ry="8" fill="#8B4513" stroke="#654321" stroke-width="1.5"/>
-                                <text x="95" y="455" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">L Leg</text>
-                                
-                                <!-- Right Hip Joint -->
-                                <circle cx="170" cy="345" r="7" fill="#FF6B35" opacity="0.8"/>
-                                <text x="185" y="348" text-anchor="start" font-size="9" fill="#FF6B35" font-weight="bold">Hip</text>
-                                
-                                <!-- Right Leg -->
-                                <line x1="170" y1="345" x2="175" y2="420" stroke="#8B4513" stroke-width="10" stroke-linecap="round"/>
-                                <circle cx="175" cy="425" r="6" fill="#FF6B35" opacity="0.8"/>
-                                <text x="190" y="428" text-anchor="start" font-size="9" fill="#FF6B35" font-weight="bold">Knee</text>
-                                <line x1="175" y1="425" x2="180" y2="520" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <circle cx="180" cy="525" r="5" fill="#FF6B35" opacity="0.7"/>
-                                <text x="195" y="528" text-anchor="start" font-size="8" fill="#666">Ankle</text>
-                                <ellipse cx="180" cy="565" rx="15" ry="8" fill="#8B4513" stroke="#654321" stroke-width="1.5"/>
-                                <text x="205" y="455" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">R Leg</text>
-                            </svg>
-                        </div>
-                    </div>
-                    
-                    <!-- Back View -->
-                    <div>
-                        <h3 class="text-center font-bold mb-2 text-brand-blue"><i class="fas fa-user mr-1"></i>Back View</h3>
-                        <div class="body-map relative" id="bodyMapBack">
-                            <svg viewBox="0 0 300 600" class="w-full border-2 border-brand-blue rounded-lg cursor-crosshair shadow-md hover:shadow-lg transition-shadow" onclick="addPainMarker(event, 'back')">
-                                <!-- Head -->
-                                <ellipse cx="150" cy="50" rx="35" ry="42" fill="#FFE4C4" stroke="#8B4513" stroke-width="2"/>
-                                <text x="150" y="25" text-anchor="middle" font-size="12" font-weight="bold" fill="#666">Head</text>
-                                
-                                <!-- Neck -->
-                                <rect x="140" y="85" width="20" height="20" fill="#FFE4C4" stroke="#8B4513" stroke-width="1.5"/>
-                                <text x="150" y="100" text-anchor="middle" font-size="10" fill="#666">Neck</text>
-                                
-                                <!-- Upper Back -->
-                                <ellipse cx="150" cy="160" rx="50" ry="70" fill="#E6D5B8" stroke="#8B4513" stroke-width="2"/>
-                                <text x="150" y="140" text-anchor="middle" font-size="14" font-weight="bold" fill="#666">Upper Back</text>
-                                
-                                <!-- Lower Back -->
-                                <ellipse cx="150" cy="250" rx="45" ry="50" fill="#F5E6D3" stroke="#8B4513" stroke-width="2"/>
-                                <text x="150" y="250" text-anchor="middle" font-size="13" font-weight="bold" fill="#666">Lower Back</text>
-                                
-                                <!-- Pelvis/Gluteal -->
-                                <ellipse cx="150" cy="320" rx="48" ry="30" fill="#E6D5B8" stroke="#8B4513" stroke-width="2"/>
-                                <text x="150" y="323" text-anchor="middle" font-size="11" fill="#666">Gluteal</text>
-                                
-                                <!-- Spine line -->
-                                <line x1="150" y1="105" x2="150" y2="340" stroke="#666" stroke-width="1" stroke-dasharray="5,3"/>
-                                
-                                <!-- Left Shoulder -->
-                                <circle cx="103" cy="115" r="6" fill="#004E89" opacity="0.8"/>
-                                <line x1="103" y1="115" x2="70" y2="160" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <line x1="70" y1="160" x2="60" y2="230" stroke="#8B4513" stroke-width="7" stroke-linecap="round"/>
-                                <ellipse cx="63" cy="245" rx="8" ry="10" fill="#FFE4C4" stroke="#8B4513" stroke-width="1.5"/>
-                                
-                                <!-- Right Shoulder -->
-                                <circle cx="197" cy="115" r="6" fill="#004E89" opacity="0.8"/>
-                                <line x1="197" y1="115" x2="230" y2="160" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <line x1="230" y1="160" x2="240" y2="230" stroke="#8B4513" stroke-width="7" stroke-linecap="round"/>
-                                <ellipse cx="237" cy="245" rx="8" ry="10" fill="#FFE4C4" stroke="#8B4513" stroke-width="1.5"/>
-                                
-                                <!-- Left Leg -->
-                                <circle cx="130" cy="345" r="7" fill="#004E89" opacity="0.8"/>
-                                <line x1="130" y1="345" x2="125" y2="420" stroke="#8B4513" stroke-width="10" stroke-linecap="round"/>
-                                <circle cx="125" cy="425" r="6" fill="#004E89" opacity="0.8"/>
-                                <line x1="125" y1="425" x2="120" y2="520" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <circle cx="120" cy="525" r="5" fill="#004E89" opacity="0.7"/>
-                                <ellipse cx="120" cy="565" rx="15" ry="8" fill="#8B4513" stroke="#654321" stroke-width="1.5"/>
-                                <text x="95" y="470" text-anchor="middle" font-size="11" fill="#666">L Hamstring</text>
-                                <text x="95" y="540" text-anchor="middle" font-size="11" fill="#666">L Calf</text>
-                                
-                                <!-- Right Leg -->
-                                <circle cx="170" cy="345" r="7" fill="#004E89" opacity="0.8"/>
-                                <line x1="170" y1="345" x2="175" y2="420" stroke="#8B4513" stroke-width="10" stroke-linecap="round"/>
-                                <circle cx="175" cy="425" r="6" fill="#004E89" opacity="0.8"/>
-                                <line x1="175" y1="425" x2="180" y2="520" stroke="#8B4513" stroke-width="8" stroke-linecap="round"/>
-                                <circle cx="180" cy="525" r="5" fill="#004E89" opacity="0.7"/>
-                                <ellipse cx="180" cy="565" rx="15" ry="8" fill="#8B4513" stroke="#654321" stroke-width="1.5"/>
-                                <text x="205" y="470" text-anchor="middle" font-size="11" fill="#666">R Hamstring</text>
-                                <text x="205" y="540" text-anchor="middle" font-size="11" fill="#666">R Calf</text>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Pain Severity Legend -->
-                <div class="mt-4 flex items-center justify-center space-x-4 text-sm">
-                    <span>Pain Severity:</span>
-                    <div class="flex items-center space-x-1">
-                        <div class="w-4 h-4 rounded-full bg-yellow-400"></div>
-                        <span>Mild (1-3)</span>
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <div class="w-4 h-4 rounded-full bg-orange-500"></div>
-                        <span>Moderate (4-6)</span>
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <div class="w-4 h-4 rounded-full bg-red-600"></div>
-                        <span>Severe (7-10)</span>
-                    </div>
-                </div>
-                
-                <div class="mt-4">
-                    <input type="range" id="painSeverity" min="1" max="10" value="5" class="w-full">
-                    <p class="text-center text-sm mt-2">Current severity: <span id="painValue" class="font-bold">5</span>/10</p>
-                </div>
-            </div>
+
 
             <!-- BMI Analysis Card -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -898,16 +719,7 @@ IMPRESSION:
             generateMedicalNote();
         });
 
-        // Update pain severity display
-        document.addEventListener('DOMContentLoaded', () => {
-            const slider = document.getElementById('painSeverity');
-            const display = document.getElementById('painValue');
-            if (slider && display) {
-                slider.addEventListener('input', (e) => {
-                    display.textContent = e.target.value;
-                });
-            }
-        });
+
 
         async function loadData() {
             try {
@@ -1908,52 +1720,7 @@ IMPRESSION:
             document.getElementById('soapNote').innerHTML = soapNote;
         }
 
-        // Pain marker functions
-        function addPainMarker(event, view) {
-            const svg = event.currentTarget;
-            const rect = svg.getBoundingClientRect();
-            const x = ((event.clientX - rect.left) / rect.width) * 100;
-            const y = ((event.clientY - rect.top) / rect.height) * 100;
-            const severity = document.getElementById('painSeverity').value;
-            
-            const marker = document.createElement('div');
-            marker.className = 'pain-marker';
-            marker.style.left = `${x}%`;
-            marker.style.top = `${y}%`;
-            marker.style.width = `${10 + severity * 2}px`;
-            marker.style.height = `${10 + severity * 2}px`;
-            
-            const color = severity <= 3 ? '#FCD34D' : severity <= 6 ? '#F97316' : '#DC2626';
-            marker.style.background = color;
-            marker.title = `Pain severity: ${severity}/10`;
-            
-            marker.onclick = function(e) {
-                e.stopPropagation();
-                if (confirm('Remove this pain marker?')) {
-                    marker.remove();
-                    STATE.painMarkers = STATE.painMarkers.filter(m => m.element !== marker);
-                }
-            };
-            
-            const container = view === 'front' ? document.getElementById('bodyMapFront') : document.getElementById('bodyMapBack');
-            container.appendChild(marker);
-            
-            STATE.painMarkers.push({
-                view, x, y, severity,
-                element: marker,
-                location: getBodyLocation(x, y, view)
-            });
-        }
 
-        function getBodyLocation(x, y, view) {
-            // Simple location mapping based on body diagram coordinates
-            if (y < 20) return view === 'front' ? 'Head/Face' : 'Head/Neck (back)';
-            if (y < 35) return view === 'front' ? 'Neck/Shoulders' : 'Upper Back/Shoulders';
-            if (y < 55) return view === 'front' ? 'Chest/Upper Torso' : 'Mid Back';
-            if (y < 70) return view === 'front' ? 'Abdomen/Lower Torso' : 'Lower Back';
-            if (x < 50) return view === 'front' ? 'Left Leg' : 'Left Leg (back)';
-            return view === 'front' ? 'Right Leg' : 'Right Leg (back)';
-        }
 
         // Utility functions
         function calculateAge(dob) {

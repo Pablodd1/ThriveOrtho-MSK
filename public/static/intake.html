@@ -256,59 +256,24 @@
                             Musculoskeletal Assessment
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Pain Location -->
+                            <!-- Pain Location with Interactive Body Diagram -->
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Primary Pain Location(s) *</label>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="cervical_spine" class="mr-2">
-                                        <span class="text-sm">Neck</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="shoulder_left" class="mr-2">
-                                        <span class="text-sm">L Shoulder</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="shoulder_right" class="mr-2">
-                                        <span class="text-sm">R Shoulder</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="thoracic_spine" class="mr-2">
-                                        <span class="text-sm">Mid-back</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="lumbar_spine" class="mr-2">
-                                        <span class="text-sm">Lower Back</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="hip_left" class="mr-2">
-                                        <span class="text-sm">L Hip</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="hip_right" class="mr-2">
-                                        <span class="text-sm">R Hip</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="knee_left" class="mr-2">
-                                        <span class="text-sm">L Knee</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="knee_right" class="mr-2">
-                                        <span class="text-sm">R Knee</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="ankle_left" class="mr-2">
-                                        <span class="text-sm">L Ankle</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="ankle_right" class="mr-2">
-                                        <span class="text-sm">R Ankle</span>
-                                    </label>
-                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
-                                        <input type="checkbox" name="pain_location[]" value="other" class="mr-2">
-                                        <span class="text-sm">Other</span>
-                                    </label>
-                                </div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Primary Pain Location(s) *</label>
+                                <p class="text-xs text-gray-500 mb-3">
+                                    <i class="fas fa-hand-pointer mr-1"></i>
+                                    Click on the body diagram below to mark pain locations. Click again to remove.
+                                </p>
+                                
+                                <!-- Embedded Body Diagram -->
+                                <iframe 
+                                    src="/static/body-diagram.html" 
+                                    id="bodyDiagramFrame"
+                                    style="width: 100%; height: 700px; border: 2px solid #e5e7eb; border-radius: 12px; background: white;"
+                                    title="Interactive Body Diagram for Pain Location Marking">
+                                </iframe>
+                                
+                                <!-- Hidden input to store selected pain locations -->
+                                <input type="hidden" name="pain_locations" id="painLocationsInput" value="">
                             </div>
 
                             <!-- Pain Quality -->
@@ -510,6 +475,18 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Extract pain locations from body diagram iframe
+            try {
+                const iframe = document.getElementById('bodyDiagramFrame');
+                const iframeWindow = iframe.contentWindow;
+                if (iframeWindow && typeof iframeWindow.getPainLocations === 'function') {
+                    const painLocations = iframeWindow.getPainLocations();
+                    document.getElementById('painLocationsInput').value = JSON.stringify(painLocations);
+                }
+            } catch (error) {
+                console.warn('Could not extract pain locations from iframe:', error);
+            }
+            
             const formData = new FormData(form);
             const data = {};
             
@@ -521,6 +498,17 @@
             data.pain_scale = parseInt(data.pain_scale);
             data.height_cm = parseFloat(data.height_cm);
             data.weight_kg = parseFloat(data.weight_kg);
+
+            // Parse pain locations JSON
+            if (data.pain_locations) {
+                try {
+                    data.pain_locations = JSON.parse(data.pain_locations);
+                } catch (e) {
+                    data.pain_locations = [];
+                }
+            } else {
+                data.pain_locations = [];
+            }
 
             // Initialize JSON fields
             data.medical_history = {};

@@ -20,6 +20,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/glassmorphism.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/static/angle-visualization.js"></script>
     <style>
         @media print {
             .no-print { display: none; }
@@ -145,6 +146,30 @@
             </div>
         </div>
 
+        <!-- Angle Visualization Graphics (NEW) -->
+        <div class="report-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-user-injured mr-2 text-purple-600"></i>
+                Visual Angle Analysis - Stick Figure Diagram
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Interactive visualization showing joint angles during movement phases. 
+                Color coding: <span class="text-green-600 font-semibold">Green (>80°)</span>, 
+                <span class="text-orange-600 font-semibold">Orange (60-80°)</span>, 
+                <span class="text-red-600 font-semibold">Red (<60°)</span>
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-bold text-gray-700 mb-3 text-center">Average Joint Angles</h3>
+                    <div id="angleVisualizationAvg" style="min-height: 500px;"></div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-bold text-gray-700 mb-3 text-center">Movement Phases (Start → Mid → End)</h3>
+                    <div id="angleVisualizationPhases" style="min-height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Biomechanical Data Graphs -->
         <div class="report-section">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">
@@ -239,6 +264,7 @@
             }
             
             populateReport(reportData);
+            generateAngleVisualizations(reportData);
             generateGraphs(reportData);
         });
 
@@ -387,6 +413,52 @@
             });
             
             tbody.innerHTML = html;
+        }
+
+        // ============================================
+        // GENERATE ANGLE VISUALIZATIONS (NEW)
+        // ============================================
+        function generateAngleVisualizations(data) {
+            // Calculate average angles
+            const avgHipLeft = average(data.joint_angles.hip_left);
+            const avgHipRight = average(data.joint_angles.hip_right);
+            const avgKneeLeft = average(data.joint_angles.knee_left);
+            const avgKneeRight = average(data.joint_angles.knee_right);
+            
+            // Average angles visualization
+            const avgVisualizer = new AngleVisualizer('angleVisualizationAvg', 400, 500);
+            avgVisualizer.drawStickFigure({
+                hip_left: avgHipLeft,
+                hip_right: avgHipRight,
+                knee_left: avgKneeLeft,
+                knee_right: avgKneeRight
+            }, data.test_name);
+            
+            // Movement phases visualization (start, mid, end)
+            const dataLength = data.joint_angles.hip_left.length;
+            const phases = [
+                { // Start position
+                    hip_left: data.joint_angles.hip_left[0],
+                    hip_right: data.joint_angles.hip_right[0],
+                    knee_left: data.joint_angles.knee_left[0],
+                    knee_right: data.joint_angles.knee_right[0]
+                },
+                { // Mid position
+                    hip_left: data.joint_angles.hip_left[Math.floor(dataLength / 2)],
+                    hip_right: data.joint_angles.hip_right[Math.floor(dataLength / 2)],
+                    knee_left: data.joint_angles.knee_left[Math.floor(dataLength / 2)],
+                    knee_right: data.joint_angles.knee_right[Math.floor(dataLength / 2)]
+                },
+                { // End position
+                    hip_left: data.joint_angles.hip_left[dataLength - 1],
+                    hip_right: data.joint_angles.hip_right[dataLength - 1],
+                    knee_left: data.joint_angles.knee_left[dataLength - 1],
+                    knee_right: data.joint_angles.knee_right[dataLength - 1]
+                }
+            ];
+            
+            const phasesVisualizer = new AngleVisualizer('angleVisualizationPhases', 750, 500);
+            phasesVisualizer.drawMovementPhases(phases, data.test_name);
         }
 
         // ============================================
