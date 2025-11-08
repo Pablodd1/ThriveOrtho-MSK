@@ -780,5 +780,21 @@
             if (e.key === 'Escape') closeModal();
         });
     </script>
+    
+    <!-- Trainer AI Helper -->
+    <script src="/static/trainer-ai-helper.js"></script>
+    <script>
+        // Set patient context for AI helper once it's loaded
+        window.addEventListener('load', () => {
+            if (window.trainerAI) {
+                window.trainerAI.setPatientContext({
+                    name: STATE.patientName,
+                    age: null, // Could be loaded from patient data
+                    condition: 'Lower back pain recovery' // Could be dynamic
+                });
+                window.trainerAI.setExercises(STATE.exercises);
+            }
+        });
+    </script>
 </body>
 </html>

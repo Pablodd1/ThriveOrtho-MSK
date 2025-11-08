@@ -1249,5 +1249,28 @@
             if (e.target.id === 'exerciseModal') closeModal();
         });
     </script>
+    
+    <!-- Trainer AI Helper -->
+    <script src="/static/trainer-ai-helper.js"></script>
+    <script>
+        // Set exercise context for AI helper
+        window.addEventListener('load', () => {
+            if (window.trainerAI) {
+                window.trainerAI.setPatientContext({
+                    name: 'Patient',
+                    condition: 'Exercise library browsing'
+                });
+                // Update exercises when viewing details
+                const originalViewExercise = window.viewExercise;
+                window.viewExercise = function(exerciseId) {
+                    originalViewExercise(exerciseId);
+                    const exercise = STATE.exercises.find(ex => ex.id === exerciseId);
+                    if (exercise && window.trainerAI) {
+                        window.trainerAI.setExercises([exercise]);
+                    }
+                };
+            }
+        });
+    </script>
 </body>
 </html>

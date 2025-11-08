@@ -1792,4 +1792,97 @@ Output ONLY valid JSON in this exact format (no markdown, no extra text):
   }
 })
 
+// ============================================
+// TRAINER AI HELPER - Patient Q&A Assistant
+// ============================================
+app.post('/api/gemini-flash', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { messages, temperature = 0.7, max_tokens = 500 } = body
+    
+    if (!messages || !Array.isArray(messages)) {
+      return c.json({ error: 'Invalid messages format' }, 400)
+    }
+    
+    const apiKey = c.env.GEMINI_API_KEY
+    if (!apiKey) {
+      return c.json({ error: 'Gemini API key not configured' }, 500)
+    }
+    
+    // Convert messages to Gemini format
+    const contents = []
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        // Gemini doesn't have system role, prepend to first user message
+        continue
+      }
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      })
+    }
+    
+    // Add system message to first user message if exists
+    const systemMsg = messages.find(m => m.role === 'system')
+    if (systemMsg && contents.length > 0 && contents[0].role === 'user') {
+      contents[0].parts[0].text = `${systemMsg.content}\n\n${contents[0].parts[0].text}`
+    }
+    
+    const requestBody = {
+      contents: contents,
+      generationConfig: {
+        temperature: temperature,
+        maxOutputTokens: max_tokens,
+        topP: 0.95,
+        topK: 40
+      }
+    }
+    
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      }
+    )
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Gemini API error:', errorText)
+      return c.json({ 
+        error: 'AI service unavailable',
+        details: errorText 
+      }, response.status)
+    }
+    
+    const data = await response.json()
+    
+    if (!data.candidates || data.candidates.length === 0) {
+      return c.json({ 
+        error: 'No response generated',
+        response: "I'm having trouble generating a response. Please try rephrasing your question."
+      }, 200)
+    }
+    
+    const text = data.candidates[0].content.parts[0].text
+    
+    return c.json({ 
+      success: true,
+      response: text,
+      text: text // Alias for compatibility
+    })
+    
+  } catch (error: any) {
+    console.error('Trainer AI error:', error)
+    return c.json({ 
+      error: 'Internal server error',
+      message: error.message,
+      response: "I'm sorry, I'm having technical difficulties. Please try again in a moment."
+    }, 500)
+  }
+})
+
 export default app
