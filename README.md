@@ -122,7 +122,7 @@ https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 
 # Test pages
 /                           # Homepage
-/static/unified-dashboard.html    # 🤖 NEW Unified Dashboard (AI Features Tab)
+/static/human-dashboard.html    # 🤖 NEW Human Dashboard (AI Features Tab)
 /static/dashboard.html      # Original Dashboard
 /static/assessment-enhanced.html  # Assessment with scribe
 /static/assessment-realtime.html  # 🔥 NEW Real-time assessment with FMS scoring

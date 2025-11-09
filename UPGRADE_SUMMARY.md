@@ -222,7 +222,7 @@ AILoader.getStats();
    - Step 1: Patient Intake
    - Step 2: Assessment (5 camera options)
    - Step 3: Device Integration (optional)
-   - Step 4: Unified Dashboard (5 tabs)
+   - Step 4: Human Dashboard (5 tabs)
    - Step 5: Medical Documentation
 
 4. **Patient Workflow (6 Steps)**
@@ -288,7 +288,7 @@ AILoader.getStats();
 - Sample data: `/sample-data/kinetisense-sample.csv` ✓
 - Documentation links: 2/2 working ✓
 
-### Unified Dashboard Tabs
+### Human Dashboard Tabs
 ✅ **5 Tabs Verified**:
 1. Overview → `switchTab('overview')` ✓
 2. Patients → `switchTab('patients')` ✓

@@ -45,7 +45,7 @@
 - Dashboard (`/static/dashboard.html`)
 - Intake Form (`/static/intake.html`)
 - Assessment Tool (`/static/assessment-enhanced.html`)
-- Unified Dashboard (`/static/unified-dashboard.html`)
+- Human Dashboard (`/static/human-dashboard.html`)
 - Medical Notes (`/static/medical-note.html`)
 
 ### 2. Patient
@@ -151,12 +151,12 @@
 
 **Exit Points**:
 - ✅ Import Success → Assessment or Dashboard
-- 🔗 Unified Dashboard → Review imported data
+- 🔗 Human Dashboard → Review imported data
 
 ---
 
-### Step 4: Unified Dashboard
-**Page**: `/static/unified-dashboard.html`
+### Step 4: Human Dashboard
+**Page**: `/static/human-dashboard.html`
 
 **5 Main Tabs**:
 
@@ -413,7 +413,7 @@
 │   ├── Parse & Validate
 │   └── Import Success → Back to Assessment
 │
-├── /static/unified-dashboard.html (Unified Dashboard)
+├── /static/human-dashboard.html (Human Dashboard)
 │   ├── Tab: Overview
 │   ├── Tab: Patients
 │   ├── Tab: Assessments
@@ -525,7 +525,7 @@ public/static/
 ├── assessment-realtime.html       # Real-time assessment variant
 ├── assessment-report.html         # Assessment report view
 ├── medical-note.html              # AI-generated medical notes
-├── unified-dashboard.html         # Unified AI dashboard (5 tabs)
+├── human-dashboard.html         # Unified AI dashboard (5 tabs)
 ├── device-integration.html        # Device import hub
 ├── prescription.html              # Exercise prescription
 ├── reports-dashboard.html         # Reports overview
@@ -604,7 +604,7 @@ Device Import (3rd Party Data)
   ↓
 Medical Note (AI Documentation)
   ↓
-Unified Dashboard (Review AI Analysis)
+Human Dashboard (Review AI Analysis)
   ↓
 Prescription (Assign Exercises)
   ↓
@@ -644,7 +644,7 @@ Message Therapist (Communication)
 - Data normalized to F-AI bian format
 - Validated for quality
 - Can continue assessment workflow
-- Or navigate to Unified Dashboard
+- Or navigate to Human Dashboard
 
 ### 3. Assessment → Medical Note
 **Completion Flow**:
@@ -660,7 +660,7 @@ Message Therapist (Communication)
 - Exercise-specific help
 - Safety guidance
 
-### 5. All Pages → Unified Dashboard
+### 5. All Pages → Human Dashboard
 **Central Hub**:
 - Accessible from header
 - Device Import button

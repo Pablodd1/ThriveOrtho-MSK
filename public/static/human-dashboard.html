@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unified Dashboard - F-AI bian</title>
+    <title>Human Dashboard - F-AI bian</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -70,16 +70,35 @@
                     </h1>
                 </div>
                 <div class="flex gap-3">
+                    <!-- API Integration Button -->
+                    <button onclick="showAPIIntegrationModal()" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                        <i class="fas fa-code mr-2"></i>
+                        API Integration
+                    </button>
+                    
+                    <!-- Data Export/Download Button -->
+                    <button onclick="showDataExportModal()" 
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Data
+                    </button>
+                    
+                    <!-- Device Import Button -->
                     <button onclick="window.location.href='/static/device-integration.html'" 
                             class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
                         <i class="fas fa-plug mr-2"></i>
                         Device Import
                     </button>
+                    
+                    <!-- Quick Assessment Button -->
                     <button onclick="window.location.href='/static/assessment-enhanced.html?quick=true'" 
                             class="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold">
                         <i class="fas fa-bolt mr-2"></i>
                         Quick Assessment
                     </button>
+                    
+                    <!-- New Patient Button -->
                     <button onclick="window.location.href='/static/intake.html'" 
                             class="px-4 py-2 bg-brand-green text-white rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-plus mr-2"></i>
@@ -549,6 +568,425 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadOverview();
         });
+        
+        // ============================================
+        // API INTEGRATION MODAL
+        // ============================================
+        function showAPIIntegrationModal() {
+            document.getElementById('apiIntegrationModal').classList.remove('hidden');
+            document.getElementById('apiIntegrationModal').classList.add('flex');
+        }
+        
+        function closeAPIIntegrationModal() {
+            document.getElementById('apiIntegrationModal').classList.add('hidden');
+            document.getElementById('apiIntegrationModal').classList.remove('flex');
+        }
+        
+        // ============================================
+        // DATA EXPORT MODAL
+        // ============================================
+        function showDataExportModal() {
+            document.getElementById('dataExportModal').classList.remove('hidden');
+            document.getElementById('dataExportModal').classList.add('flex');
+        }
+        
+        function closeDataExportModal() {
+            document.getElementById('dataExportModal').classList.add('hidden');
+            document.getElementById('dataExportModal').classList.remove('flex');
+        }
+        
+        async function exportAssessmentData(format) {
+            try {
+                // Get all assessment data from localStorage or API
+                const assessments = JSON.parse(localStorage.getItem('assessments') || '[]');
+                
+                if (assessments.length === 0) {
+                    alert('No assessment data available to export');
+                    return;
+                }
+                
+                let exportData;
+                let filename;
+                let mimeType;
+                
+                if (format === 'json') {
+                    exportData = JSON.stringify(assessments, null, 2);
+                    filename = `assessments_${Date.now()}.json`;
+                    mimeType = 'application/json';
+                } else if (format === 'csv') {
+                    exportData = convertToCSV(assessments);
+                    filename = `assessments_${Date.now()}.csv`;
+                    mimeType = 'text/csv';
+                }
+                
+                // Create download
+                const blob = new Blob([exportData], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert(`Successfully exported ${assessments.length} assessments as ${format.toUpperCase()}`);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Error exporting data: ' + error.message);
+            }
+        }
+        
+        async function exportDeviceData(format) {
+            try {
+                // Get imported device data from localStorage
+                const deviceData = JSON.parse(localStorage.getItem('importedDeviceData') || '[]');
+                
+                if (deviceData.length === 0) {
+                    alert('No imported device data available to export');
+                    return;
+                }
+                
+                let exportData;
+                let filename;
+                let mimeType;
+                
+                if (format === 'json') {
+                    exportData = JSON.stringify(deviceData, null, 2);
+                    filename = `device_data_${Date.now()}.json`;
+                    mimeType = 'application/json';
+                } else if (format === 'csv') {
+                    exportData = convertDeviceDataToCSV(deviceData);
+                    filename = `device_data_${Date.now()}.csv`;
+                    mimeType = 'text/csv';
+                }
+                
+                // Create download
+                const blob = new Blob([exportData], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert(`Successfully exported device data as ${format.toUpperCase()}`);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Error exporting device data: ' + error.message);
+            }
+        }
+        
+        function convertToCSV(assessments) {
+            if (assessments.length === 0) return '';
+            
+            // CSV headers
+            const headers = [
+                'Assessment ID',
+                'Patient ID',
+                'Patient Name',
+                'Date',
+                'Test Type',
+                'Result Summary',
+                'Risk Score',
+                'Deficiencies'
+            ];
+            
+            // CSV rows
+            const rows = assessments.map(assessment => {
+                return [
+                    assessment.id || '',
+                    assessment.patientId || '',
+                    assessment.patientName || '',
+                    assessment.date || '',
+                    assessment.testType || '',
+                    assessment.resultSummary || '',
+                    assessment.riskScore || '',
+                    (assessment.deficiencies || []).join('; ')
+                ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+            });
+            
+            return [headers.join(','), ...rows].join('\n');
+        }
+        
+        function convertDeviceDataToCSV(deviceData) {
+            if (deviceData.length === 0) return '';
+            
+            // CSV headers
+            const headers = [
+                'Import ID',
+                'Device Type',
+                'Device Name',
+                'Import Date',
+                'Frame Count',
+                'Duration',
+                'Joints Tracked',
+                'Data Quality'
+            ];
+            
+            // CSV rows
+            const rows = deviceData.map(data => {
+                return [
+                    data.importId || '',
+                    data.deviceType || '',
+                    data.deviceName || '',
+                    data.importDate || '',
+                    data.frameCount || '',
+                    data.duration || '',
+                    data.jointsTracked || '',
+                    data.dataQuality || ''
+                ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+            });
+            
+            return [headers.join(','), ...rows].join('\n');
+        }
     </script>
+    
+    <!-- API Integration Modal -->
+    <div id="apiIntegrationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 sticky top-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-2">
+                            <i class="fas fa-code mr-2"></i>
+                            API Integration
+                        </h2>
+                        <p class="text-sm opacity-90">Connect external applications to F-AI bian Platform</p>
+                    </div>
+                    <button onclick="closeAPIIntegrationModal()" 
+                            class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6">
+                <!-- Available APIs -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-plug text-blue-600 mr-2"></i>
+                        Available APIs
+                    </h3>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- Assessment API -->
+                        <div class="border-2 border-blue-200 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                            <h4 class="font-bold text-gray-900 mb-2">
+                                <i class="fas fa-clipboard-check text-blue-600 mr-2"></i>
+                                Assessment API
+                            </h4>
+                            <p class="text-sm text-gray-600 mb-3">Submit and retrieve assessment data</p>
+                            <code class="text-xs bg-gray-100 p-2 rounded block mb-2">
+                                POST /api/assessments
+                            </code>
+                            <code class="text-xs bg-gray-100 p-2 rounded block">
+                                GET /api/assessments/:id
+                            </code>
+                        </div>
+                        
+                        <!-- Patient API -->
+                        <div class="border-2 border-green-200 rounded-lg p-4 hover:border-green-400 transition-colors">
+                            <h4 class="font-bold text-gray-900 mb-2">
+                                <i class="fas fa-user text-green-600 mr-2"></i>
+                                Patient API
+                            </h4>
+                            <p class="text-sm text-gray-600 mb-3">Manage patient records</p>
+                            <code class="text-xs bg-gray-100 p-2 rounded block mb-2">
+                                POST /api/patients
+                            </code>
+                            <code class="text-xs bg-gray-100 p-2 rounded block">
+                                GET /api/patients/:id
+                            </code>
+                        </div>
+                        
+                        <!-- AI Analysis API -->
+                        <div class="border-2 border-purple-200 rounded-lg p-4 hover:border-purple-400 transition-colors">
+                            <h4 class="font-bold text-gray-900 mb-2">
+                                <i class="fas fa-brain text-purple-600 mr-2"></i>
+                                AI Analysis API
+                            </h4>
+                            <p class="text-sm text-gray-600 mb-3">Get AI-powered insights</p>
+                            <code class="text-xs bg-gray-100 p-2 rounded block mb-2">
+                                POST /api/gemini-pro
+                            </code>
+                            <code class="text-xs bg-gray-100 p-2 rounded block">
+                                POST /api/gemini-flash
+                            </code>
+                        </div>
+                        
+                        <!-- Exercise API -->
+                        <div class="border-2 border-orange-200 rounded-lg p-4 hover:border-orange-400 transition-colors">
+                            <h4 class="font-bold text-gray-900 mb-2">
+                                <i class="fas fa-dumbbell text-orange-600 mr-2"></i>
+                                Exercise API
+                            </h4>
+                            <p class="text-sm text-gray-600 mb-3">Access exercise library</p>
+                            <code class="text-xs bg-gray-100 p-2 rounded block mb-2">
+                                GET /api/exercises
+                            </code>
+                            <code class="text-xs bg-gray-100 p-2 rounded block">
+                                GET /api/exercises/:id
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Authentication -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                    <h4 class="font-bold text-gray-900 mb-2">
+                        <i class="fas fa-key text-yellow-600 mr-2"></i>
+                        Authentication Required
+                    </h4>
+                    <p class="text-sm text-gray-700 mb-2">
+                        API access requires authentication tokens. Contact your system administrator to generate API keys.
+                    </p>
+                    <p class="text-xs text-gray-600">
+                        Include API key in header: <code class="bg-white px-2 py-1 rounded">Authorization: Bearer YOUR_API_KEY</code>
+                    </p>
+                </div>
+                
+                <!-- Documentation Link -->
+                <div class="flex gap-3">
+                    <button onclick="alert('API documentation coming soon!')" 
+                            class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                        <i class="fas fa-book mr-2"></i>
+                        View Full API Documentation
+                    </button>
+                    <button onclick="alert('Webhook setup coming soon!')" 
+                            class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                        <i class="fas fa-webhook mr-2"></i>
+                        Setup Webhooks
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Data Export Modal -->
+    <div id="dataExportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white p-6 sticky top-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-2">
+                            <i class="fas fa-download mr-2"></i>
+                            Export Data for Analysis
+                        </h2>
+                        <p class="text-sm opacity-90">Download assessment and device data in multiple formats</p>
+                    </div>
+                    <button onclick="closeDataExportModal()" 
+                            class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6">
+                <!-- Export Options -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-database text-indigo-600 mr-2"></i>
+                        Data Sources
+                    </h3>
+                    
+                    <!-- Assessment Data Export -->
+                    <div class="border-2 border-indigo-200 rounded-lg p-6 mb-4">
+                        <h4 class="font-bold text-gray-900 mb-3 flex items-center">
+                            <i class="fas fa-video text-indigo-600 mr-2"></i>
+                            Multi-Camera Assessment Data
+                            <span class="ml-auto text-sm font-normal text-gray-600">Our App Data</span>
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Export all assessment data captured from Phone, Laptop, External, and Pro cameras including:
+                        </p>
+                        <ul class="text-sm text-gray-700 space-y-1 mb-4 ml-4">
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Skeleton tracking data (33 joints)</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Angle measurements and ROM data</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>AI analysis results and risk scores</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Patient demographics and test metadata</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Voice transcription and clinical notes</li>
+                        </ul>
+                        <div class="flex gap-3">
+                            <button onclick="exportAssessmentData('json')" 
+                                    class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
+                                <i class="fas fa-file-code mr-2"></i>
+                                Export as JSON
+                            </button>
+                            <button onclick="exportAssessmentData('csv')" 
+                                    class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Export as CSV
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Device Data Export -->
+                    <div class="border-2 border-purple-200 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-900 mb-3 flex items-center">
+                            <i class="fas fa-plug text-purple-600 mr-2"></i>
+                            3rd Party Device Data
+                            <span class="ml-auto text-sm font-normal text-gray-600">Imported Data</span>
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Export data imported from external devices including:
+                        </p>
+                        <ul class="text-sm text-gray-700 space-y-1 mb-4 ml-4">
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Kinetisense markerless 3D capture data</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Vicon marker-based motion data</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>OptiTrack high-speed capture data</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Generic device imports (CSV/JSON/XML)</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Normalized F-AI bian format data</li>
+                        </ul>
+                        <div class="flex gap-3">
+                            <button onclick="exportDeviceData('json')" 
+                                    class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+                                <i class="fas fa-file-code mr-2"></i>
+                                Export as JSON
+                            </button>
+                            <button onclick="exportDeviceData('csv')" 
+                                    class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Export as CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Info -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <h4 class="font-bold text-gray-900 mb-2">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        Data Usage
+                    </h4>
+                    <p class="text-sm text-gray-700 mb-2">
+                        Exported data can be used for:
+                    </p>
+                    <ul class="text-sm text-gray-700 space-y-1 ml-4">
+                        <li>• External analysis tools (MATLAB, Python, R)</li>
+                        <li>• Research studies and clinical trials</li>
+                        <li>• Integration with EMR/EHR systems</li>
+                        <li>• Custom reporting and visualization</li>
+                        <li>• Machine learning model training</li>
+                    </ul>
+                </div>
+                
+                <!-- Close Button -->
+                <div class="flex justify-end">
+                    <button onclick="closeDataExportModal()" 
+                            class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-times mr-2"></i>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
