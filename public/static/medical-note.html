@@ -3954,5 +3954,33 @@ IMPRESSION:
             alert((icons[type] || '') + ' ' + message);
         }
     </script>
+    
+    <!-- Human Oversight System -->
+    <script src="/static/human-oversight.js"></script>
+    <script>
+        // Add AI disclaimers and consult buttons to all AI-generated content sections
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add disclaimer to SOAP note section
+            const soapSection = document.getElementById('soapNote');
+            if (soapSection && window.humanOversight) {
+                window.humanOversight.addAIDisclaimer('soapNote', 'SOAP Note');
+                window.humanOversight.addConsultButton('soapNote', 'soap_note');
+            }
+            
+            // Add disclaimer to HEP section
+            const hepSection = document.getElementById('hepContent');
+            if (hepSection && window.humanOversight) {
+                window.humanOversight.addAIDisclaimer('hepContent', 'Home Exercise Program');
+                window.humanOversight.addConsultButton('hepContent', 'exercise_plan');
+            }
+            
+            // Add disclaimer to deficiency analysis
+            const deficiencySection = document.getElementById('deficiencyAnalysis');
+            if (deficiencySection && window.humanOversight) {
+                window.humanOversight.addAIDisclaimer('deficiencyAnalysis', 'Deficiency Analysis');
+                window.humanOversight.addConsultButton('deficiencyAnalysis', 'deficiency_analysis');
+            }
+        });
+    </script>
 </body>
 </html>
