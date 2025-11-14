@@ -257,6 +257,9 @@
         </div>
     </main>
 
+    <!-- Load required modules -->
+    <script src="/static/device-data-parser.js"></script>
+    <script src="/static/biomechanical-analyzer.js"></script>
     <script src="/static/device-integration-hub.js"></script>
     <script>
         const hub = new DeviceIntegrationHub();
@@ -415,9 +418,48 @@
             `;
         }
 
-        function createAssessment() {
-            // TODO: Integrate with assessment creation flow
-            alert('This feature will create a new assessment from the imported data');
+        async function createAssessment() {
+            if (!importedData || !importedData.analysis) {
+                alert('No analysis data available');
+                return;
+            }
+
+            // Show loading
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Assessment...';
+
+            try {
+                // Get patient info (would normally come from patient selection)
+                const patientInfo = {
+                    id: 'demo_patient',
+                    name: prompt('Enter patient name:', 'Demo Patient'),
+                    age: parseInt(prompt('Enter patient age:', '45')),
+                    gender: prompt('Enter patient gender (M/F):', 'M')
+                };
+
+                if (!patientInfo.name) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-file-medical mr-2"></i> Create Assessment from Import';
+                    return;
+                }
+
+                // Create assessment
+                const result = await hub.createAssessmentFromImport(importedData, patientInfo);
+
+                if (result.success) {
+                    alert('Assessment created successfully! Redirecting to dashboard...');
+                    window.location.href = '/static/human-dashboard.html';
+                } else {
+                    throw new Error(result.error);
+                }
+
+            } catch (error) {
+                console.error('Assessment creation error:', error);
+                alert('Failed to create assessment: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-medical mr-2"></i> Create Assessment from Import';
+            }
         }
 
         function downloadJSON() {

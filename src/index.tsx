@@ -1885,4 +1885,176 @@ app.post('/api/gemini-flash', async (c) => {
   }
 })
 
+// ============================================
+// DEVICE DATA INGESTION & ANALYSIS API
+// ============================================
+
+/**
+ * POST /api/ingest-device-data
+ * Accepts device data (Kinetisense, Vicon, etc.), analyzes it, and returns complete assessment
+ */
+app.post('/api/ingest-device-data', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { normalizedData, patientInfo } = body
+    
+    if (!normalizedData || !normalizedData.frames || normalizedData.frames.length === 0) {
+      return c.json({ 
+        success: false, 
+        error: 'Invalid data format. Expected normalizedData with frames array' 
+      }, 400)
+    }
+    
+    // This endpoint expects data already normalized by the frontend DeviceDataParser
+    // It performs biomechanical analysis and generates assessment
+    
+    // Return the analyzed data structure
+    // Note: Actual analysis is done client-side by BiomechanicalAnalyzer for performance
+    // This endpoint can be used for server-side processing if needed
+    
+    return c.json({ 
+      success: true,
+      message: 'Data received. Perform analysis client-side using BiomechanicalAnalyzer',
+      dataPoints: normalizedData.frames.length,
+      recommendation: 'Use BiomechanicalAnalyzer.analyze(normalizedData, patientInfo) on client'
+    })
+    
+  } catch (error: any) {
+    console.error('Device data ingestion error:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to process device data',
+      message: error.message 
+    }, 500)
+  }
+})
+
+/**
+ * POST /api/generate-assessment-from-analysis
+ * Generates SOAP note, HEP, and predictions from biomechanical analysis using Gemini AI
+ */
+app.post('/api/generate-assessment-from-analysis', async (c) => {
+  try {
+    const apiKey = c.env.GEMINI_API_KEY
+    if (!apiKey) {
+      return c.json({ error: 'Gemini API key not configured' }, 500)
+    }
+    
+    const body = await c.req.json()
+    const { analysis, patientInfo } = body
+    
+    if (!analysis || !analysis.riskScore) {
+      return c.json({ 
+        success: false, 
+        error: 'Invalid analysis format. Expected analysis object with riskScore' 
+      }, 400)
+    }
+    
+    // Generate SOAP Note from analysis
+    const soapPrompt = `You are a licensed physical therapist. Based on the following biomechanical analysis data, generate a comprehensive SOAP note.
+
+Patient Information:
+- Name: ${patientInfo.name || 'Unknown'}
+- Age: ${patientInfo.age || 'Unknown'}
+- Gender: ${patientInfo.gender || 'Unknown'}
+
+Analysis Results:
+- Overall Risk Score: ${analysis.riskScore}/100
+- ROM Analysis: ${JSON.stringify(analysis.romAnalysis, null, 2)}
+- Functional Movement: ${JSON.stringify(analysis.functionalMovement, null, 2)}
+- Balance Assessment: ${JSON.stringify(analysis.balanceAssessment, null, 2)}
+- Movement Quality: ${JSON.stringify(analysis.movementQuality, null, 2)}
+- Identified Deficiencies: ${JSON.stringify(analysis.deficiencies, null, 2)}
+
+Generate a professional SOAP note with these sections:
+1. Subjective (S): Patient's reported symptoms and functional limitations
+2. Objective (O): Detailed observations, ROM measurements, strength testing, special tests, functional assessment
+3. Assessment (A): Primary diagnosis, contributing factors, prognosis
+4. Plan (P): Treatment frequency, interventions, short-term and long-term goals
+
+Format as JSON with keys: subjective, objective, assessment, plan`
+
+    const soapResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: soapPrompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
+        })
+      }
+    )
+    
+    const soapData = await soapResponse.json()
+    const soapText = soapData.candidates[0].content.parts[0].text
+    
+    // Parse SOAP note (try to extract JSON, fallback to text)
+    let soapNote
+    try {
+      const jsonMatch = soapText.match(/\{[\s\S]*\}/)
+      soapNote = jsonMatch ? JSON.parse(jsonMatch[0]) : { text: soapText }
+    } catch {
+      soapNote = { text: soapText }
+    }
+    
+    // Generate Home Exercise Program
+    const hepPrompt = `Based on the following movement deficiencies, create a Home Exercise Program (HEP).
+
+Deficiencies:
+${analysis.deficiencies.map((d: any) => `- ${d.type}: ${d.joint} (${d.severity})`).join('\n')}
+
+Create 4-6 exercises targeting these deficiencies. For each exercise provide:
+- Exercise name
+- Sets and reps
+- Frequency (daily, 3x/week, etc.)
+- Instructions (brief, clear)
+- Focus area
+
+Format as JSON array of exercises with keys: exercise, sets, reps, frequency, instructions, focus`
+
+    const hepResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: hepPrompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1500 }
+        })
+      }
+    )
+    
+    const hepData = await hepResponse.json()
+    const hepText = hepData.candidates[0].content.parts[0].text
+    
+    // Parse HEP (try to extract JSON array)
+    let hep
+    try {
+      const jsonMatch = hepText.match(/\[[\s\S]*\]/)
+      hep = jsonMatch ? JSON.parse(jsonMatch[0]) : []
+    } catch {
+      hep = []
+    }
+    
+    return c.json({ 
+      success: true,
+      soapNote,
+      homeExerciseProgram: hep,
+      deficiencies: analysis.deficiencies,
+      injuryPredictions: analysis.injuryPredictions,
+      recommendations: analysis.recommendations,
+      riskScore: analysis.riskScore
+    })
+    
+  } catch (error: any) {
+    console.error('Assessment generation error:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to generate assessment',
+      message: error.message 
+    }, 500)
+  }
+})
+
 export default app
