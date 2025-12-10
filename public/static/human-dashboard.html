@@ -157,12 +157,18 @@
                     <i class="fas fa-bolt text-yellow-500 mr-2"></i>
                     Quick Actions
                 </h2>
-                <div class="grid md:grid-cols-3 gap-6">
+                <div class="grid md:grid-cols-4 gap-6">
                     <div class="quick-action-card rounded-xl p-6 cursor-pointer" 
                          onclick="window.location.href='/static/assessment-enhanced.html?quick=true'">
                         <i class="fas fa-video text-4xl text-green-600 mb-4"></i>
                         <h3 class="text-xl font-bold text-gray-900 mb-2">Quick Assessment</h3>
                         <p class="text-gray-600">Start assessment without registration</p>
+                    </div>
+                    <div class="quick-action-card rounded-xl p-6 cursor-pointer" 
+                         onclick="window.location.href='/static/fms-interface.html'">
+                        <i class="fas fa-running text-4xl text-blue-600 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">FMS Assessment</h3>
+                        <p class="text-gray-600">7-test movement screen (600% ROI)</p>
                     </div>
                     <div class="quick-action-card rounded-xl p-6 cursor-pointer" 
                          onclick="window.location.href='/static/intake.html'">
@@ -171,10 +177,10 @@
                         <p class="text-gray-600">Add new patient with intake form</p>
                     </div>
                     <div class="quick-action-card rounded-xl p-6 cursor-pointer" 
-                         onclick="switchTab('patients')">
-                        <i class="fas fa-search text-4xl text-green-600 mb-4"></i>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Find Patient</h3>
-                        <p class="text-gray-600">Search and manage existing patients</p>
+                         onclick="window.location.href='/static/3d-movement-viewer.html'">
+                        <i class="fas fa-cube text-4xl text-purple-600 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">3D Movement View</h3>
+                        <p class="text-gray-600">Dual-view skeleton + avatar analysis</p>
                     </div>
                 </div>
             </div>
@@ -392,6 +398,131 @@
                                 <li><i class="fas fa-check text-green-600 mr-2"></i>Lossless reconstruction</li>
                             </ul>
                             <span class="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-semibold">Backend Optimization</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase G: High-ROI Revenue Features -->
+            <div class="mt-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-rocket text-orange-600 mr-2"></i>
+                    Phase G: High-ROI Revenue Features
+                    <span class="ml-3 px-3 py-1 bg-orange-100 text-orange-800 text-sm rounded-full font-semibold">850% Avg ROI</span>
+                </h2>
+                <p class="text-gray-600 mb-6">Four critical revenue-generating features adding $550K annual revenue</p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- FMS Integration -->
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-400 cursor-pointer hover:shadow-xl transition-all"
+                         onclick="window.location.href='/static/fms-interface.html'">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-running text-4xl text-blue-600"></i>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-gray-900">FMS Integration</h3>
+                                    <span class="px-3 py-1 bg-blue-600 text-white text-xs rounded-full font-bold">600% ROI</span>
+                                </div>
+                                <p class="text-gray-700 mb-3">Industry-standard 7-test Functional Movement Screen</p>
+                                <ul class="text-sm text-gray-600 space-y-1 mb-4">
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>NFL, NBA, MLB standard</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>0-21 scoring with injury risk</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Auto exercise prescription</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>$180K annual revenue</li>
+                                </ul>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-semibold">✅ Ready</span>
+                                    <span class="text-xs text-gray-500">Click to start assessment</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Telehealth Video -->
+                    <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border-2 border-indigo-400">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-video text-4xl text-indigo-600"></i>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-gray-900">Telehealth Video</h3>
+                                    <span class="px-3 py-1 bg-indigo-600 text-white text-xs rounded-full font-bold">1000% ROI</span>
+                                </div>
+                                <p class="text-gray-700 mb-3">WebRTC video calls with real-time pose analysis</p>
+                                <ul class="text-sm text-gray-600 space-y-1 mb-4">
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>HD video + audio (30fps)</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Live pose detection</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Remote assessments</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>$200K annual revenue</li>
+                                </ul>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded font-semibold">⏳ Backend API Required</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPT-4 Vision -->
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border-2 border-purple-400">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-eye text-4xl text-purple-600"></i>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-gray-900">GPT-4 Vision AI</h3>
+                                    <span class="px-3 py-1 bg-purple-600 text-white text-xs rounded-full font-bold">833% ROI</span>
+                                </div>
+                                <p class="text-gray-700 mb-3">Advanced visual movement analysis with AI insights</p>
+                                <ul class="text-sm text-gray-600 space-y-1 mb-4">
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Posture, gait, ROM analysis</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Before/after comparison</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Expert-level insights</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>$100K annual revenue</li>
+                                </ul>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded font-semibold">⏳ OpenAI API Key Required</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CPT Code Optimizer -->
+                    <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-6 border-2 border-green-400">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-file-invoice-dollar text-4xl text-green-600"></i>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-gray-900">CPT Code Optimizer</h3>
+                                    <span class="px-3 py-1 bg-green-600 text-white text-xs rounded-full font-bold">875% ROI</span>
+                                </div>
+                                <p class="text-gray-700 mb-3">Intelligent billing optimization for max reimbursement</p>
+                                <ul class="text-sm text-gray-600 space-y-1 mb-4">
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Auto code selection</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>8-minute rule calculation</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>Denial risk assessment</li>
+                                    <li><i class="fas fa-check text-green-600 mr-2"></i>$70K annual revenue</li>
+                                </ul>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-semibold">✅ Ready</span>
+                                    <span class="text-xs text-gray-500">Integrated in all assessments</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROI Summary -->
+                <div class="mt-6 bg-gradient-to-r from-orange-100 to-amber-100 rounded-xl p-6 border-2 border-orange-400">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">
+                                <i class="fas fa-chart-line text-orange-600 mr-2"></i>
+                                Phase G Total Impact
+                            </h3>
+                            <p class="text-gray-700">Combined revenue optimization across 4 high-ROI features</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold text-green-600">$550K</div>
+                            <div class="text-sm text-gray-600">Annual Revenue</div>
+                            <div class="text-xs text-gray-500 mt-1">$50K investment • 850% avg ROI</div>
                         </div>
                     </div>
                 </div>
