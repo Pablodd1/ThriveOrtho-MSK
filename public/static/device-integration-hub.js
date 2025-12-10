@@ -79,10 +79,27 @@ class DeviceIntegrationHub {
     }
 
     /**
-     * Generate complete assessment from analysis
+     * Generate complete assessment from analysis with AMA guidelines
      * Calls backend API to generate SOAP note and HEP using Gemini
      */
     async generateAssessment(analysis, patientInfo) {
+        // Generate AMA-compliant assessment data first
+        let amaCompliance = null;
+        if (typeof AMAGuidelinesSystem !== 'undefined') {
+            const amaSystem = new AMAGuidelinesSystem();
+            amaCompliance = amaSystem.generateAMACompliantAssessment(
+                analysis, 
+                patientInfo, 
+                patientInfo.chiefComplaint || 'Patient seeking physical therapy evaluation'
+            );
+            console.log('AMA compliance data generated:', amaCompliance);
+        }
+        
+    /**
+     * Generate complete assessment from analysis
+     * Calls backend API to generate SOAP note and HEP using Gemini
+     */
+    async generateAssessmentOriginal(analysis, patientInfo) {
         try {
             console.log('Generating assessment from analysis...');
             
@@ -112,7 +129,8 @@ class DeviceIntegrationHub {
                 deficiencies: result.deficiencies,
                 injuryPredictions: result.injuryPredictions,
                 recommendations: result.recommendations,
-                riskScore: result.riskScore
+                riskScore: result.riskScore,
+                amaCompliance: amaCompliance // Include AMA guidelines data
             };
             
         } catch (error) {
