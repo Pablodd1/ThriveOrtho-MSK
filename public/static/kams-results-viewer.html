@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAMS Assessment Results - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Three.js for 3D skeleton visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .kams-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .kams-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        
+        .score-ring {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+        
+        .score-circle {
+            transform: rotate(-90deg);
+        }
+        
+        .metric-bar {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .metric-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        
+        .dysfunction-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .severity-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .severity-moderate {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .severity-low {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .plane-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            font-size: 11px;
+            font-weight: 700;
+            color: #4b5563;
+            margin-right: 8px;
+        }
+        
+        #skeleton-canvas {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px;
+        }
+        
+        .protocol-step {
+            background: #f9fafb;
+            border-left: 4px solid #3b82f6;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+        }
+        
+        .recommendation-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .priority-critical {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .priority-high {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/static/human-dashboard.html" class="text-blue-600 hover:text-blue-700 font-semibold">
+                        <i class="fas fa-arrow-left mr-2"></i> Dashboard
+                    </a>
+                    <div class="h-6 w-px bg-gray-300"></div>
+                    <h1 class="text-xl font-bold text-gray-900">
+                        <i class="fas fa-chart-line text-blue-600 mr-2"></i>
+                        KAMS Assessment Results
+                    </h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="printReport()" class="text-gray-600 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-lg">
+                        <i class="fas fa-print mr-2"></i>Print
+                    </button>
+                    <button onclick="exportPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Patient Info -->
+        <div class="kams-card mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900" id="patient-name">Loading...</h2>
+                    <p class="text-gray-600 mt-1" id="patient-info">Assessment Date: Loading...</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600">Assessment Type</div>
+                    <div class="text-lg font-semibold text-gray-900">KAMS Movement Analysis</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overall Score Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Main Score -->
+            <div class="kams-card text-center">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Overall KAMS Score</h3>
+                <div class="flex items-center justify-center mb-4">
+                    <svg class="score-ring" viewBox="0 0 200 200">
+                        <circle
+                            class="score-circle"
+                            cx="100"
+                            cy="100"
+                            r="85"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            stroke-width="15"
+                        />
+                        <circle
+                            id="score-progress"
+                            class="score-circle"
+                            cx="100"
+                            cy="100"
+                            r="85"
+                            fill="none"
+                            stroke="#3b82f6"
+                            stroke-width="15"
+                            stroke-dasharray="534"
+                            stroke-dashoffset="534"
+                            stroke-linecap="round"
+                        />
+                        <text x="100" y="95" text-anchor="middle" font-size="48" font-weight="bold" fill="#1f2937" id="score-value">0</text>
+                        <text x="100" y="115" text-anchor="middle" font-size="20" fill="#6b7280">%</text>
+                    </svg>
+                </div>
+                <div class="inline-block px-4 py-2 rounded-full font-semibold" id="score-rating-badge">
+                    Calculating...
+                </div>
+                <p class="text-sm text-gray-600 mt-3">
+                    Assessment completed: <span id="assessment-date">--/--/----</span>
+                </p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="lg:col-span-2 kams-card">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Assessment Summary</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="text-sm text-blue-600 font-semibold mb-1">Dynamic Posture Index</div>
+                        <div class="text-2xl font-bold text-blue-900" id="dpi-value">--</div>
+                        <div class="text-sm text-blue-700" id="dpi-rating">--</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="text-sm text-purple-600 font-semibold mb-1">Lower Extremity Power</div>
+                        <div class="text-2xl font-bold text-purple-900" id="lep-value">--</div>
+                        <div class="text-sm text-purple-700" id="lep-rating">--</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="text-sm text-green-600 font-semibold mb-1">Functional Asymmetry</div>
+                        <div class="text-2xl font-bold text-green-900" id="fa-value">--</div>
+                        <div class="text-sm text-green-700" id="fa-rating">--</div>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <div class="text-sm text-red-600 font-semibold mb-1">Injury Susceptibility</div>
+                        <div class="text-2xl font-bold text-red-900" id="is-value">--</div>
+                        <div class="text-sm text-red-700" id="is-rating">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Skeleton Visualization -->
+        <div class="kams-card mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-cube text-blue-600 mr-2"></i>
+                    3D Skeleton Analysis
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="rotate3D()" class="text-gray-600 hover:text-gray-900 px-3 py-1 border border-gray-300 rounded">
+                        <i class="fas fa-sync-alt mr-1"></i>Rotate
+                    </button>
+                    <button onclick="reset3D()" class="text-gray-600 hover:text-gray-900 px-3 py-1 border border-gray-300 rounded">
+                        <i class="fas fa-undo mr-1"></i>Reset
+                    </button>
+                </div>
+            </div>
+            <div id="skeleton-canvas"></div>
+            <div class="mt-4 flex items-center justify-center gap-6 text-sm">
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                    <span class="text-gray-700">Normal</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+                    <span class="text-gray-700">Low Concern</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full bg-red-500"></div>
+                    <span class="text-gray-700">High Concern</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full bg-blue-500"></div>
+                    <span class="text-gray-700">Compensatory Pattern</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Metrics -->
+        <div class="kams-card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Core Metrics Breakdown</h3>
+            <div class="space-y-6">
+                <!-- Dynamic Posture Index -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-balance-scale text-blue-600"></i>
+                            <span class="font-semibold text-gray-900">Dynamic Posture Index</span>
+                        </div>
+                        <span class="text-lg font-bold text-blue-600" id="dpi-score">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div id="dpi-bar" class="metric-fill bg-blue-600" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">Static and dynamic alignment quality</p>
+                </div>
+
+                <!-- Lower Extremity Power Score -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-bolt text-purple-600"></i>
+                            <span class="font-semibold text-gray-900">Lower Extremity Power Score</span>
+                        </div>
+                        <span class="text-lg font-bold text-purple-600" id="lep-score">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div id="lep-bar" class="metric-fill bg-purple-600" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">Lower body strength and ROM capabilities</p>
+                </div>
+
+                <!-- Functional Asymmetry Index -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-equals text-green-600"></i>
+                            <span class="font-semibold text-gray-900">Functional Asymmetry Index</span>
+                        </div>
+                        <span class="text-lg font-bold text-green-600" id="fa-score">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div id="fa-bar" class="metric-fill bg-green-600" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">Left-right movement balance and symmetry</p>
+                </div>
+
+                <!-- Susceptibility to Injury Index -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                            <span class="font-semibold text-gray-900">Susceptibility to Injury Index</span>
+                        </div>
+                        <span class="text-lg font-bold text-red-600" id="is-score">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div id="is-bar" class="metric-fill bg-red-600" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">Risk of injury based on movement patterns</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dysfunction Regions -->
+        <div class="kams-card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-map-marker-alt text-red-600 mr-2"></i>
+                Dysfunction Regions
+            </h3>
+            
+            <!-- Upper Body -->
+            <div class="mb-6">
+                <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-user text-blue-600 mr-2"></i>
+                    Upper Body
+                </h4>
+                <div id="upper-body-issues" class="space-y-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Lower Body -->
+            <div class="mb-6">
+                <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-running text-purple-600 mr-2"></i>
+                    Lower Body
+                </h4>
+                <div id="lower-body-issues" class="space-y-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Spinal -->
+            <div>
+                <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-spine text-green-600 mr-2"></i>
+                    Spinal
+                </h4>
+                <div id="spinal-issues" class="space-y-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="kams-card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                Clinical Recommendations
+            </h3>
+            <div id="recommendations-container" class="space-y-3">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Treatment Protocol -->
+        <div class="kams-card mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-clipboard-list text-green-600 mr-2"></i>
+                Personalized Treatment Protocol
+            </h3>
+            
+            <div class="space-y-6">
+                <!-- Phase 1 -->
+                <div id="phase1-protocol">
+                    <h4 class="font-bold text-blue-900 mb-2">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm mr-2">1</span>
+                        Foundation & Correction (Weeks 1-4)
+                    </h4>
+                    <div class="pl-10">
+                        <p class="text-sm text-gray-600 mb-2">
+                            <strong>Frequency:</strong> <span id="phase1-frequency">2-3x/week</span>
+                        </p>
+                        <div class="mb-2">
+                            <strong class="text-sm text-gray-700">Focus Areas:</strong>
+                            <ul id="phase1-focus" class="list-disc list-inside text-sm text-gray-600 mt-1">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                        <div>
+                            <strong class="text-sm text-gray-700">Exercises:</strong>
+                            <ul id="phase1-exercises" class="list-disc list-inside text-sm text-gray-600 mt-1">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 2 -->
+                <div id="phase2-protocol">
+                    <h4 class="font-bold text-purple-900 mb-2">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 text-white text-sm mr-2">2</span>
+                        Strengthening & Integration (Weeks 5-8)
+                    </h4>
+                    <div class="pl-10">
+                        <p class="text-sm text-gray-600 mb-2">
+                            <strong>Frequency:</strong> <span id="phase2-frequency">2x/week</span>
+                        </p>
+                        <div class="mb-2">
+                            <strong class="text-sm text-gray-700">Focus Areas:</strong>
+                            <ul id="phase2-focus" class="list-disc list-inside text-sm text-gray-600 mt-1">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                        <div>
+                            <strong class="text-sm text-gray-700">Exercises:</strong>
+                            <ul id="phase2-exercises" class="list-disc list-inside text-sm text-gray-600 mt-1">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 3 -->
+                <div id="phase3-protocol">
+                    <h4 class="font-bold text-green-900 mb-2">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white text-sm mr-2">3</span>
+                        Functional & Return to Activity (Weeks 9-12)
+                    </h4>
+                    <div class="pl-10">
+                        <p class="text-sm text-gray-600 mb-2">
+                            <strong>Frequency:</strong> <span id="phase3-frequency">1-2x/week</span>
+                        </p>
+                        <div class="mb-2">
+                            <strong class="text-sm text-gray-700">Focus Areas:</strong>
+                            <ul id="phase3-focus" class="list-disc list-inside text-sm text-gray-600 mt-1">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                        <div>
+                            <strong class="text-sm text-gray-700">Exercises:</strong>
+                            <ul id="phase3-exercises" class="list-disc list-inside text-sm text-gray-600 mt-1">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <button onclick="generateProtocol()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold text-lg">
+                <i class="fas fa-file-medical mr-2"></i>
+                Generate Treatment Protocol
+            </button>
+            <button onclick="scheduleFollowUp()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg">
+                <i class="fas fa-calendar-plus mr-2"></i>
+                Schedule Follow-Up
+            </button>
+        </div>
+    </main>
+
+    <!-- Import KAMS Assessment Logic -->
+    <script src="/static/kams-style-assessment.js"></script>
+    
+    <script>
+        // Global variables
+        let kamsData = null;
+        let scene, camera, renderer, controls;
+        let skeletonJoints = [];
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for KAMS data in sessionStorage (from visual assessment)
+            const sessionData = sessionStorage.getItem('kamsData');
+            if (sessionData) {
+                try {
+                    kamsData = JSON.parse(sessionData);
+                    displayResults(kamsData);
+                    init3DViewer();
+                    return;
+                } catch (error) {
+                    console.error('Failed to parse session KAMS data:', error);
+                }
+            }
+            
+            // Check for KAMS data in URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const assessmentId = urlParams.get('id');
+            
+            if (assessmentId) {
+                loadAssessmentData(assessmentId);
+            } else {
+                // Load demo data for testing
+                loadDemoData();
+            }
+            
+            // Initialize 3D skeleton
+            init3DViewer();
+        });
+
+        /**
+         * Load assessment data from API
+         */
+        async function loadAssessmentData(id) {
+            try {
+                const response = await fetch(`/api/assessments/${id}/kams`);
+                if (response.ok) {
+                    kamsData = await response.json();
+                    displayResults(kamsData);
+                } else {
+                    console.error('Failed to load assessment data');
+                    loadDemoData(); // Fallback to demo
+                }
+            } catch (error) {
+                console.error('Error loading assessment:', error);
+                loadDemoData(); // Fallback to demo
+            }
+        }
+
+        /**
+         * Load demo KAMS data for Sarah Mitchell
+         */
+        function loadDemoData() {
+            // Sarah Mitchell - Initial Assessment (Day 1)
+            kamsData = {
+                patient: {
+                    name: 'Sarah Mitchell',
+                    id: 999,
+                    age: 36,
+                    diagnosis: 'Post-ACL reconstruction (6 weeks)',
+                },
+                assessment: {
+                    date: '2024-09-15',
+                    type: 'Initial KAMS Assessment',
+                    assessor: 'Dr. Rodriguez'
+                },
+                overallScore: 64,
+                scoreRating: 'Fair',
+                metrics: {
+                    dynamicPostureIndex: {
+                        score: 77,
+                        rating: 'Great',
+                        description: 'Static and dynamic alignment quality'
+                    },
+                    lowerExtremityPowerScore: {
+                        score: 54,
+                        rating: 'Moderate',
+                        description: 'Lower body strength and ROM'
+                    },
+                    functionalAsymmetryIndex: {
+                        score: 92,
+                        rating: 'Great',
+                        description: 'Left-right movement balance'
+                    },
+                    susceptibilityToInjuryIndex: {
+                        score: 59,
+                        rating: 'Moderate',
+                        description: 'Risk of injury based on movement patterns'
+                    }
+                },
+                dysfunctionRegions: {
+                    upperBody: [],
+                    lowerBody: [
+                        {
+                            location: 'Right Knee',
+                            plane: 'FP',
+                            severity: 'High',
+                            issue: 'valgus/instability'
+                        },
+                        {
+                            location: 'Right Hip',
+                            plane: 'SP',
+                            severity: 'Moderate',
+                            issue: 'weakness/reduced ROM'
+                        },
+                        {
+                            location: 'Right Ankle',
+                            plane: 'TP',
+                            severity: 'Low',
+                            issue: 'reduced dorsiflexion'
+                        }
+                    ],
+                    spinal: [
+                        {
+                            location: 'Lumbar',
+                            plane: 'SP',
+                            severity: 'Low',
+                            issue: 'mild anterior pelvic tilt'
+                        }
+                    ]
+                },
+                recommendations: [
+                    {
+                        category: 'Strength & Power',
+                        priority: 'Critical',
+                        interventions: [
+                            'Progressive quad strengthening (R > L)',
+                            'Closed-chain exercises for knee stability',
+                            'Gradual plyometric progression',
+                            'Single-leg balance and proprioception'
+                        ]
+                    },
+                    {
+                        category: 'Injury Prevention',
+                        priority: 'High',
+                        interventions: [
+                            'Knee valgus correction drills',
+                            'Hip abductor strengthening',
+                            'Landing mechanics training',
+                            'Movement screening and modification'
+                        ]
+                    },
+                    {
+                        category: 'Lower Body Dysfunction',
+                        priority: 'High',
+                        interventions: [
+                            'Hip strengthening (glute med/max)',
+                            'Ankle mobility and stability',
+                            'Knee alignment training',
+                            'Single-leg balance progression'
+                        ]
+                    }
+                ],
+                treatmentProtocol: {
+                    phase1: {
+                        name: 'Foundation & Correction (Weeks 1-4)',
+                        frequency: '3x/week',
+                        focus: [
+                            'Knee stability and alignment',
+                            'Quad strengthening (surgical side)',
+                            'Hip abductor activation',
+                            'Proprioception training'
+                        ],
+                        exercises: [
+                            'Quad sets and straight leg raises',
+                            'Clamshells and side-lying hip abduction',
+                            'Single-leg stance progression (eyes open → closed)',
+                            'Mini squats with mirror feedback',
+                            'Ankle pumps and dorsiflexion stretches'
+                        ]
+                    },
+                    phase2: {
+                        name: 'Strengthening & Integration (Weeks 5-8)',
+                        frequency: '2-3x/week',
+                        focus: [
+                            'Progressive resistance training',
+                            'Functional movement patterns',
+                            'Asymmetry reduction',
+                            'Dynamic stability'
+                        ],
+                        exercises: [
+                            'Bulgarian split squats (R emphasis)',
+                            'Step-ups and step-downs',
+                            'Lateral band walks',
+                            'Single-leg deadlifts',
+                            'Controlled lunges (sagittal and frontal planes)'
+                        ]
+                    },
+                    phase3: {
+                        name: 'Functional & Return to Running (Weeks 9-12)',
+                        frequency: '2x/week + running progression',
+                        focus: [
+                            'Return to running mechanics',
+                            'Plyometric training',
+                            'Sport-specific drills',
+                            'Endurance building'
+                        ],
+                        exercises: [
+                            'Walk-jog intervals on flat surface',
+                            'Low-impact plyometrics (box steps, small hops)',
+                            'Agility drills (lateral shuffle, carioca)',
+                            'Running form analysis and correction',
+                            'Progressive distance building (5K goal)'
+                        ]
+                    }
+                }
+            };
+            
+            displayResults(kamsData);
+        }
+
+        /**
+         * Display KAMS results in UI
+         */
+        function displayResults(data) {
+            // Patient info
+            document.getElementById('patient-name').textContent = data.patient.name;
+            document.getElementById('patient-info').textContent = 
+                `${data.patient.age}y/o - ${data.patient.diagnosis} - Assessment Date: ${data.assessment.date}`;
+            document.getElementById('assessment-date').textContent = data.assessment.date;
+            
+            // Overall score
+            updateScoreRing(data.overallScore);
+            document.getElementById('score-value').textContent = data.overallScore;
+            
+            const ratingBadge = document.getElementById('score-rating-badge');
+            ratingBadge.textContent = data.scoreRating;
+            ratingBadge.className = `inline-block px-4 py-2 rounded-full font-semibold ${getRatingColor(data.scoreRating)}`;
+            
+            // Metrics
+            updateMetric('dpi', data.metrics.dynamicPostureIndex);
+            updateMetric('lep', data.metrics.lowerExtremityPowerScore);
+            updateMetric('fa', data.metrics.functionalAsymmetryIndex);
+            updateMetric('is', data.metrics.susceptibilityToInjuryIndex);
+            
+            // Dysfunction regions
+            displayDysfunctionRegions(data.dysfunctionRegions);
+            
+            // Recommendations
+            displayRecommendations(data.recommendations);
+            
+            // Treatment protocol
+            displayTreatmentProtocol(data.treatmentProtocol);
+            
+            // Update 3D skeleton
+            update3DSkeleton(data.dysfunctionRegions);
+        }
+
+        /**
+         * Update score ring animation
+         */
+        function updateScoreRing(score) {
+            const circle = document.getElementById('score-progress');
+            const circumference = 2 * Math.PI * 85;
+            const offset = circumference - (score / 100) * circumference;
+            
+            // Animate
+            setTimeout(() => {
+                circle.style.strokeDashoffset = offset;
+                circle.style.stroke = getScoreColor(score);
+            }, 100);
+        }
+
+        /**
+         * Get color based on score
+         */
+        function getScoreColor(score) {
+            if (score >= 80) return '#10b981'; // Green
+            if (score >= 65) return '#3b82f6'; // Blue
+            if (score >= 50) return '#f59e0b'; // Yellow
+            return '#ef4444'; // Red
+        }
+
+        /**
+         * Get rating badge color
+         */
+        function getRatingColor(rating) {
+            const colors = {
+                'Excellent': 'bg-green-100 text-green-800',
+                'Good': 'bg-blue-100 text-blue-800',
+                'Fair': 'bg-yellow-100 text-yellow-800',
+                'Poor': 'bg-red-100 text-red-800'
+            };
+            return colors[rating] || 'bg-gray-100 text-gray-800';
+        }
+
+        /**
+         * Update individual metric
+         */
+        function updateMetric(prefix, metric) {
+            document.getElementById(`${prefix}-value`).textContent = metric.score;
+            document.getElementById(`${prefix}-rating`).textContent = metric.rating;
+            document.getElementById(`${prefix}-score`).textContent = `${metric.score}%`;
+            
+            const bar = document.getElementById(`${prefix}-bar`);
+            setTimeout(() => {
+                bar.style.width = `${metric.score}%`;
+            }, 200);
+        }
+
+        /**
+         * Display dysfunction regions
+         */
+        function displayDysfunctionRegions(regions) {
+            // Upper Body
+            const upperContainer = document.getElementById('upper-body-issues');
+            if (regions.upperBody.length === 0) {
+                upperContainer.innerHTML = '<p class="text-sm text-gray-500 italic">No significant issues detected</p>';
+            } else {
+                upperContainer.innerHTML = regions.upperBody.map(issue => `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span class="plane-indicator">${issue.plane}</span>
+                        <div class="flex-1">
+                            <span class="font-semibold text-gray-900">${issue.location}</span>
+                            <span class="text-gray-600 text-sm">- ${issue.issue}</span>
+                        </div>
+                        <span class="dysfunction-badge severity-${issue.severity.toLowerCase()}">${issue.severity}</span>
+                    </div>
+                `).join('');
+            }
+            
+            // Lower Body
+            const lowerContainer = document.getElementById('lower-body-issues');
+            if (regions.lowerBody.length === 0) {
+                lowerContainer.innerHTML = '<p class="text-sm text-gray-500 italic">No significant issues detected</p>';
+            } else {
+                lowerContainer.innerHTML = regions.lowerBody.map(issue => `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span class="plane-indicator">${issue.plane}</span>
+                        <div class="flex-1">
+                            <span class="font-semibold text-gray-900">${issue.location}</span>
+                            <span class="text-gray-600 text-sm">- ${issue.issue}</span>
+                        </div>
+                        <span class="dysfunction-badge severity-${issue.severity.toLowerCase()}">${issue.severity}</span>
+                    </div>
+                `).join('');
+            }
+            
+            // Spinal
+            const spinalContainer = document.getElementById('spinal-issues');
+            if (regions.spinal.length === 0) {
+                spinalContainer.innerHTML = '<p class="text-sm text-gray-500 italic">No significant issues detected</p>';
+            } else {
+                spinalContainer.innerHTML = regions.spinal.map(issue => `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span class="plane-indicator">${issue.plane}</span>
+                        <div class="flex-1">
+                            <span class="font-semibold text-gray-900">${issue.location}</span>
+                            <span class="text-gray-600 text-sm">- ${issue.issue}</span>
+                        </div>
+                        <span class="dysfunction-badge severity-${issue.severity.toLowerCase()}">${issue.severity}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        /**
+         * Display recommendations
+         */
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendations-container');
+            container.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item priority-${rec.priority.toLowerCase()}">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold text-gray-900">${rec.category}</h4>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(rec.priority)}">
+                            ${rec.priority} Priority
+                        </span>
+                    </div>
+                    <ul class="space-y-1">
+                        ${rec.interventions.map(intervention => `
+                            <li class="flex items-start gap-2 text-sm text-gray-700">
+                                <i class="fas fa-check-circle text-green-600 mt-1"></i>
+                                <span>${intervention}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Get priority badge color
+         */
+        function getPriorityColor(priority) {
+            const colors = {
+                'Critical': 'bg-red-100 text-red-800',
+                'High': 'bg-orange-100 text-orange-800',
+                'Medium': 'bg-blue-100 text-blue-800',
+                'Low': 'bg-gray-100 text-gray-800'
+            };
+            return colors[priority] || 'bg-gray-100 text-gray-800';
+        }
+
+        /**
+         * Display treatment protocol
+         */
+        function displayTreatmentProtocol(protocol) {
+            // Phase 1
+            document.getElementById('phase1-frequency').textContent = protocol.phase1.frequency;
+            document.getElementById('phase1-focus').innerHTML = protocol.phase1.focus.map(f => `<li>${f}</li>`).join('');
+            document.getElementById('phase1-exercises').innerHTML = protocol.phase1.exercises.map(e => `<li>${e}</li>`).join('');
+            
+            // Phase 2
+            document.getElementById('phase2-frequency').textContent = protocol.phase2.frequency;
+            document.getElementById('phase2-focus').innerHTML = protocol.phase2.focus.map(f => `<li>${f}</li>`).join('');
+            document.getElementById('phase2-exercises').innerHTML = protocol.phase2.exercises.map(e => `<li>${e}</li>`).join('');
+            
+            // Phase 3
+            document.getElementById('phase3-frequency').textContent = protocol.phase3.frequency;
+            document.getElementById('phase3-focus').innerHTML = protocol.phase3.focus.map(f => `<li>${f}</li>`).join('');
+            document.getElementById('phase3-exercises').innerHTML = protocol.phase3.exercises.map(e => `<li>${e}</li>`).join('');
+        }
+
+        /**
+         * Initialize 3D skeleton viewer
+         */
+        function init3DViewer() {
+            const container = document.getElementById('skeleton-canvas');
+            const width = container.clientWidth;
+            const height = 500;
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e293b);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 1.5, 4);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            container.appendChild(renderer.domElement);
+            
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+            scene.add(gridHelper);
+            
+            // Create skeleton
+            createSkeletonStructure();
+            
+            // Animation loop
+            animate();
+        }
+
+        /**
+         * Create 3D skeleton structure
+         */
+        function createSkeletonStructure() {
+            // MediaPipe skeleton points (simplified for demo)
+            const skeletonStructure = [
+                // Torso
+                { from: [0, 1.6, 0], to: [0, 1.2, 0], color: 0x00ff00 }, // Neck to shoulders
+                { from: [0, 1.2, 0], to: [-0.2, 1.2, 0], color: 0x00ff00 }, // Left shoulder
+                { from: [0, 1.2, 0], to: [0.2, 1.2, 0], color: 0x00ff00 }, // Right shoulder
+                { from: [0, 1.2, 0], to: [0, 0.6, 0], color: 0x00ff00 }, // Spine
+                { from: [0, 0.6, 0], to: [-0.1, 0.6, 0], color: 0x00ff00 }, // Left hip
+                { from: [0, 0.6, 0], to: [0.1, 0.6, 0], color: 0xff0000 }, // Right hip (RED - dysfunction)
+                
+                // Left arm
+                { from: [-0.2, 1.2, 0], to: [-0.2, 0.8, 0], color: 0x00ff00 },
+                { from: [-0.2, 0.8, 0], to: [-0.2, 0.4, 0], color: 0x00ff00 },
+                
+                // Right arm
+                { from: [0.2, 1.2, 0], to: [0.2, 0.8, 0], color: 0x00ff00 },
+                { from: [0.2, 0.8, 0], to: [0.2, 0.4, 0], color: 0x00ff00 },
+                
+                // Left leg
+                { from: [-0.1, 0.6, 0], to: [-0.1, 0.2, 0], color: 0x00ff00 },
+                { from: [-0.1, 0.2, 0], to: [-0.1, -0.2, 0], color: 0x00ff00 },
+                
+                // Right leg (RED - dysfunction)
+                { from: [0.1, 0.6, 0], to: [0.1, 0.2, 0], color: 0xff0000 }, // Right thigh
+                { from: [0.1, 0.2, 0], to: [0.1, -0.2, 0], color: 0xff0000 }, // Right shin
+            ];
+            
+            skeletonStructure.forEach(bone => {
+                const geometry = new THREE.CylinderGeometry(0.02, 0.02, 
+                    Math.sqrt(
+                        Math.pow(bone.to[0] - bone.from[0], 2) +
+                        Math.pow(bone.to[1] - bone.from[1], 2) +
+                        Math.pow(bone.to[2] - bone.from[2], 2)
+                    )
+                );
+                const material = new THREE.MeshPhongMaterial({ color: bone.color });
+                const cylinder = new THREE.Mesh(geometry, material);
+                
+                // Position and rotate
+                const midX = (bone.from[0] + bone.to[0]) / 2;
+                const midY = (bone.from[1] + bone.to[1]) / 2;
+                const midZ = (bone.from[2] + bone.to[2]) / 2;
+                cylinder.position.set(midX, midY, midZ);
+                
+                // Add to scene
+                scene.add(cylinder);
+                skeletonJoints.push(cylinder);
+            });
+            
+            // Add joint spheres
+            const jointPositions = [
+                [0, 1.6, 0], [0, 1.2, 0], [-0.2, 1.2, 0], [0.2, 1.2, 0],
+                [-0.2, 0.8, 0], [0.2, 0.8, 0], [-0.2, 0.4, 0], [0.2, 0.4, 0],
+                [0, 0.6, 0], [-0.1, 0.6, 0], [0.1, 0.6, 0], // Hips - right hip is red
+                [-0.1, 0.2, 0], [0.1, 0.2, 0], // Knees - right knee is red
+                [-0.1, -0.2, 0], [0.1, -0.2, 0] // Ankles - right ankle is yellow
+            ];
+            
+            jointPositions.forEach((pos, index) => {
+                let color = 0x00ff00; // Default green
+                
+                // Color based on dysfunction
+                if (index === 10) color = 0xff0000; // Right hip - red
+                if (index === 12) color = 0xff0000; // Right knee - red
+                if (index === 14) color = 0xffff00; // Right ankle - yellow
+                
+                const geometry = new THREE.SphereGeometry(0.04, 16, 16);
+                const material = new THREE.MeshPhongMaterial({ color });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.set(pos[0], pos[1], pos[2]);
+                scene.add(sphere);
+            });
+        }
+
+        /**
+         * Update 3D skeleton based on dysfunction data
+         */
+        function update3DSkeleton(dysfunctionRegions) {
+            // This would update the skeleton colors based on real dysfunction data
+            // For now, the demo skeleton already shows the dysfunction patterns
+            console.log('Updating 3D skeleton with dysfunction data:', dysfunctionRegions);
+        }
+
+        /**
+         * Animation loop
+         */
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        /**
+         * Rotate 3D view
+         */
+        function rotate3D() {
+            controls.autoRotate = !controls.autoRotate;
+        }
+
+        /**
+         * Reset 3D view
+         */
+        function reset3D() {
+            camera.position.set(0, 1.5, 4);
+            controls.reset();
+        }
+
+        /**
+         * Print report
+         */
+        function printReport() {
+            window.print();
+        }
+
+        /**
+         * Export to PDF
+         */
+        function exportPDF() {
+            alert('PDF export functionality will be implemented with server-side PDF generation');
+        }
+
+        /**
+         * Generate treatment protocol
+         */
+        function generateProtocol() {
+            alert('Generating downloadable treatment protocol PDF...');
+        }
+
+        /**
+         * Schedule follow-up
+         */
+        function scheduleFollowUp() {
+            window.location.href = '/static/human-dashboard.html?action=schedule&patient=' + kamsData.patient.id;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const container = document.getElementById('skeleton-canvas');
+            const width = container.clientWidth;
+            const height = 500;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+    </script>
+</body>
+</html>
