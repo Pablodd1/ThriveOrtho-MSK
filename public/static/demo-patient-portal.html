@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Patient Portal - Sarah Mitchell</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .feature-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/static/human-dashboard.html" class="text-blue-600 hover:text-blue-700 font-semibold">
+                        <i class="fas fa-arrow-left mr-2"></i> Dashboard
+                    </a>
+                    <div class="h-6 w-px bg-gray-300"></div>
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        <i class="fas fa-user-circle text-blue-600 mr-2"></i>
+                        Demo Patient Portal
+                    </h1>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600">Demo Account</div>
+                    <div class="font-semibold text-gray-900">ThriveOrtho MVP</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Patient Info Card -->
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 mb-8 text-white">
+            <div class="flex items-start justify-between">
+                <div class="flex items-start gap-6">
+                    <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-blue-600 text-4xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold mb-2">Sarah Mitchell</h2>
+                        <div class="space-y-1 text-blue-100">
+                            <p><i class="fas fa-id-card mr-2"></i><strong>Patient ID:</strong> 999</p>
+                            <p><i class="fas fa-envelope mr-2"></i><strong>Email:</strong> sarah.mitchell.demo@thriveortho.com</p>
+                            <p><i class="fas fa-birthday-cake mr-2"></i><strong>Age:</strong> 36 years old</p>
+                            <p><i class="fas fa-stethoscope mr-2"></i><strong>Diagnosis:</strong> Post-ACL reconstruction (Right knee)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-blue-100 mb-1">Journey Progress</div>
+                    <div class="text-4xl font-bold">90 Days</div>
+                    <div class="text-sm text-blue-100 mt-1">Complete Rehabilitation</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-3xl font-bold text-green-600 mb-2">13 → 16</div>
+                <div class="text-sm text-gray-600">FMS Score</div>
+                <div class="text-xs text-green-600 mt-1">+23% Improvement</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-3xl font-bold text-blue-600 mb-2">64 → 86</div>
+                <div class="text-sm text-gray-600">KAMS Score</div>
+                <div class="text-xs text-blue-600 mt-1">+34% Improvement</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-3xl font-bold text-purple-600 mb-2">6 → 0</div>
+                <div class="text-sm text-gray-600">Pain Level</div>
+                <div class="text-xs text-purple-600 mt-1">83% Reduction</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-3xl font-bold text-yellow-600 mb-2">$2,485</div>
+                <div class="text-sm text-gray-600">Total Revenue</div>
+                <div class="text-xs text-yellow-600 mt-1">0% Denied</div>
+            </div>
+        </div>
+
+        <!-- Assessment Results Overview -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
+                Available Assessments & Results
+            </h3>
+            <p class="text-gray-600 mb-6">Sarah Mitchell has complete assessment data across all ThriveOrtho features. Click any card below to view detailed results.</p>
+        </div>
+
+        <!-- Feature Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- KAMS Assessments -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="window.open('/static/kams-results-viewer.html', '_blank')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">3 Assessments</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">KAMS Assessments</h4>
+                <p class="text-sm text-gray-600 mb-4">Kinetic Analysis & Movement Screen with 3D skeleton visualization</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 6 (Initial)</span>
+                        <span class="font-semibold text-yellow-600">64% (Fair)</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 10</span>
+                        <span class="font-semibold text-blue-600">72% (Good)</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 14 (Final)</span>
+                        <span class="font-semibold text-green-600">86% (Excellent)</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View KAMS Results <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FMS Assessments -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="window.open('/static/fms-interface.html', '_blank')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-running text-green-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">2 Assessments</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">FMS Assessments</h4>
+                <p class="text-sm text-gray-600 mb-4">Functional Movement Screen (7 tests) with injury risk scoring</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Day 1 Initial</span>
+                        <span class="font-semibold text-yellow-600">13/21 (Elevated Risk)</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 8 Re-test</span>
+                        <span class="font-semibold text-green-600">16/21 (Low Risk)</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Asymmetries</span>
+                        <span class="font-semibold text-blue-600">4 → 2 (50% reduction)</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View FMS Results <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visual Assessments -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="window.open('/static/visual-assessment-improved.html', '_blank')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-video text-purple-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-info">1 Assessment</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">Visual Assessment</h4>
+                <p class="text-sm text-gray-600 mb-4">AI-powered pose detection with biomechanical analysis</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">AI Quality Score</span>
+                        <span class="font-semibold text-green-600">88/100</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Compensation Patterns</span>
+                        <span class="font-semibold text-yellow-600">3 detected</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">ROM Analysis</span>
+                        <span class="font-semibold text-blue-600">Right knee 85%</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View Visual Assessment <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SOAP Notes -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="alert('SOAP notes viewer will open - integrate with patient detail page')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-notes-medical text-yellow-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">2 Notes</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">SOAP Notes</h4>
+                <p class="text-sm text-gray-600 mb-4">Clinical documentation with ICD-10 and CPT codes</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Initial Evaluation</span>
+                        <span class="font-semibold text-blue-600">2024-09-15</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 8 Progress</span>
+                        <span class="font-semibold text-blue-600">2024-11-10</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">ICD-10 Codes</span>
+                        <span class="font-semibold text-green-600">S83.511A, M25.561</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View SOAP Notes <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Photos -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="alert('Progress photos viewer will open - integrate with patient detail page')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-images text-pink-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">5 Photos</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">Progress Photos</h4>
+                <p class="text-sm text-gray-600 mb-4">Timeline of visual recovery with annotations</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 1</span>
+                        <span class="font-semibold text-gray-700">Post-surgery swelling</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 4</span>
+                        <span class="font-semibold text-gray-700">Early ROM work</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Week 8</span>
+                        <span class="font-semibold text-gray-700">Single-leg stance</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View Progress Photos <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- CPT Billing Optimization -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="alert('CPT billing details will open')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-dollar-sign text-indigo-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">9 Sessions</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">CPT Code Optimization</h4>
+                <p class="text-sm text-gray-600 mb-4">Automatic billing codes with 8-minute rule compliance</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Total Revenue</span>
+                        <span class="font-semibold text-green-600">$2,485</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Avg per Session</span>
+                        <span class="font-semibold text-blue-600">$276</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Denial Rate</span>
+                        <span class="font-semibold text-green-600">0%</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View Billing Details <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Treatment Goals -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="alert('Treatment goals will open')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-bullseye text-teal-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">6 Goals</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">Treatment Goals</h4>
+                <p class="text-sm text-gray-600 mb-4">SMART goals with progress tracking</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Completed</span>
+                        <span class="font-semibold text-green-600">5 of 6 (83%)</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">In Progress</span>
+                        <span class="font-semibold text-yellow-600">1 goal</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Current Focus</span>
+                        <span class="font-semibold text-blue-600">5K race prep</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View Treatment Goals <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Patient Messages -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="alert('Messaging interface will open')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-comments text-orange-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-info">9 Messages</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">Patient Messages</h4>
+                <p class="text-sm text-gray-600 mb-4">Two-way communication between patient and therapist</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Total Messages</span>
+                        <span class="font-semibold text-blue-600">9 exchanges</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Latest</span>
+                        <span class="font-semibold text-gray-700">"Race day success!"</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Response Time</span>
+                        <span class="font-semibold text-green-600">< 24hrs avg</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View Messages <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Appointment History -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6" onclick="alert('Appointment history will open')">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-calendar-check text-red-600 text-xl"></i>
+                    </div>
+                    <span class="badge badge-success">9 Visits</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-2">Appointment History</h4>
+                <p class="text-sm text-gray-600 mb-4">Complete visit schedule with attendance tracking</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Total Visits</span>
+                        <span class="font-semibold text-blue-600">9 sessions</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Attendance Rate</span>
+                        <span class="font-semibold text-green-600">100%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Avg Duration</span>
+                        <span class="font-semibold text-gray-700">52 minutes</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold">
+                        View Appointments <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="/static/human-dashboard.html" class="block p-4 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition">
+                    <i class="fas fa-home text-blue-600 text-2xl mb-2"></i>
+                    <div class="font-semibold text-gray-900">Go to Dashboard</div>
+                    <div class="text-sm text-gray-600">Search all patients</div>
+                </a>
+                <a href="/static/fms-interface.html" class="block p-4 border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition">
+                    <i class="fas fa-plus-circle text-green-600 text-2xl mb-2"></i>
+                    <div class="font-semibold text-gray-900">New Assessment</div>
+                    <div class="text-sm text-gray-600">Start FMS or Visual</div>
+                </a>
+                <button onclick="window.print()" class="block w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition text-left">
+                    <i class="fas fa-print text-gray-600 text-2xl mb-2"></i>
+                    <div class="font-semibold text-gray-900">Print Summary</div>
+                    <div class="text-sm text-gray-600">Patient overview</div>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-12 py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-gray-600">
+            <p><strong>ThriveOrtho Demo Patient Portal</strong> - Comprehensive MVP Demonstration</p>
+            <p class="mt-2">This demo showcases all platform features with real assessment data for Sarah Mitchell (Patient ID: 999)</p>
+        </div>
+    </footer>
+</body>
+</html>
