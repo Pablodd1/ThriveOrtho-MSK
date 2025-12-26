@@ -1,2060 +1,997 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { serveStatic } from 'hono/cloudflare-workers'
+import { html } from 'hono/html'
 
-// Type definitions for Cloudflare D1 and environment variables
-type Bindings = {
-  DB: D1Database
-  GEMINI_API_KEY: string
+// Demo users for skip authentication
+const DEMO_USERS = {
+  admin: {
+    id: 'admin-demo-001',
+    email: 'admin@telemed.demo',
+    name: 'Demo Admin',
+    role: 'admin',
+    avatar: '👨‍💼'
+  },
+  provider: {
+    id: 'provider-demo-001',
+    email: 'dr.demo@telemed.demo',
+    name: 'Dr. Sarah Demo',
+    role: 'provider',
+    specialization: 'General Practice',
+    avatar: '👩‍⚕️'
+  },
+  patient: {
+    id: 'patient-demo-001',
+    email: 'patient@telemed.demo',
+    name: 'Demo Patient',
+    role: 'patient',
+    avatar: '👤'
+  }
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+// Sample data for dashboards
+const SAMPLE_DATA = {
+  stats: {
+    activeProviders: 12,
+    todayConsults: 47,
+    aiAnalyses: 156,
+    revenue: 3420
+  },
+  recentActivity: [
+    { time: '10:42 AM', event: 'Dr. Smith started consultation #1247', type: 'consultation' },
+    { time: '10:41 AM', event: 'AI: Skin analysis completed (conf: 94%)', type: 'ai' },
+    { time: '10:40 AM', event: 'New patient registered: John D.', type: 'user' },
+    { time: '10:38 AM', event: 'AI: Symptom triage completed (urgent: 3)', type: 'ai' },
+    { time: '10:35 AM', event: 'Payment received: $75.00', type: 'payment' }
+  ],
+  aiServices: [
+    { name: 'OpenAI GPT-4o', status: 'online', latency: '234ms' },
+    { name: 'Image Analysis', status: 'online', latency: '456ms' },
+    { name: 'Video Vitals', status: 'online', latency: '123ms' },
+    { name: 'Transcription', status: 'degraded', latency: '892ms' }
+  ],
+  todaySchedule: [
+    { time: '9:00 AM', patient: 'John Doe', type: 'Follow-up', status: 'completed', urgency: 'normal' },
+    { time: '9:30 AM', patient: 'Jane Smith', type: 'Skin Consult', status: 'ready', urgency: 'normal' },
+    { time: '10:00 AM', patient: 'Mike Wilson', type: 'Diabetes Mgmt', status: 'upcoming', urgency: 'normal' },
+    { time: '10:30 AM', patient: 'Lisa Brown', type: 'Urgent Triage', status: 'upcoming', urgency: 'urgent' }
+  ],
+  patients: [
+    { id: 'pat-001', name: 'John Doe', age: 38, lastVisit: '2025-12-20', conditions: ['Hypertension'] },
+    { id: 'pat-002', name: 'Jane Smith', age: 34, lastVisit: '2025-12-24', conditions: ['Contact Dermatitis'] },
+    { id: 'pat-003', name: 'Mike Wilson', age: 46, lastVisit: '2025-12-18', conditions: ['Type 2 Diabetes', 'High Cholesterol'] }
+  ],
+  aiAlerts: [
+    { patient: 'Lisa Brown', message: 'AI flagged: possible cardiac concern', severity: 'warning' },
+    { patient: 'Mike Wilson', message: 'Blood sugar trend requires attention', severity: 'info' }
+  ]
+}
 
-// Enable CORS for API routes
+const app = new Hono()
+
+// Enable CORS
 app.use('/api/*', cors())
 
-// Serve static files from public/static directory
-app.use('/static/*', serveStatic({ root: './public' }))
+// ============================================
+// SHARED STYLES
+// ============================================
+const baseStyles = html`
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f3f4f6; }
+    .demo-banner { background: linear-gradient(90deg, #f59e0b, #d97706); color: white; text-align: center; padding: 8px; font-size: 14px; font-weight: 500; }
+    .sidebar { width: 260px; background: linear-gradient(180deg, #1e3a5f 0%, #0f2847 100%); min-height: 100vh; color: white; position: fixed; left: 0; top: 0; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-header h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; }
+    .sidebar-nav { padding: 20px 0; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.2s; cursor: pointer; }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+    .nav-item i { width: 20px; text-align: center; }
+    .main-content { margin-left: 260px; padding: 24px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header h2 { font-size: 24px; color: #1e3a5f; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .user-avatar { width: 40px; height: 40px; background: #e5e7eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .stat-card h3 { font-size: 14px; color: #6b7280; margin-bottom: 8px; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: #1e3a5f; }
+    .stat-card .change { font-size: 12px; color: #10b981; margin-top: 4px; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1e3a5f; display: flex; align-items: center; gap: 8px; }
+    .card-body { padding: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    .activity-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-time { font-size: 12px; color: #9ca3af; width: 70px; }
+    .activity-event { flex: 1; font-size: 14px; }
+    .status-badge { padding: 4px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
+    .status-online { background: #d1fae5; color: #059669; }
+    .status-degraded { background: #fef3c7; color: #d97706; }
+    .status-offline { background: #fee2e2; color: #dc2626; }
+    .service-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+    .service-item:last-child { border-bottom: none; }
+    .progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); border-radius: 4px; }
+    .btn { padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: none; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .schedule-item { display: flex; align-items: center; padding: 12px; border-radius: 8px; margin-bottom: 8px; background: #f9fafb; }
+    .schedule-time { font-weight: 600; color: #1e3a5f; width: 80px; }
+    .schedule-patient { flex: 1; }
+    .schedule-type { color: #6b7280; font-size: 13px; }
+    .schedule-status { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+    .status-ready { background: #d1fae5; color: #059669; }
+    .status-completed { background: #e5e7eb; color: #6b7280; }
+    .status-upcoming { background: #dbeafe; color: #2563eb; }
+    .status-urgent { background: #fee2e2; color: #dc2626; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .alert-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .alert-warning { background: #fef3c7; border-left: 4px solid #f59e0b; }
+    .alert-info { background: #dbeafe; border-left: 4px solid #3b82f6; }
+    .alert-icon { font-size: 18px; }
+    .ai-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; }
+    .ai-card h4 { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
+    .ai-card .title { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+    .ai-confidence { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 12px; }
+    .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e3a5f 0%, #0f2847 100%); }
+    .login-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 400px; max-width: 90%; }
+    .login-card h1 { text-align: center; color: #1e3a5f; margin-bottom: 8px; }
+    .login-card .subtitle { text-align: center; color: #6b7280; margin-bottom: 32px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #374151; }
+    .form-group input { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; }
+    .form-group input:focus { outline: none; border-color: #3b82f6; }
+    .divider { display: flex; align-items: center; margin: 24px 0; }
+    .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e5e7eb; }
+    .divider span { padding: 0 16px; color: #9ca3af; font-size: 14px; }
+    .skip-btn { width: 100%; padding: 14px; border: 2px dashed #d1d5db; background: #f9fafb; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; color: #374151; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .skip-btn:hover { background: #f3f4f6; border-color: #3b82f6; color: #3b82f6; }
+    .role-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .role-option { padding: 16px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .role-option:hover { border-color: #3b82f6; }
+    .role-option.selected { border-color: #3b82f6; background: #eff6ff; }
+    .role-option .icon { font-size: 32px; margin-bottom: 8px; }
+    .role-option .title { font-weight: 600; color: #1e3a5f; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th { text-align: left; padding: 12px; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #6b7280; }
+    .table td { padding: 12px; border-bottom: 1px solid #f3f4f6; }
+    .table tr:hover { background: #f9fafb; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: white; border-radius: 16px; padding: 24px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
+    .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+    .tab { padding: 12px 20px; cursor: pointer; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+    .image-upload { border: 2px dashed #d1d5db; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .image-upload:hover { border-color: #3b82f6; background: #f9fafb; }
+    .chat-container { height: 400px; display: flex; flex-direction: column; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .chat-input { display: flex; gap: 8px; margin-top: 12px; }
+    .chat-input input { flex: 1; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; }
+    .message { margin-bottom: 12px; }
+    .message.user { text-align: right; }
+    .message .bubble { display: inline-block; padding: 10px 16px; border-radius: 16px; max-width: 80%; }
+    .message.user .bubble { background: #3b82f6; color: white; }
+    .message.ai .bubble { background: white; border: 1px solid #e5e7eb; }
+  </style>
+`
+
+const fontAwesome = html`<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">`
 
 // ============================================
-// HOME PAGE
+// HOME / ENTRY PAGE
 // ============================================
 app.get('/', (c) => {
-  return c.html(`
+  return c.html(html`
     <!DOCTYPE html>
     <html lang="en">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ThriveOrtho - Made by Humans, Powered by AI</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-          tailwind.config = {
-            theme: {
-              extend: {
-                colors: {
-                  'brand-blue': '#0066CC',
-                  'brand-green': '#00C851'
-                }
-              }
-            }
-          }
-        </script>
-        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <link href="/static/glassmorphism.css" rel="stylesheet">
-        <style>
-            body {
-                background: #ffffff;
-                min-height: 100vh;
-            }
-        </style>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>TeleMed AI - Telemedicine Platform</title>
+      ${fontAwesome}
+      ${baseStyles}
+      <style>
+        .hero { min-height: 100vh; background: linear-gradient(135deg, #1e3a5f 0%, #0f2847 100%); display: flex; flex-direction: column; }
+        .hero-nav { padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .hero-logo { color: white; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .hero-content { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .hero-text { max-width: 600px; color: white; }
+        .hero-text h1 { font-size: 48px; margin-bottom: 20px; line-height: 1.2; }
+        .hero-text p { font-size: 18px; opacity: 0.9; margin-bottom: 32px; line-height: 1.6; }
+        .portal-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
+        .portal-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 30px; border-radius: 16px; text-align: center; transition: all 0.3s; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; text-decoration: none; color: white; }
+        .portal-card:hover { background: rgba(255,255,255,0.2); transform: translateY(-5px); }
+        .portal-card .icon { font-size: 48px; margin-bottom: 16px; }
+        .portal-card h3 { font-size: 20px; margin-bottom: 8px; }
+        .portal-card p { font-size: 14px; opacity: 0.8; }
+        .features { display: flex; gap: 40px; margin-top: 60px; }
+        .feature { display: flex; align-items: center; gap: 12px; }
+        .feature i { color: #10b981; font-size: 20px; }
+        .feature span { font-size: 14px; }
+      </style>
     </head>
     <body>
-        <div class="min-h-screen">
-            <!-- Header with Glassmorphism -->
-            <header class="glass-header sticky top-0 z-50">
-                <div class="max-w-7xl mx-auto px-4 py-4 md:py-6">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4">
-                            <img src="/static/logo.svg" alt="ThriveOrtho" class="h-12 md:h-14 logo-glow">
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <a href="/static/patient-portal.html" class="glass-btn glass-btn-secondary glass-btn-sm">
-                                <i class="fas fa-user mr-2"></i>
-                                <span class="hidden md:inline">Patient</span> Login
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Main Content -->
-            <main class="max-w-7xl mx-auto px-4 py-8 md:py-16">
-                
-                <!-- Hero Section -->
-                <div class="text-center mb-12">
-                    <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-                        Physical Therapy Platform
-                    </h1>
-                    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-                        AI-powered assessments, automated documentation, and patient engagement
-                    </p>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <!-- Patient Intake -->
-                    <a href="/static/intake.html" class="glass-card glass-lift block">
-                        <div class="text-center">
-                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                                <i class="fas fa-user-plus text-2xl text-white"></i>
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">New Patient</h2>
-                            <p class="text-gray-600 mb-4">Start patient intake and demographic information</p>
-                            <button class="glass-btn glass-btn-success glass-btn-sm w-full">
-                                Get Started <i class="fas fa-arrow-right ml-2"></i>
-                            </button>
-                        </div>
-                    </a>
-
-                    <!-- Dashboard -->
-                    <a href="/static/dashboard.html" class="glass-card glass-lift block">
-                        <div class="text-center">
-                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                                <i class="fas fa-video text-2xl text-white"></i>
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h2>
-                            <p class="text-gray-600 mb-4">View all patients and manage assessments</p>
-                            <button class="glass-btn glass-btn-primary glass-btn-sm w-full">
-                                View Dashboard <i class="fas fa-arrow-right ml-2"></i>
-                            </button>
-                        </div>
-                    </a>
-
-                    <!-- RPM Monitoring -->
-                    <a href="/static/clinician-analytics.html" class="glass-card glass-lift block">
-                        <div class="text-center">
-                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                                <i class="fas fa-chart-line text-2xl text-white"></i>
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Analytics</h2>
-                            <p class="text-gray-600 mb-4">Track patient engagement and outcomes</p>
-                            <button class="glass-btn glass-btn-primary glass-btn-sm w-full">
-                                View Reports <i class="fas fa-arrow-right ml-2"></i>
-                            </button>
-                        </div>
-                    </a>
-                </div>
-
-                <!-- Features -->
-                <div class="bg-gray-50 rounded-lg p-8 mb-12">
-                    <h3 class="text-3xl font-bold text-gray-800 mb-8 text-center">
-                        System Features
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="flex items-start">
-                            <div class="bg-brand-blue w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl flex-shrink-0">
-                                <i class="fas fa-camera"></i>
-                            </div>
-                            <div class="ml-5">
-                                <h4 class="font-bold text-gray-800 text-lg mb-2">AI Movement Analysis</h4>
-                                <p class="text-gray-600">Camera-based skeleton tracking with MediaPipe (33 joints)</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start">
-                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-brand-blue text-xl flex-shrink-0">
-                                <i class="fas fa-dumbbell"></i>
-                            </div>
-                            <div class="ml-5">
-                                <h4 class="font-bold text-gray-800 text-lg mb-2">Exercise Programs</h4>
-                                <p class="text-gray-600">17 therapeutic exercises targeting identified deficiencies</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start">
-                            <div class="bg-brand-blue w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl flex-shrink-0">
-                                <i class="fas fa-clipboard-check"></i>
-                            </div>
-                            <div class="ml-5">
-                                <h4 class="font-bold text-gray-800 text-lg mb-2">Compliance Tracking</h4>
-                                <p class="text-gray-600">Monitor patient adherence with detailed session logs</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start">
-                            <div class="bg-brand-green w-12 h-12 rounded-lg flex items-center justify-center text-brand-blue text-xl flex-shrink-0">
-                                <i class="fas fa-file-medical"></i>
-                            </div>
-                            <div class="ml-5">
-                                <h4 class="font-bold text-gray-800 text-lg mb-2">RPM Billing Support</h4>
-                                <p class="text-gray-600">Automatic CPT code tracking for reimbursement</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Workflow Overview -->
-                <div class="bg-white border-2 border-gray-200 rounded-lg p-10">
-                    <h3 class="text-3xl font-bold text-gray-800 mb-10 text-center">
-                        Assessment Workflow
-                    </h3>
-                    <div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4">
-                        <div class="text-center flex-1">
-                            <div class="bg-brand-blue w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-white font-bold">1</div>
-                            <h4 class="font-bold mt-3 text-gray-800 text-base">Patient Intake</h4>
-                            <p class="text-sm text-gray-600 mt-1">Demographics & Medical History</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-brand-green w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-brand-blue font-bold">2</div>
-                            <h4 class="font-bold mt-3 text-gray-800 text-base">Movement Assessment</h4>
-                            <p class="text-sm text-gray-600 mt-1">Camera-based Tracking</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-brand-blue w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-white font-bold">3</div>
-                            <h4 class="font-bold mt-3 text-gray-800 text-base">AI Analysis</h4>
-                            <p class="text-sm text-gray-600 mt-1">Biomechanical Deficiencies</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-brand-green w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-brand-blue font-bold">4</div>
-                            <h4 class="font-bold mt-3 text-gray-800 text-base">Exercise Prescription</h4>
-                            <p class="text-sm text-gray-600 mt-1">Personalized Programs</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-2xl hidden md:block"></i>
-                        <div class="text-center flex-1">
-                            <div class="bg-brand-blue w-16 h-16 mx-auto rounded-lg flex items-center justify-center text-2xl text-white font-bold">5</div>
-                            <h4 class="font-bold mt-3 text-gray-800 text-base">RPM Monitoring</h4>
-                            <p class="text-sm text-gray-600 mt-1">Compliance & Billing</p>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <!-- Footer -->
-            <footer class="bg-gray-100 mt-20 py-10">
-                <div class="max-w-7xl mx-auto px-4 text-center">
-                    <p class="text-lg font-semibold text-gray-800">&copy; 2025 ThriveOrtho. All rights reserved.</p>
-                    <p class="text-gray-600 text-sm mt-2">Made by Humans, Powered by AI</p>
-                    <div class="mt-4 flex justify-center space-x-6">
-                        <i class="fas fa-shield-alt text-brand-blue text-xl"></i>
-                        <i class="fas fa-lock text-brand-blue text-xl"></i>
-                        <i class="fas fa-check-circle text-brand-green text-xl"></i>
-                    </div>
-                </div>
-            </footer>
+      <div class="hero">
+        <nav class="hero-nav">
+          <div class="hero-logo">
+            <i class="fas fa-heartbeat"></i>
+            TeleMed AI
+          </div>
+          <div>
+            <a href="/login" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Login</a>
+          </div>
+        </nav>
+        
+        <div class="hero-content">
+          <div class="hero-text">
+            <h1>AI-Powered Telemedicine Platform</h1>
+            <p>Experience the future of healthcare with intelligent diagnostics, video consultations, and AI-assisted medical analysis. Connect with healthcare providers from anywhere.</p>
+            
+            <div class="features">
+              <div class="feature"><i class="fas fa-check-circle"></i><span>AI Diagnostics</span></div>
+              <div class="feature"><i class="fas fa-check-circle"></i><span>Video Consultations</span></div>
+              <div class="feature"><i class="fas fa-check-circle"></i><span>HIPAA Compliant</span></div>
+            </div>
+            
+            <div class="portal-cards">
+              <a href="/admin" class="portal-card">
+                <div class="icon">👨‍💼</div>
+                <h3>Admin Portal</h3>
+                <p>System management & analytics</p>
+              </a>
+              <a href="/provider" class="portal-card">
+                <div class="icon">👩‍⚕️</div>
+                <h3>Provider Portal</h3>
+                <p>Clinical tools & consultations</p>
+              </a>
+              <a href="/patient" class="portal-card">
+                <div class="icon">👤</div>
+                <h3>Patient Portal</h3>
+                <p>Book appointments & records</p>
+              </a>
+            </div>
+          </div>
         </div>
+      </div>
     </body>
     </html>
   `)
 })
 
 // ============================================
-// API: PATIENTS
+// LOGIN PAGE
 // ============================================
-
-// Get all patients
-app.get('/api/patients', async (c) => {
-  try {
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM patients ORDER BY created_at DESC
-    `).all()
-    
-    return c.json({ success: true, data: results })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get single patient
-app.get('/api/patients/:id', async (c) => {
-  try {
-    const patientId = c.req.param('id')
-    const patient = await c.env.DB.prepare(`
-      SELECT * FROM patients WHERE id = ?
-    `).bind(patientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    return c.json({ success: true, data: patient })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Create patient
-app.post('/api/patients', async (c) => {
-  try {
-    const patient = await c.req.json()
-    
-    const result = await c.env.DB.prepare(`
-      INSERT INTO patients (
-        first_name, last_name, date_of_birth, gender, email, phone,
-        address_line1, address_line2, city, state, zip_code,
-        emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
-        primary_physician, insurance_provider, insurance_policy_number,
-        medical_history, current_medications, allergies,
-        assessment_reason, chief_complaint, pain_scale, activity_level,
-        height_cm, weight_kg
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      patient.first_name,
-      patient.last_name,
-      patient.date_of_birth,
-      patient.gender?.toLowerCase() || null,
-      patient.email || null,
-      patient.phone || null,
-      patient.address_line1 || null,
-      patient.address_line2 || null,
-      patient.city || null,
-      patient.state || null,
-      patient.zip_code || null,
-      patient.emergency_contact_name || null,
-      patient.emergency_contact_phone || null,
-      patient.emergency_contact_relationship || null,
-      patient.primary_physician || null,
-      patient.insurance_provider || null,
-      patient.insurance_policy_number || null,
-      JSON.stringify(patient.medical_history || {}),
-      JSON.stringify(patient.current_medications || []),
-      JSON.stringify(patient.allergies || []),
-      patient.assessment_reason || null,
-      patient.chief_complaint || null,
-      patient.pain_scale || null,
-      patient.activity_level || null,
-      patient.height_cm || null,
-      patient.weight_kg || null
-    ).run()
-    
-    return c.json({ 
-      success: true, 
-      data: { 
-        id: result.meta.last_row_id,
-        ...patient 
-      } 
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: ASSESSMENTS
-// ============================================
-
-// Get all assessments for a patient
-app.get('/api/patients/:id/assessments', async (c) => {
-  try {
-    const patientId = c.req.param('id')
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM assessments WHERE patient_id = ? ORDER BY assessment_date DESC
-    `).bind(patientId).all()
-    
-    return c.json({ success: true, data: results })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get single assessment with all details
-app.get('/api/assessments/:id', async (c) => {
-  try {
-    const assessmentId = c.req.param('id')
-    
-    const assessment = await c.env.DB.prepare(`
-      SELECT * FROM assessments WHERE id = ?
-    `).bind(assessmentId).first()
-    
-    if (!assessment) {
-      return c.json({ success: false, error: 'Assessment not found' }, 404)
-    }
-    
-    const { results: tests } = await c.env.DB.prepare(`
-      SELECT * FROM movement_tests WHERE assessment_id = ? ORDER BY test_order
-    `).bind(assessmentId).all()
-    
-    return c.json({ 
-      success: true, 
-      data: {
-        assessment,
-        tests
-      }
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Create assessment
-app.post('/api/assessments', async (c) => {
-  try {
-    const assessment = await c.req.json()
-    
-    const result = await c.env.DB.prepare(`
-      INSERT INTO assessments (
-        patient_id, clinician_id, assessment_type, status
-      ) VALUES (?, ?, ?, ?)
-    `).bind(
-      assessment.patient_id,
-      assessment.clinician_id || 1,
-      assessment.assessment_type || 'initial',
-      'in_progress'
-    ).run()
-    
-    return c.json({ 
-      success: true, 
-      data: { 
-        id: result.meta.last_row_id,
-        ...assessment,
-        status: 'in_progress'
-      } 
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Complete assessment
-app.put('/api/assessments/:id/complete', async (c) => {
-  try {
-    const assessmentId = c.req.param('id')
-    const { overall_score, clinical_notes, recommendations } = await c.req.json()
-    
-    await c.env.DB.prepare(`
-      UPDATE assessments 
-      SET status = 'completed', 
-          completed_at = CURRENT_TIMESTAMP,
-          overall_score = ?,
-          clinical_notes = ?,
-          recommendations = ?
-      WHERE id = ?
-    `).bind(
-      overall_score,
-      clinical_notes,
-      JSON.stringify(recommendations),
-      assessmentId
-    ).run()
-    
-    return c.json({ success: true })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: MOVEMENT TESTS
-// ============================================
-
-// Create movement test
-app.post('/api/assessments/:id/tests', async (c) => {
-  try {
-    const assessmentId = c.req.param('id')
-    const test = await c.req.json()
-    
-    const result = await c.env.DB.prepare(`
-      INSERT INTO movement_tests (
-        assessment_id, test_name, test_category, test_order, instructions, status
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(
-      assessmentId,
-      test.test_name,
-      test.test_category,
-      test.test_order || 1,
-      test.instructions,
-      'pending'
-    ).run()
-    
-    return c.json({ 
-      success: true, 
-      data: { id: result.meta.last_row_id } 
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Update test with skeleton data and analysis
-app.put('/api/tests/:id/analyze', async (c) => {
-  try {
-    const testId = c.req.param('id')
-    const { skeleton_data, camera_type } = await c.req.json()
-    
-    await c.env.DB.prepare(`
-      UPDATE movement_tests 
-      SET skeleton_data = ?, 
-          camera_type = ?,
-          status = 'completed', 
-          completed_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).bind(
-      JSON.stringify(skeleton_data),
-      camera_type || 'webcam',
-      testId
-    ).run()
-    
-    return c.json({ success: true })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: EXERCISES
-// ============================================
-
-// Get all exercises
-app.get('/api/exercises', async (c) => {
-  try {
-    const category = c.req.query('category')
-    
-    let query = 'SELECT * FROM exercises'
-    const params: any[] = []
-    
-    if (category) {
-      query += ' WHERE category = ?'
-      params.push(category)
-    }
-    
-    query += ' ORDER BY category, name'
-    
-    const { results } = await c.env.DB.prepare(query).bind(...params).all()
-    
-    return c.json({ success: true, data: results })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get single exercise
-app.get('/api/exercises/:id', async (c) => {
-  try {
-    const exerciseId = c.req.param('id')
-    const exercise = await c.env.DB.prepare(`
-      SELECT * FROM exercises WHERE id = ?
-    `).bind(exerciseId).first()
-    
-    if (!exercise) {
-      return c.json({ success: false, error: 'Exercise not found' }, 404)
-    }
-    
-    return c.json({ success: true, data: exercise })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: PRESCRIPTIONS
-// ============================================
-
-// Get all prescriptions for a patient
-app.get('/api/patients/:id/prescriptions', async (c) => {
-  try {
-    const patientId = c.req.param('id')
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM prescriptions WHERE patient_id = ? ORDER BY created_at DESC
-    `).bind(patientId).all()
-    
-    return c.json({ success: true, data: results })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get single prescription with exercises
-app.get('/api/prescriptions/:id', async (c) => {
-  try {
-    const prescriptionId = c.req.param('id')
-    
-    const prescription = await c.env.DB.prepare(`
-      SELECT * FROM prescriptions WHERE id = ?
-    `).bind(prescriptionId).first()
-    
-    if (!prescription) {
-      return c.json({ success: false, error: 'Prescription not found' }, 404)
-    }
-    
-    const { results: prescribedExercises } = await c.env.DB.prepare(`
-      SELECT pe.*, e.name, e.description, e.instructions, e.category
-      FROM prescribed_exercises pe
-      JOIN exercises e ON pe.exercise_id = e.id
-      WHERE pe.prescription_id = ?
-      ORDER BY e.category, e.name
-    `).bind(prescriptionId).all()
-    
-    return c.json({ 
-      success: true, 
-      data: {
-        prescription,
-        exercises: prescribedExercises
-      }
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Create prescription
-app.post('/api/prescriptions', async (c) => {
-  try {
-    const prescription = await c.req.json()
-    
-    const result = await c.env.DB.prepare(`
-      INSERT INTO prescriptions (
-        patient_id, assessment_id, clinician_id,
-        program_name, program_goals, frequency_per_week,
-        estimated_duration_minutes, start_date,
-        clinician_notes, patient_instructions, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      prescription.patient_id,
-      prescription.assessment_id,
-      prescription.clinician_id || 1,
-      prescription.program_name,
-      JSON.stringify(prescription.program_goals || []),
-      prescription.frequency_per_week || 3,
-      prescription.estimated_duration_minutes || 30,
-      prescription.start_date || new Date().toISOString().split('T')[0],
-      prescription.clinician_notes,
-      prescription.patient_instructions,
-      'active'
-    ).run()
-    
-    return c.json({ 
-      success: true, 
-      data: { id: result.meta.last_row_id } 
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: PRESCRIBED EXERCISES
-// ============================================
-
-// Add exercise to prescription
-app.post('/api/prescribed-exercises', async (c) => {
-  try {
-    const prescribed = await c.req.json()
-    
-    const result = await c.env.DB.prepare(`
-      INSERT INTO prescribed_exercises (
-        prescription_id, exercise_id, sets, reps, 
-        hold_time, rest_time, frequency_per_week,
-        clinical_reason, target_deficiency, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      prescribed.prescription_id,
-      prescribed.exercise_id,
-      prescribed.sets || 3,
-      prescribed.reps || 10,
-      prescribed.hold_time || null,
-      prescribed.rest_time || 60,
-      prescribed.frequency_per_week || 3,
-      prescribed.clinical_reason,
-      prescribed.target_deficiency,
-      'active'
-    ).run()
-    
-    return c.json({ 
-      success: true, 
-      data: { id: result.meta.last_row_id } 
-    })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: RPM MONITORING
-// ============================================
-
-// Get RPM data for patient and month
-app.get('/api/patients/:id/rpm/:month', async (c) => {
-  try {
-    const patientId = c.req.param('id')
-    const month = c.req.param('month')
-    
-    const rpm = await c.env.DB.prepare(`
-      SELECT * FROM rpm_monitoring 
-      WHERE patient_id = ? AND billing_month = ?
-    `).bind(patientId, month).first()
-    
-    if (!rpm) {
-      return c.json({ success: true, data: null })
-    }
-    
-    return c.json({ success: true, data: rpm })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Update RPM monitoring data
-app.post('/api/rpm', async (c) => {
-  try {
-    const rpm = await c.req.json()
-    
-    const result = await c.env.DB.prepare(`
-      INSERT INTO rpm_monitoring (
-        patient_id, billing_month, total_monitoring_minutes,
-        total_sessions_recorded, days_with_data, eligible_for_billing
-      ) VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(patient_id, billing_month) DO UPDATE SET
-        total_monitoring_minutes = total_monitoring_minutes + excluded.total_monitoring_minutes,
-        total_sessions_recorded = total_sessions_recorded + excluded.total_sessions_recorded,
-        days_with_data = excluded.days_with_data,
-        eligible_for_billing = excluded.eligible_for_billing,
-        updated_at = CURRENT_TIMESTAMP
-    `).bind(
-      rpm.patient_id,
-      rpm.billing_month,
-      rpm.total_monitoring_minutes || 0,
-      rpm.total_sessions_recorded || 1,
-      rpm.days_with_data || 1,
-      rpm.eligible_for_billing || 0
-    ).run()
-    
-    return c.json({ success: true })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// API: PATIENT PORTAL (HEP)
-// ============================================
-
-// Patient authentication
-app.post('/api/patient/auth', async (c) => {
-  try {
-    const { patientId, lastName } = await c.req.json()
-    
-    // Query database for patient with portal access
-    const result = await c.env.DB.prepare(`
-      SELECT 
-        p.id,
-        p.first_name,
-        p.last_name,
-        ppa.portal_patient_id,
-        ppa.last_name_hash,
-        pr.start_date as program_start_date,
-        pr.program_name,
-        cl.first_name || ' ' || cl.last_name as therapist_name
-      FROM patient_portal_access ppa
-      JOIN patients p ON ppa.patient_id = p.id
-      LEFT JOIN prescriptions pr ON p.id = pr.patient_id AND pr.status = 'active'
-      LEFT JOIN clinicians cl ON pr.clinician_id = cl.id
-      WHERE ppa.portal_patient_id = ? 
-        AND ppa.portal_enabled = 1
-        AND LOWER(ppa.last_name_hash) = LOWER(?)
-      ORDER BY pr.start_date DESC
-      LIMIT 1
-    `).bind(patientId, lastName).first()
-    
-    if (!result) {
-      // Log failed login attempt
-      await c.env.DB.prepare(`
-        INSERT INTO patient_activity_log (patient_id, activity_type, notes)
-        SELECT p.id, 'login_failed', 'Invalid credentials'
-        FROM patients p
-        JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-        WHERE ppa.portal_patient_id = ?
-      `).bind(patientId).run().catch(() => {})
+app.get('/login', (c) => {
+  const role = c.req.query('role') || 'patient'
+  
+  return c.html(html`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Login - TeleMed AI</title>
+      ${fontAwesome}
+      ${baseStyles}
+    </head>
+    <body>
+      <div class="login-container">
+        <div class="login-card">
+          <h1><i class="fas fa-heartbeat" style="color: #3b82f6;"></i> TeleMed AI</h1>
+          <p class="subtitle">Sign in to your account</p>
+          
+          <div class="role-selector">
+            <div class="role-option ${role === 'admin' ? 'selected' : ''}" onclick="selectRole('admin')">
+              <div class="icon">👨‍💼</div>
+              <div class="title">Admin</div>
+            </div>
+            <div class="role-option ${role === 'provider' ? 'selected' : ''}" onclick="selectRole('provider')">
+              <div class="icon">👩‍⚕️</div>
+              <div class="title">Provider</div>
+            </div>
+            <div class="role-option ${role === 'patient' ? 'selected' : ''}" onclick="selectRole('patient')">
+              <div class="icon">👤</div>
+              <div class="title">Patient</div>
+            </div>
+          </div>
+          
+          <form onsubmit="return handleLogin(event)">
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+              <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+          </form>
+          
+          <div class="divider"><span>or</span></div>
+          
+          <button class="skip-btn" onclick="skipLogin()">
+            <i class="fas fa-bolt"></i>
+            Skip Login (Demo Mode)
+          </button>
+          
+          <p style="text-align: center; margin-top: 20px; font-size: 13px; color: #6b7280;">
+            Demo credentials auto-fill when you click Skip Login
+          </p>
+        </div>
+      </div>
       
-      return c.json({
-        success: false,
-        error: 'Invalid patient ID or last name'
-      }, 401)
-    }
-    
-    // Update last login time and count
-    await c.env.DB.prepare(`
-      UPDATE patient_portal_access 
-      SET last_login = CURRENT_TIMESTAMP,
-          login_count = login_count + 1
-      WHERE portal_patient_id = ?
-    `).bind(patientId).run()
-    
-    // Log successful login
-    await c.env.DB.prepare(`
-      INSERT INTO patient_activity_log (patient_id, activity_type)
-      VALUES (?, 'login')
-    `).bind(result.id).run()
-    
-    return c.json({
-      success: true,
-      patient: {
-        id: result.portal_patient_id,
-        patientDbId: result.id,
-        name: `${result.first_name} ${result.last_name}`,
-        therapist: result.therapist_name || 'Your Physical Therapist',
-        programStartDate: result.program_start_date || new Date().toISOString().split('T')[0],
-        programName: result.program_name || 'Exercise Program',
-        loginTime: new Date().toISOString()
-      }
-    })
-  } catch (error: any) {
-    console.error('Patient auth error:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get patient's exercises
-app.get('/api/patient/:id/exercises', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    
-    // Get patient's database ID from portal ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id
-      FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Get assigned exercises using the view
-    const { results } = await c.env.DB.prepare(`
-      SELECT 
-        prescribed_exercise_id,
-        exercise_id,
-        exercise_name,
-        category,
-        description,
-        instructions,
-        sets,
-        reps,
-        hold_time,
-        frequency_per_week,
-        clinical_reason,
-        target_deficiency
-      FROM vw_patient_active_exercises
-      WHERE patient_id = ?
-      ORDER BY category, exercise_name
-    `).bind(patient.id).all()
-    
-    // Log view activity
-    await c.env.DB.prepare(`
-      INSERT INTO patient_activity_log (patient_id, activity_type)
-      VALUES (?, 'exercise_view')
-    `).bind(patient.id).run()
-    
-    // Transform to match frontend format
-    const exercises = results.map((ex: any) => ({
-      id: `ex${ex.exercise_id}`,
-      prescribedId: ex.prescribed_exercise_id,
-      name: ex.exercise_name,
-      category: ex.category,
-      description: ex.description,
-      instructions: ex.instructions || 'No instructions available',
-      sets: ex.sets,
-      reps: ex.reps,
-      holdTime: ex.hold_time,
-      frequency: `${ex.frequency_per_week}x weekly`,
-      clinicalReason: ex.clinical_reason,
-      targetDeficiency: ex.target_deficiency
-    }))
-    
-    return c.json({
-      success: true,
-      exercises
-    })
-  } catch (error: any) {
-    console.error('Get exercises error:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Record exercise completion
-app.post('/api/patient/:id/complete', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    const { prescribedExerciseId, exerciseName, sets, reps, duration, painLevel, difficulty, notes } = await c.req.json()
-    
-    // Get patient's database ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id
-      FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Log completion in activity log
-    await c.env.DB.prepare(`
-      INSERT INTO patient_activity_log (
-        patient_id,
-        prescribed_exercise_id,
-        activity_type,
-        exercise_name,
-        sets_completed,
-        reps_completed,
-        duration_seconds,
-        pain_level,
-        difficulty_rating,
-        notes
-      ) VALUES (?, ?, 'exercise_complete', ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      patient.id,
-      prescribedExerciseId || null,
-      exerciseName,
-      sets || null,
-      reps || null,
-      duration || null,
-      painLevel || null,
-      difficulty || null,
-      notes || null
-    ).run()
-    
-    // Calculate streak and today's progress
-    const today = new Date().toISOString().split('T')[0]
-    
-    // Get today's completions
-    const todayStats = await c.env.DB.prepare(`
-      SELECT COUNT(DISTINCT exercise_name) as completed_today
-      FROM patient_activity_log
-      WHERE patient_id = ?
-        AND activity_type = 'exercise_complete'
-        AND DATE(activity_date) = ?
-    `).bind(patient.id, today).first()
-    
-    // Get total assigned exercises
-    const totalExercises = await c.env.DB.prepare(`
-      SELECT COUNT(*) as total
-      FROM vw_patient_active_exercises
-      WHERE patient_id = ?
-    `).bind(patient.id).first()
-    
-    // Calculate streak (consecutive days with activity)
-    const streakResult = await c.env.DB.prepare(`
-      WITH RECURSIVE dates AS (
-        SELECT DATE('now') as date
-        UNION ALL
-        SELECT DATE(date, '-1 day')
-        FROM dates
-        WHERE date > DATE('now', '-30 days')
-      ),
-      daily_activity AS (
-        SELECT DISTINCT DATE(activity_date) as activity_date
-        FROM patient_activity_log
-        WHERE patient_id = ?
-          AND activity_type = 'exercise_complete'
-      )
-      SELECT COUNT(*) as streak
-      FROM dates d
-      LEFT JOIN daily_activity da ON d.date = da.activity_date
-      WHERE da.activity_date IS NOT NULL
-        AND d.date <= DATE('now')
-      ORDER BY d.date DESC
-    `).bind(patient.id).first()
-    
-    return c.json({
-      success: true,
-      streak: streakResult?.streak || 0,
-      todayCompleted: todayStats?.completed_today || 0,
-      todayTotal: totalExercises?.total || 0
-    })
-  } catch (error: any) {
-    console.error('Complete exercise error:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get patient progress
-app.get('/api/patient/:id/progress', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    const days = parseInt(c.req.query('days') || '30')
-    
-    // Get patient's database ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id
-      FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Get daily progress for specified period
-    const { results } = await c.env.DB.prepare(`
-      SELECT 
-        DATE(activity_date) as date,
-        COUNT(DISTINCT exercise_name) as completed,
-        COUNT(*) as total_sessions,
-        AVG(pain_level) as avg_pain,
-        AVG(difficulty_rating) as avg_difficulty
-      FROM patient_activity_log
-      WHERE patient_id = ?
-        AND activity_type = 'exercise_complete'
-        AND activity_date >= DATE('now', '-' || ? || ' days')
-      GROUP BY DATE(activity_date)
-      ORDER BY date DESC
-    `).bind(patient.id, days).all()
-    
-    // Get total assigned exercises
-    const totalEx = await c.env.DB.prepare(`
-      SELECT COUNT(*) as total
-      FROM vw_patient_active_exercises
-      WHERE patient_id = ?
-    `).bind(patient.id).first()
-    
-    const total = totalEx?.total || 1
-    
-    // Format progress data
-    const progress = results.map((row: any) => ({
-      date: row.date,
-      completed: row.completed,
-      total: total,
-      percentage: Math.round((row.completed / total) * 100),
-      avgPain: row.avg_pain ? Math.round(row.avg_pain * 10) / 10 : null,
-      avgDifficulty: row.avg_difficulty ? Math.round(row.avg_difficulty * 10) / 10 : null,
-      sessions: row.total_sessions
-    }))
-    
-    return c.json({
-      success: true,
-      progress,
-      summary: {
-        totalAssignedExercises: total,
-        activeDays: results.length,
-        periodDays: days
-      }
-    })
-  } catch (error: any) {
-    console.error('Get progress error:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// PROGRESS PHOTOS API
-// ============================================
-
-// Get patient progress photos
-app.get('/api/patient/:id/photos', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    
-    // Get patient's database ID from portal ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Get all photos for this patient
-    const { results } = await c.env.DB.prepare(`
-      SELECT 
-        id,
-        photo_type,
-        photo_category,
-        photo_data,
-        photo_format,
-        thumbnail_data,
-        body_area,
-        notes,
-        taken_by,
-        photo_date,
-        created_at
-      FROM progress_photos
-      WHERE patient_id = ?
-      ORDER BY photo_date DESC, created_at DESC
-    `).bind(patient.id).all()
-    
-    // Log view activity
-    await c.env.DB.prepare(`
-      INSERT INTO patient_activity_log (patient_id, activity_type)
-      VALUES (?, 'photo_view')
-    `).bind(patient.id).run()
-    
-    return c.json({ success: true, photos: results })
-  } catch (error: any) {
-    console.error('Error fetching photos:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Upload new progress photo
-app.post('/api/patient/:id/photos', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    const { photoData, photoType, photoCategory, bodyArea, notes } = await c.req.json()
-    
-    // Validate required fields
-    if (!photoData || !photoType) {
-      return c.json({ success: false, error: 'Photo data and type required' }, 400)
-    }
-    
-    // Get patient's database ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Determine format from data URL
-    const formatMatch = photoData.match(/^data:image\/(\w+);base64,/)
-    const photoFormat = formatMatch ? formatMatch[1] : 'jpeg'
-    
-    // Create thumbnail (first 1000 chars of base64 as a simple approach)
-    const thumbnailData = photoData.substring(0, Math.min(photoData.length, 1000))
-    
-    // Insert photo
-    const result = await c.env.DB.prepare(`
-      INSERT INTO progress_photos (
-        patient_id, photo_type, photo_category, photo_data, photo_format,
-        thumbnail_data, body_area, notes, taken_by, visible_to_patient
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'patient', 1)
-    `).bind(
-      patient.id,
-      photoType,
-      photoCategory || null,
-      photoData,
-      photoFormat,
-      thumbnailData,
-      bodyArea || null,
-      notes || null
-    ).run()
-    
-    // Log upload activity
-    await c.env.DB.prepare(`
-      INSERT INTO patient_activity_log (patient_id, activity_type)
-      VALUES (?, 'photo_upload')
-    `).bind(patient.id).run()
-    
-    return c.json({ 
-      success: true, 
-      photoId: result.meta.last_row_id,
-      message: 'Photo uploaded successfully'
-    })
-  } catch (error: any) {
-    console.error('Error uploading photo:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// MESSAGING API
-// ============================================
-
-// Get patient messages
-app.get('/api/patient/:id/messages', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    
-    // Get patient's database ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Get messages with clinician info
-    const { results } = await c.env.DB.prepare(`
-      SELECT 
-        pm.id,
-        pm.sender_type,
-        pm.message_subject,
-        pm.message_text,
-        pm.is_read,
-        pm.is_priority,
-        pm.sent_at,
-        pm.thread_id,
-        pm.parent_message_id,
-        c.first_name || ' ' || c.last_name as clinician_name
-      FROM patient_messages pm
-      JOIN clinicians c ON pm.clinician_id = c.id
-      WHERE pm.patient_id = ?
-      ORDER BY pm.thread_id, pm.sent_at ASC
-    `).bind(patient.id).all()
-    
-    // Group by threads
-    const threads: any = {}
-    results.forEach((msg: any) => {
-      const threadId = msg.thread_id || msg.id
-      if (!threads[threadId]) {
-        threads[threadId] = []
-      }
-      threads[threadId].push(msg)
-    })
-    
-    return c.json({ success: true, messages: results, threads })
-  } catch (error: any) {
-    console.error('Error fetching messages:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Send message to therapist
-app.post('/api/patient/:id/messages', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    const { subject, message, parentMessageId } = await c.req.json()
-    
-    if (!message) {
-      return c.json({ success: false, error: 'Message text required' }, 400)
-    }
-    
-    // Get patient and clinician IDs
-    const patient = await c.env.DB.prepare(`
-      SELECT 
-        p.id as patient_id,
-        pr.clinician_id
-      FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      JOIN prescriptions pr ON p.id = pr.patient_id
-      WHERE ppa.portal_patient_id = ? AND pr.status = 'active'
-      LIMIT 1
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found or no active prescription' }, 404)
-    }
-    
-    // Get thread_id from parent if replying
-    let threadId = null
-    if (parentMessageId) {
-      const parentMsg = await c.env.DB.prepare(`
-        SELECT thread_id FROM patient_messages WHERE id = ?
-      `).bind(parentMessageId).first()
-      threadId = parentMsg?.thread_id || parentMessageId
-    }
-    
-    // Insert message
-    const result = await c.env.DB.prepare(`
-      INSERT INTO patient_messages (
-        patient_id, clinician_id, sender_type, message_subject, 
-        message_text, parent_message_id, thread_id
-      ) VALUES (?, ?, 'patient', ?, ?, ?, ?)
-    `).bind(
-      patient.patient_id,
-      patient.clinician_id,
-      subject || 'Message from patient',
-      message,
-      parentMessageId || null,
-      threadId
-    ).run()
-    
-    // If this is a new thread, update thread_id to be the message id
-    const messageId = result.meta.last_row_id
-    if (!threadId) {
-      await c.env.DB.prepare(`
-        UPDATE patient_messages SET thread_id = ? WHERE id = ?
-      `).bind(messageId, messageId).run()
-    }
-    
-    // Log activity
-    await c.env.DB.prepare(`
-      INSERT INTO patient_activity_log (patient_id, activity_type)
-      VALUES (?, 'message_sent')
-    `).bind(patient.patient_id).run()
-    
-    return c.json({ 
-      success: true, 
-      messageId,
-      message: 'Message sent to your therapist'
-    })
-  } catch (error: any) {
-    console.error('Error sending message:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Mark message as read
-app.put('/api/patient/:id/messages/:messageId/read', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    const messageId = c.req.param('messageId')
-    
-    // Get patient ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Mark as read
-    await c.env.DB.prepare(`
-      UPDATE patient_messages 
-      SET is_read = 1, read_at = CURRENT_TIMESTAMP
-      WHERE id = ? AND patient_id = ?
-    `).bind(messageId, patient.id).run()
-    
-    return c.json({ success: true })
-  } catch (error: any) {
-    console.error('Error marking message as read:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// APPOINTMENTS API
-// ============================================
-
-// Get patient appointments
-app.get('/api/patient/:id/appointments', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    
-    // Get patient ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Get appointments with clinician info
-    const { results } = await c.env.DB.prepare(`
-      SELECT 
-        a.id,
-        a.appointment_type,
-        a.appointment_date,
-        a.appointment_time,
-        a.duration_minutes,
-        a.location_type,
-        a.location_address,
-        a.status,
-        a.notes,
-        c.first_name || ' ' || c.last_name as clinician_name
-      FROM appointments a
-      JOIN clinicians c ON a.clinician_id = c.id
-      WHERE a.patient_id = ?
-      ORDER BY a.appointment_date DESC, a.appointment_time DESC
-    `).bind(patient.id).all()
-    
-    // Separate upcoming and past
-    const today = new Date().toISOString().split('T')[0]
-    const upcoming = results.filter((apt: any) => apt.appointment_date >= today && apt.status !== 'cancelled')
-    const past = results.filter((apt: any) => apt.appointment_date < today || apt.status === 'completed')
-    
-    return c.json({ success: true, upcoming, past, all: results })
-  } catch (error: any) {
-    console.error('Error fetching appointments:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// PATIENT GOALS API
-// ============================================
-
-// Get patient goals
-app.get('/api/patient/:id/goals', async (c) => {
-  try {
-    const portalPatientId = c.req.param('id')
-    
-    // Get patient ID
-    const patient = await c.env.DB.prepare(`
-      SELECT p.id FROM patients p
-      JOIN patient_portal_access ppa ON p.id = ppa.patient_id
-      WHERE ppa.portal_patient_id = ?
-    `).bind(portalPatientId).first()
-    
-    if (!patient) {
-      return c.json({ success: false, error: 'Patient not found' }, 404)
-    }
-    
-    // Get all goals
-    const { results } = await c.env.DB.prepare(`
-      SELECT 
-        id,
-        goal_type,
-        goal_description,
-        baseline_value,
-        target_value,
-        current_value,
-        measurement_unit,
-        target_date,
-        status,
-        progress_percentage,
-        achievement_date,
-        created_at
-      FROM patient_goals
-      WHERE patient_id = ?
-      ORDER BY 
-        CASE status 
-          WHEN 'active' THEN 1 
-          WHEN 'achieved' THEN 2 
-          ELSE 3 
-        END,
-        target_date ASC
-    `).bind(patient.id).all()
-    
-    return c.json({ success: true, goals: results })
-  } catch (error: any) {
-    console.error('Error fetching goals:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// ENHANCED ANALYTICS API
-// ============================================
-
-// Get patient engagement metrics
-app.get('/api/analytics/engagement', async (c) => {
-  try {
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM vw_patient_engagement
-      ORDER BY days_active_7d DESC, exercises_completed_30d DESC
-    `).all()
-    
-    return c.json({ success: true, patients: results })
-  } catch (error: any) {
-    console.error('Error fetching engagement metrics:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get clinician dashboard summary
-app.get('/api/analytics/clinician/:id', async (c) => {
-  try {
-    const clinicianId = c.req.param('id')
-    
-    const result = await c.env.DB.prepare(`
-      SELECT * FROM vw_clinician_dashboard
-      WHERE clinician_id = ?
-    `).bind(clinicianId).first()
-    
-    if (!result) {
-      return c.json({ success: false, error: 'Clinician not found' }, 404)
-    }
-    
-    // Get detailed patient engagement for this clinician
-    const { results: patients } = await c.env.DB.prepare(`
-      SELECT 
-        pe.*,
-        p.first_name || ' ' || p.last_name as patient_name
-      FROM vw_patient_engagement pe
-      JOIN patients p ON pe.patient_id = p.id
-      JOIN prescriptions pr ON p.id = pr.patient_id
-      WHERE pr.clinician_id = ? AND pr.status = 'active'
-      ORDER BY pe.days_active_7d DESC
-    `).bind(clinicianId).all()
-    
-    return c.json({ 
-      success: true, 
-      summary: result,
-      patients
-    })
-  } catch (error: any) {
-    console.error('Error fetching clinician dashboard:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Get exercise effectiveness metrics
-app.get('/api/analytics/exercises', async (c) => {
-  try {
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM vw_exercise_effectiveness
-      ORDER BY effectiveness_score DESC, total_completions DESC
-    `).all()
-    
-    return c.json({ success: true, exercises: results })
-  } catch (error: any) {
-    console.error('Error fetching exercise effectiveness:', error)
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// ============================================
-// GEMINI AI API ROUTES
-// ============================================
-
-// Generate SOAP note from complaints (Medical Scribe)
-app.post('/api/ai/generate-soap', async (c) => {
-  try {
-    const { complaints, patientInfo } = await c.req.json()
-    
-    const prompt = `You are a licensed physical therapist writing a professional SOAP note.
-
-Patient Information:
-- Age: ${patientInfo.age || 'N/A'}
-- Gender: ${patientInfo.gender || 'N/A'}
-- BMI: ${patientInfo.bmi || 'N/A'}
-
-Patient Complaints (from medical scribe):
-${complaints.map((c: any, i: number) => `${i + 1}. "${c.text}" (${c.timestamp})`).join('\n')}
-
-Generate a professional SUBJECTIVE section for the SOAP note. Include:
-1. Chief complaint summary
-2. Pain characteristics (location, quality, severity if mentioned)
-3. Onset and duration
-4. Aggravating/alleviating factors if mentioned
-5. Patient's functional limitations if mentioned
-
-Write in professional medical terminology. Keep it concise but comprehensive.`
-
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 500
+      <script>
+        let selectedRole = '${role}';
+        
+        function selectRole(role) {
+          selectedRole = role;
+          document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
+          event.target.closest('.role-option').classList.add('selected');
         }
-      })
-    })
-
-    const data = await response.json() as any
-    
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Gemini API error')
-    }
-    
-    const soapText = data.candidates[0].content.parts[0].text
-    
-    return c.json({ success: true, soapNote: soapText })
-  } catch (error: any) {
-    console.error('Gemini SOAP generation error:', error)
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      fallback: true // Signal to use fallback
-    }, 500)
-  }
-})
-
-// Generate HEP recommendations from deficiencies
-app.post('/api/ai/generate-hep', async (c) => {
-  try {
-    const { deficiencies, patientInfo } = await c.req.json()
-    
-    const prompt = `You are a licensed physical therapist creating a home exercise program (HEP).
-
-Patient Information:
-- Age: ${patientInfo.age || 'N/A'}
-- BMI: ${patientInfo.bmi || 'N/A'}
-- Gender: ${patientInfo.gender || 'N/A'}
-
-Assessment Deficiencies Identified:
-${deficiencies.map((d: any, i: number) => `${i + 1}. ${d.area}: ${d.description} (Severity: ${d.severity})`).join('\n')}
-
-Based on these deficiencies, recommend 3-5 therapeutic exercises. For each exercise, provide:
-1. Exercise name (choose from: Bodyweight Squats, Plank Hold, Shoulder Raises, Calf Raises, Hip Bridges, Leg Raises, or similar standard exercises)
-2. Recommended sets (1-5)
-3. Recommended reps (5-20) or duration in seconds for holds
-4. Intensity (Light/Moderate/Heavy)
-5. Speed/tempo (e.g., "Slow and controlled", "2-1-2", "Static hold")
-6. Clinical reasoning (why this exercise addresses the specific deficiency)
-7. Priority level (1=high priority, 2=recommended, 3=optional)
-
-Consider the patient's age and BMI when making recommendations. Start conservative for older/deconditioned patients.
-
-Output ONLY valid JSON in this exact format:
-{
-  "exercises": [
-    {
-      "name": "Exercise Name",
-      "sets": 3,
-      "reps": 10,
-      "intensity": "Moderate",
-      "speed": "Controlled (2-1-2)",
-      "reasoning": "Clinical reasoning here",
-      "priority": 1
-    }
-  ]
-}`
-
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 1000
+        
+        function skipLogin() {
+          // Redirect to appropriate dashboard based on selected role
+          window.location.href = '/' + selectedRole;
         }
-      })
-    })
-
-    const data = await response.json() as any
-    
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Gemini API error')
-    }
-    
-    let jsonText = data.candidates[0].content.parts[0].text
-    
-    // Clean JSON (remove markdown code blocks if present)
-    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    
-    const recommendations = JSON.parse(jsonText)
-    
-    return c.json({ success: true, recommendations })
-  } catch (error: any) {
-    console.error('Gemini HEP generation error:', error)
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      fallback: true
-    }, 500)
-  }
-})
-
-// Analyze MRI report
-app.post('/api/ai/analyze-mri', async (c) => {
-  try {
-    const { reportText } = await c.req.json()
-    
-    const prompt = `You are a radiologist and physical therapist analyzing an MRI report.
-
-MRI Report:
-${reportText}
-
-Analyze this report and provide:
-
-1. KEY FINDINGS: Extract the most important pathological findings with severity (high/moderate/mild/normal)
-
-2. ANATOMY: List all anatomical structures mentioned in the report
-
-3. PATHOLOGY: Identify all pathological conditions with their medical terms
-
-4. DOCTOR EXPLANATION: Write a technical explanation for medical professionals (2-3 sentences)
-
-5. PATIENT EXPLANATION: Write a simple, non-technical explanation a patient can understand (2-3 sentences)
-
-6. CLINICAL IMPLICATIONS: What does this mean for treatment? What should be done next?
-
-7. ICD-10 CODES: Suggest appropriate ICD-10 diagnosis codes with descriptions
-
-Output ONLY valid JSON in this exact format:
-{
-  "keyFindings": [
-    {"finding": "Description", "severity": "high|moderate|mild|normal"}
-  ],
-  "anatomy": ["Structure 1", "Structure 2"],
-  "pathology": [
-    {"term": "Medical term", "description": "Plain English", "severity": "high|moderate|mild"}
-  ],
-  "doctorExplanation": "Technical explanation...",
-  "patientExplanation": "Simple explanation...",
-  "clinicalImplications": [
-    "Implication 1",
-    "Implication 2"
-  ],
-  "icd10Codes": [
-    {"code": "M25.561", "description": "Pain in right knee"}
-  ]
-}`
-
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1500
+        
+        function handleLogin(e) {
+          e.preventDefault();
+          // For demo, just redirect
+          window.location.href = '/' + selectedRole;
+          return false;
         }
-      })
-    })
-
-    const data = await response.json() as any
-    
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Gemini API error')
-    }
-    
-    let jsonText = data.candidates[0].content.parts[0].text
-    
-    // Clean JSON
-    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    
-    const analysis = JSON.parse(jsonText)
-    
-    return c.json({ success: true, analysis })
-  } catch (error: any) {
-    console.error('Gemini MRI analysis error:', error)
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      fallback: true
-    }, 500)
-  }
+      </script>
+    </body>
+    </html>
+  `)
 })
 
-// Smart ICD-10 Suggestions based on SOAP note
-app.post('/api/ai/suggest-icd10', async (c) => {
-  try {
-    const { soapNote, patientInfo } = await c.req.json()
-    
-    const prompt = `You are an expert medical coder analyzing a physical therapy SOAP note to suggest appropriate ICD-10 diagnosis codes.
+// ============================================
+// ADMIN DASHBOARD
+// ============================================
+app.get('/admin', (c) => {
+  const user = DEMO_USERS.admin
+  const { stats, recentActivity, aiServices } = SAMPLE_DATA
+  
+  return c.html(html`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Admin Dashboard - TeleMed AI</title>
+      ${fontAwesome}
+      ${baseStyles}
+    </head>
+    <body>
+      <div class="demo-banner">
+        <i class="fas fa-flask"></i> DEMO MODE - Data resets periodically
+      </div>
+      
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h1><i class="fas fa-heartbeat"></i> TeleMed AI</h1>
+          <small style="opacity: 0.7;">Admin Console</small>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="nav-item active"><i class="fas fa-chart-pie"></i> Dashboard</a>
+          <a class="nav-item" href="/admin/users"><i class="fas fa-users"></i> Users</a>
+          <a class="nav-item" href="/admin/providers"><i class="fas fa-user-md"></i> Providers</a>
+          <a class="nav-item" href="/admin/appointments"><i class="fas fa-calendar-alt"></i> Appointments</a>
+          <a class="nav-item" href="/admin/ai"><i class="fas fa-robot"></i> AI Management</a>
+          <a class="nav-item" href="/admin/analytics"><i class="fas fa-chart-line"></i> Analytics</a>
+          <a class="nav-item" href="/admin/billing"><i class="fas fa-credit-card"></i> Billing</a>
+          <a class="nav-item" href="/admin/audit"><i class="fas fa-file-alt"></i> Audit Logs</a>
+          <a class="nav-item"><i class="fas fa-cog"></i> Settings</a>
+          <a class="nav-item"><i class="fas fa-tools"></i> System</a>
+          <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;"></div>
+          <a class="nav-item" href="/"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+      </div>
+      
+      <div class="main-content" style="margin-top: 32px;">
+        <div class="header">
+          <h2>System Overview</h2>
+          <div class="user-info">
+            <span style="color: #6b7280;">Welcome back,</span>
+            <strong>${user.name}</strong>
+            <div class="user-avatar">${user.avatar}</div>
+          </div>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3><i class="fas fa-user-md" style="color: #3b82f6;"></i> Active Providers</h3>
+            <div class="value">${stats.activeProviders}</div>
+            <div class="change">↑ 2 online now</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-video" style="color: #10b981;"></i> Today's Consultations</h3>
+            <div class="value">${stats.todayConsults}</div>
+            <div class="change">↑ 12% from yesterday</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-brain" style="color: #8b5cf6;"></i> AI Analyses</h3>
+            <div class="value">${stats.aiAnalyses}</div>
+            <div class="change">↑ 23% this week</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-dollar-sign" style="color: #f59e0b;"></i> Revenue Today</h3>
+            <div class="value">$${stats.revenue.toLocaleString()}</div>
+            <div class="change">↑ 8% from avg</div>
+          </div>
+        </div>
+        
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><i class="fas fa-stream"></i> Real-Time Activity</div>
+            <div class="card-body">
+              ${recentActivity.map(activity => html`
+                <div class="activity-item">
+                  <span class="activity-time">${activity.time}</span>
+                  <span class="activity-event">${activity.event}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div>
+            <div class="card">
+              <div class="card-header"><i class="fas fa-server"></i> AI Service Status</div>
+              <div class="card-body">
+                ${aiServices.map(service => html`
+                  <div class="service-item">
+                    <span>${service.name}</span>
+                    <span class="status-badge status-${service.status}">${service.status}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-header"><i class="fas fa-microchip"></i> System Health</div>
+              <div class="card-body">
+                <div style="margin-bottom: 16px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>CPU Usage</span><span>67%</span>
+                  </div>
+                  <div class="progress-bar"><div class="progress-fill" style="width: 67%"></div></div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>Memory</span><span>45%</span>
+                  </div>
+                  <div class="progress-bar"><div class="progress-fill" style="width: 45%"></div></div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>Storage</span><span>32%</span>
+                  </div>
+                  <div class="progress-bar"><div class="progress-fill" style="width: 32%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><i class="fas fa-rocket"></i> AI Upgrade Recommendations</div>
+          <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 12px;">
+                <h4 style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">🔬 Deep Research Agent</h4>
+                <p style="font-size: 13px; opacity: 0.8;">Enable AI-powered medical research for providers</p>
+                <button class="btn" style="background: rgba(255,255,255,0.2); color: white; margin-top: 12px;">Enable</button>
+              </div>
+              <div style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 20px; border-radius: 12px;">
+                <h4 style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">📸 Multi-Model Analysis</h4>
+                <p style="font-size: 13px; opacity: 0.8;">Use multiple AI models for higher accuracy</p>
+                <button class="btn" style="background: rgba(255,255,255,0.2); color: white; margin-top: 12px;">Configure</button>
+              </div>
+              <div style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; padding: 20px; border-radius: 12px;">
+                <h4 style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">📊 Auto Reports</h4>
+                <p style="font-size: 13px; opacity: 0.8;">Generate automated compliance reports</p>
+                <button class="btn" style="background: rgba(255,255,255,0.2); color: white; margin-top: 12px;">Setup</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `)
+})
 
-Patient Information:
-- Age: ${patientInfo?.age || 'N/A'}
-- Gender: ${patientInfo?.gender || 'N/A'}
-- BMI: ${patientInfo?.bmi || 'N/A'}
-
-SOAP Note:
-${soapNote}
-
-Based on this SOAP note, suggest the 3 most appropriate ICD-10 diagnosis codes for billing and documentation purposes.
-
-For each code, provide:
-1. ICD-10 code (e.g., "M54.5")
-2. Full description (e.g., "Low back pain")
-3. Confidence score (0.0 to 1.0, where 1.0 is most confident)
-4. Clinical reasoning (brief explanation of why this code is appropriate)
-5. Billing priority (primary, secondary, or tertiary)
-
-Focus on:
-- Movement dysfunction codes (M codes)
-- Pain codes (M25.5xx series)
-- ROM limitation codes
-- Weakness codes (M62.81)
-- Balance/gait codes (R26.xx series)
-- Age-related codes if applicable (R54)
-
-Output ONLY valid JSON in this exact format (no markdown, no extra text):
-{
-  "suggestions": [
-    {
-      "code": "M54.5",
-      "description": "Low back pain",
-      "confidence": 0.95,
-      "reasoning": "Patient reports chronic low back pain with movement limitations",
-      "priority": "primary"
-    },
-    {
-      "code": "M62.81",
-      "description": "Muscle weakness (generalized)",
-      "confidence": 0.85,
-      "reasoning": "Assessment shows bilateral weakness in hip extensors and core musculature",
-      "priority": "secondary"
-    },
-    {
-      "code": "R26.81",
-      "description": "Unsteadiness on feet",
-      "confidence": 0.75,
-      "reasoning": "Balance testing reveals reduced postural stability",
-      "priority": "tertiary"
-    }
-  ]
-}`
-
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + c.env.GEMINI_API_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.2, // Low temperature for consistent medical coding
-          maxOutputTokens: 800
+// ============================================
+// PROVIDER DASHBOARD
+// ============================================
+app.get('/provider', (c) => {
+  const user = DEMO_USERS.provider
+  const { todaySchedule, aiAlerts, patients } = SAMPLE_DATA
+  
+  return c.html(html`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Provider Dashboard - TeleMed AI</title>
+      ${fontAwesome}
+      ${baseStyles}
+    </head>
+    <body>
+      <div class="demo-banner">
+        <i class="fas fa-flask"></i> DEMO MODE - Data resets periodically
+      </div>
+      
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h1><i class="fas fa-heartbeat"></i> TeleMed AI</h1>
+          <small style="opacity: 0.7;">Provider Console</small>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="nav-item active"><i class="fas fa-chart-pie"></i> Dashboard</a>
+          <a class="nav-item" href="/provider/patients"><i class="fas fa-users"></i> My Patients</a>
+          <a class="nav-item" href="/provider/schedule"><i class="fas fa-calendar-alt"></i> Schedule</a>
+          <a class="nav-item" href="/provider/ai-tools"><i class="fas fa-robot"></i> AI Tools</a>
+          <a class="nav-item" href="/provider/video"><i class="fas fa-video"></i> Video Consult</a>
+          <a class="nav-item" href="/provider/records"><i class="fas fa-file-medical"></i> Records</a>
+          <a class="nav-item" href="/provider/rx"><i class="fas fa-prescription"></i> Rx Pad</a>
+          <a class="nav-item" href="/provider/stats"><i class="fas fa-chart-line"></i> My Stats</a>
+          <a class="nav-item"><i class="fas fa-cog"></i> Settings</a>
+          <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;"></div>
+          <a class="nav-item" href="/"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+      </div>
+      
+      <div class="main-content" style="margin-top: 32px;">
+        <div class="header">
+          <h2>Good Morning, ${user.name.split(' ')[1]}! 👋</h2>
+          <div class="user-info">
+            <span class="status-badge status-online">● Online</span>
+            <strong>${user.name}</strong>
+            <div class="user-avatar">${user.avatar}</div>
+          </div>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3><i class="fas fa-calendar-check" style="color: #3b82f6;"></i> Today's Appointments</h3>
+            <div class="value">8</div>
+            <div class="change">3 completed, 5 remaining</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-brain" style="color: #8b5cf6;"></i> AI Assists Today</h3>
+            <div class="value">12</div>
+            <div class="change">4 image, 8 triage</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-clock" style="color: #10b981;"></i> Avg. Consult Time</h3>
+            <div class="value">22m</div>
+            <div class="change">↓ 3 min from avg</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-star" style="color: #f59e0b;"></i> Patient Rating</h3>
+            <div class="value">4.9</div>
+            <div class="change">Based on 156 reviews</div>
+          </div>
+        </div>
+        
+        <div class="grid-2">
+          <div>
+            <div class="card">
+              <div class="card-header"><i class="fas fa-list-alt"></i> Today's Schedule - Dec 26</div>
+              <div class="card-body">
+                ${todaySchedule.map(apt => html`
+                  <div class="schedule-item">
+                    <span class="schedule-time">${apt.time}</span>
+                    <div class="schedule-patient">
+                      <strong>${apt.patient}</strong>
+                      <div class="schedule-type">${apt.type}</div>
+                    </div>
+                    <span class="schedule-status status-${apt.status} ${apt.urgency === 'urgent' ? 'status-urgent' : ''}">${apt.status}</span>
+                    ${apt.status === 'ready' ? html`<button class="btn btn-success" style="margin-left: 8px; padding: 6px 12px;"><i class="fas fa-video"></i> Start</button>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-header"><i class="fas fa-exclamation-triangle"></i> AI Alerts</div>
+              <div class="card-body">
+                ${aiAlerts.map(alert => html`
+                  <div class="alert-item alert-${alert.severity}">
+                    <span class="alert-icon">${alert.severity === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                    <div>
+                      <strong>${alert.patient}</strong>
+                      <div style="font-size: 13px; color: #6b7280;">${alert.message}</div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="ai-card" style="margin-bottom: 24px;">
+              <h4>🤖 AI PRE-ANALYSIS READY</h4>
+              <div class="title">Next Patient: Jane Smith</div>
+              <span class="ai-confidence">Confidence: 87%</span>
+              <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                <div style="font-size: 14px; margin-bottom: 8px;">Preliminary Assessment:</div>
+                <div style="font-size: 13px; opacity: 0.9;">• Contact Dermatitis (82%)</div>
+                <div style="font-size: 13px; opacity: 0.9;">• Eczema (12%)</div>
+                <div style="font-size: 13px; opacity: 0.9;">• Other (6%)</div>
+              </div>
+              <button class="btn" style="background: rgba(255,255,255,0.2); color: white; width: 100%; justify-content: center;">
+                <i class="fas fa-eye"></i> View Full Analysis
+              </button>
+            </div>
+            
+            <div class="card">
+              <div class="card-header"><i class="fas fa-tools"></i> Quick AI Tools</div>
+              <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                  <button class="btn btn-secondary" onclick="openAITool('image')" style="flex-direction: column; padding: 16px;">
+                    <i class="fas fa-camera" style="font-size: 24px; margin-bottom: 8px;"></i>
+                    Image Analysis
+                  </button>
+                  <button class="btn btn-secondary" onclick="openAITool('symptom')" style="flex-direction: column; padding: 16px;">
+                    <i class="fas fa-stethoscope" style="font-size: 24px; margin-bottom: 8px;"></i>
+                    Symptom Check
+                  </button>
+                  <button class="btn btn-secondary" onclick="openAITool('drug')" style="flex-direction: column; padding: 16px;">
+                    <i class="fas fa-pills" style="font-size: 24px; margin-bottom: 8px;"></i>
+                    Drug Interaction
+                  </button>
+                  <button class="btn btn-secondary" onclick="openAITool('research')" style="flex-direction: column; padding: 16px;">
+                    <i class="fas fa-book-medical" style="font-size: 24px; margin-bottom: 8px;"></i>
+                    Research
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-header"><i class="fas fa-chart-bar"></i> Today's Stats</div>
+              <div class="card-body">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                  <span>Consultations</span><span><strong>3</strong> / 8</span>
+                </div>
+                <div class="progress-bar" style="margin-bottom: 16px;"><div class="progress-fill" style="width: 37.5%"></div></div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div><span style="color: #6b7280;">Revenue</span><br><strong>$225</strong></div>
+                  <div><span style="color: #6b7280;">Avg Duration</span><br><strong>22 min</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI Tool Modal -->
+      <div id="ai-modal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 id="modal-title">AI Tool</h3>
+            <button class="modal-close" onclick="closeModal()">×</button>
+          </div>
+          <div id="modal-content"></div>
+        </div>
+      </div>
+      
+      <script>
+        function openAITool(tool) {
+          const modal = document.getElementById('ai-modal');
+          const title = document.getElementById('modal-title');
+          const content = document.getElementById('modal-content');
+          
+          switch(tool) {
+            case 'image':
+              title.innerHTML = '<i class="fas fa-camera"></i> AI Image Analysis';
+              content.innerHTML = \`
+                <div class="image-upload" onclick="document.getElementById('image-input').click()">
+                  <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;"></i>
+                  <div style="font-size: 16px; color: #374151; margin-bottom: 8px;">Drop medical image here or click to upload</div>
+                  <div style="font-size: 13px; color: #9ca3af;">Supports: JPG, PNG, DICOM (max 10MB)</div>
+                  <input type="file" id="image-input" style="display: none;" accept="image/*">
+                </div>
+                <div style="margin-top: 20px;">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">Analysis Type:</label>
+                  <select style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px;">
+                    <option>General Medical Analysis</option>
+                    <option>Dermatology (Skin Conditions)</option>
+                    <option>Radiology (X-Ray/CT)</option>
+                    <option>Wound Assessment</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 20px; justify-content: center;">
+                  <i class="fas fa-brain"></i> Analyze with AI
+                </button>
+              \`;
+              break;
+            case 'symptom':
+              title.innerHTML = '<i class="fas fa-stethoscope"></i> AI Symptom Checker';
+              content.innerHTML = \`
+                <div class="chat-container">
+                  <div class="chat-messages">
+                    <div class="message ai">
+                      <div class="bubble">Hello! I'm your AI medical assistant. Please describe the patient's symptoms, and I'll help with a preliminary assessment.</div>
+                    </div>
+                  </div>
+                  <div class="chat-input">
+                    <input type="text" placeholder="Describe symptoms..." id="symptom-input">
+                    <button class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
+                  </div>
+                </div>
+              \`;
+              break;
+            case 'drug':
+              title.innerHTML = '<i class="fas fa-pills"></i> Drug Interaction Checker';
+              content.innerHTML = \`
+                <div style="margin-bottom: 16px;">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">Current Medications:</label>
+                  <textarea style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; min-height: 80px;" placeholder="Enter current medications, one per line..."></textarea>
+                </div>
+                <div style="margin-bottom: 16px;">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">New Prescription:</label>
+                  <input type="text" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px;" placeholder="Enter medication to check...">
+                </div>
+                <button class="btn btn-primary" style="width: 100%; justify-content: center;">
+                  <i class="fas fa-search"></i> Check Interactions
+                </button>
+              \`;
+              break;
+            case 'research':
+              title.innerHTML = '<i class="fas fa-book-medical"></i> AI Research Assistant';
+              content.innerHTML = \`
+                <div style="margin-bottom: 16px;">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">Research Query:</label>
+                  <textarea style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; min-height: 100px;" placeholder="E.g., Latest treatment protocols for Type 2 Diabetes with cardiovascular comorbidity..."></textarea>
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                  <button class="btn btn-secondary" style="flex: 1;">Clinical Studies</button>
+                  <button class="btn btn-secondary" style="flex: 1;">Treatment Guidelines</button>
+                  <button class="btn btn-secondary" style="flex: 1;">Case Studies</button>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; justify-content: center;">
+                  <i class="fas fa-search"></i> Deep Research
+                </button>
+              \`;
+              break;
+          }
+          
+          modal.style.display = 'flex';
         }
-      })
-    })
-
-    const data = await response.json() as any
-    
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Gemini API error')
-    }
-    
-    let jsonText = data.candidates[0].content.parts[0].text
-    
-    // Clean JSON (remove markdown code blocks if present)
-    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    
-    const result = JSON.parse(jsonText)
-    
-    return c.json({ success: true, suggestions: result.suggestions })
-  } catch (error: any) {
-    console.error('Gemini ICD-10 suggestion error:', error)
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      fallback: true,
-      suggestions: [] // Return empty array on error
-    }, 500)
-  }
+        
+        function closeModal() {
+          document.getElementById('ai-modal').style.display = 'none';
+        }
+        
+        document.getElementById('ai-modal').addEventListener('click', function(e) {
+          if (e.target === this) closeModal();
+        });
+      </script>
+    </body>
+    </html>
+  `)
 })
 
 // ============================================
-// TRAINER AI HELPER - Patient Q&A Assistant
+// PATIENT PORTAL
 // ============================================
-app.post('/api/gemini-flash', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { messages, temperature = 0.7, max_tokens = 500 } = body
-    
-    if (!messages || !Array.isArray(messages)) {
-      return c.json({ error: 'Invalid messages format' }, 400)
-    }
-    
-    const apiKey = c.env.GEMINI_API_KEY
-    if (!apiKey) {
-      return c.json({ error: 'Gemini API key not configured' }, 500)
-    }
-    
-    // Convert messages to Gemini format
-    const contents = []
-    for (const msg of messages) {
-      if (msg.role === 'system') {
-        // Gemini doesn't have system role, prepend to first user message
-        continue
-      }
-      contents.push({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      })
-    }
-    
-    // Add system message to first user message if exists
-    const systemMsg = messages.find(m => m.role === 'system')
-    if (systemMsg && contents.length > 0 && contents[0].role === 'user') {
-      contents[0].parts[0].text = `${systemMsg.content}\n\n${contents[0].parts[0].text}`
-    }
-    
-    const requestBody = {
-      contents: contents,
-      generationConfig: {
-        temperature: temperature,
-        maxOutputTokens: max_tokens,
-        topP: 0.95,
-        topK: 40
-      }
-    }
-    
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      }
-    )
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Gemini API error:', errorText)
-      return c.json({ 
-        error: 'AI service unavailable',
-        details: errorText 
-      }, response.status)
-    }
-    
-    const data = await response.json()
-    
-    if (!data.candidates || data.candidates.length === 0) {
-      return c.json({ 
-        error: 'No response generated',
-        response: "I'm having trouble generating a response. Please try rephrasing your question."
-      }, 200)
-    }
-    
-    const text = data.candidates[0].content.parts[0].text
-    
-    return c.json({ 
-      success: true,
-      response: text,
-      text: text // Alias for compatibility
-    })
-    
-  } catch (error: any) {
-    console.error('Trainer AI error:', error)
-    return c.json({ 
-      error: 'Internal server error',
-      message: error.message,
-      response: "I'm sorry, I'm having technical difficulties. Please try again in a moment."
-    }, 500)
-  }
+app.get('/patient', (c) => {
+  const user = DEMO_USERS.patient
+  
+  return c.html(html`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Patient Portal - TeleMed AI</title>
+      ${fontAwesome}
+      ${baseStyles}
+    </head>
+    <body>
+      <div class="demo-banner">
+        <i class="fas fa-flask"></i> DEMO MODE - Data resets periodically
+      </div>
+      
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h1><i class="fas fa-heartbeat"></i> TeleMed AI</h1>
+          <small style="opacity: 0.7;">Patient Portal</small>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="nav-item active"><i class="fas fa-home"></i> Dashboard</a>
+          <a class="nav-item"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+          <a class="nav-item"><i class="fas fa-calendar-alt"></i> My Appointments</a>
+          <a class="nav-item"><i class="fas fa-comment-medical"></i> Symptom Checker</a>
+          <a class="nav-item"><i class="fas fa-file-medical"></i> Medical Records</a>
+          <a class="nav-item"><i class="fas fa-prescription"></i> Prescriptions</a>
+          <a class="nav-item"><i class="fas fa-video"></i> Video Consultation</a>
+          <a class="nav-item"><i class="fas fa-user"></i> My Profile</a>
+          <a class="nav-item"><i class="fas fa-cog"></i> Settings</a>
+          <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;"></div>
+          <a class="nav-item" href="/"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+      </div>
+      
+      <div class="main-content" style="margin-top: 32px;">
+        <div class="header">
+          <h2>Welcome back, ${user.name}! 👋</h2>
+          <div class="user-info">
+            <strong>${user.name}</strong>
+            <div class="user-avatar">${user.avatar}</div>
+          </div>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3><i class="fas fa-calendar-check" style="color: #3b82f6;"></i> Next Appointment</h3>
+            <div class="value" style="font-size: 20px;">Tomorrow 10AM</div>
+            <div class="change">Dr. Sarah Smith</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-file-medical" style="color: #10b981;"></i> Medical Records</h3>
+            <div class="value">12</div>
+            <div class="change">Last updated Dec 20</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-prescription" style="color: #8b5cf6;"></i> Active Prescriptions</h3>
+            <div class="value">3</div>
+            <div class="change">1 refill needed</div>
+          </div>
+          <div class="stat-card">
+            <h3><i class="fas fa-heart" style="color: #ef4444;"></i> Health Score</h3>
+            <div class="value">85</div>
+            <div class="change">↑ 5 from last month</div>
+          </div>
+        </div>
+        
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><i class="fas fa-calendar"></i> Upcoming Appointments</div>
+            <div class="card-body">
+              <div class="schedule-item" style="background: #eff6ff;">
+                <span class="schedule-time">Tomorrow<br>10:00 AM</span>
+                <div class="schedule-patient">
+                  <strong>Dr. Sarah Smith</strong>
+                  <div class="schedule-type">Annual checkup & blood pressure follow-up</div>
+                </div>
+                <button class="btn btn-primary" style="padding: 6px 12px;"><i class="fas fa-video"></i> Join</button>
+              </div>
+              <div class="schedule-item">
+                <span class="schedule-time">Dec 30<br>2:00 PM</span>
+                <div class="schedule-patient">
+                  <strong>Dr. Michael Johnson</strong>
+                  <div class="schedule-type">Dermatology follow-up</div>
+                </div>
+                <button class="btn btn-secondary" style="padding: 6px 12px;">Reschedule</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header"><i class="fas fa-robot"></i> AI Health Assistant</div>
+            <div class="card-body">
+              <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 12px; margin-bottom: 16px;">
+                <h4 style="margin-bottom: 8px;">🤖 Quick Symptom Check</h4>
+                <p style="font-size: 14px; opacity: 0.9; margin-bottom: 12px;">Describe your symptoms and get AI-powered guidance on next steps.</p>
+                <button class="btn" style="background: rgba(255,255,255,0.2); color: white;">
+                  <i class="fas fa-comment-medical"></i> Start Chat
+                </button>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                <button class="btn btn-secondary" style="flex-direction: column; padding: 16px;">
+                  <i class="fas fa-camera" style="font-size: 20px; margin-bottom: 4px;"></i>
+                  Scan Skin Issue
+                </button>
+                <button class="btn btn-secondary" style="flex-direction: column; padding: 16px;">
+                  <i class="fas fa-heart" style="font-size: 20px; margin-bottom: 4px;"></i>
+                  Check Vitals
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><i class="fas fa-notes-medical"></i> Recent Health Summary</div>
+          <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+              <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 12px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">💉</div>
+                <div style="font-weight: 600;">Blood Pressure</div>
+                <div style="font-size: 24px; color: #10b981; font-weight: 700;">128/82</div>
+                <div style="font-size: 12px; color: #6b7280;">Slightly elevated</div>
+              </div>
+              <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 12px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">🩸</div>
+                <div style="font-weight: 600;">Blood Sugar</div>
+                <div style="font-size: 24px; color: #10b981; font-weight: 700;">95 mg/dL</div>
+                <div style="font-size: 12px; color: #6b7280;">Normal range</div>
+              </div>
+              <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 12px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">⚖️</div>
+                <div style="font-weight: 600;">Weight</div>
+                <div style="font-size: 24px; color: #3b82f6; font-weight: 700;">172 lbs</div>
+                <div style="font-size: 12px; color: #6b7280;">BMI: 24.1 (Normal)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `)
 })
 
 // ============================================
-// DEVICE DATA INGESTION & ANALYSIS API
+// API ENDPOINTS
 // ============================================
-
-/**
- * POST /api/ingest-device-data
- * Accepts device data (Kinetisense, Vicon, etc.), analyzes it, and returns complete assessment
- */
-app.post('/api/ingest-device-data', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { normalizedData, patientInfo } = body
-    
-    if (!normalizedData || !normalizedData.frames || normalizedData.frames.length === 0) {
-      return c.json({ 
-        success: false, 
-        error: 'Invalid data format. Expected normalizedData with frames array' 
-      }, 400)
-    }
-    
-    // This endpoint expects data already normalized by the frontend DeviceDataParser
-    // It performs biomechanical analysis and generates assessment
-    
-    // Return the analyzed data structure
-    // Note: Actual analysis is done client-side by BiomechanicalAnalyzer for performance
-    // This endpoint can be used for server-side processing if needed
-    
-    return c.json({ 
-      success: true,
-      message: 'Data received. Perform analysis client-side using BiomechanicalAnalyzer',
-      dataPoints: normalizedData.frames.length,
-      recommendation: 'Use BiomechanicalAnalyzer.analyze(normalizedData, patientInfo) on client'
-    })
-    
-  } catch (error: any) {
-    console.error('Device data ingestion error:', error)
-    return c.json({ 
-      success: false,
-      error: 'Failed to process device data',
-      message: error.message 
-    }, 500)
-  }
+app.get('/api/health', (c) => {
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-/**
- * POST /api/generate-assessment-from-analysis
- * Generates SOAP note, HEP, and predictions from biomechanical analysis using Gemini AI
- */
-app.post('/api/generate-assessment-from-analysis', async (c) => {
-  try {
-    const apiKey = c.env.GEMINI_API_KEY
-    if (!apiKey) {
-      return c.json({ error: 'Gemini API key not configured' }, 500)
+app.get('/api/demo-users', (c) => {
+  return c.json(DEMO_USERS)
+})
+
+app.get('/api/stats', (c) => {
+  return c.json(SAMPLE_DATA.stats)
+})
+
+app.get('/api/schedule', (c) => {
+  return c.json(SAMPLE_DATA.todaySchedule)
+})
+
+app.get('/api/patients', (c) => {
+  return c.json(SAMPLE_DATA.patients)
+})
+
+app.get('/api/ai-services', (c) => {
+  return c.json(SAMPLE_DATA.aiServices)
+})
+
+// AI Analysis endpoint (placeholder)
+app.post('/api/ai/analyze-image', async (c) => {
+  return c.json({
+    success: true,
+    analysis: {
+      condition: 'Contact Dermatitis',
+      confidence: 0.87,
+      differential: ['Eczema', 'Psoriasis', 'Allergic Reaction'],
+      recommendations: [
+        'Apply topical corticosteroid',
+        'Avoid irritants',
+        'Consider patch testing if symptoms persist'
+      ]
     }
-    
-    const body = await c.req.json()
-    const { analysis, patientInfo } = body
-    
-    if (!analysis || !analysis.riskScore) {
-      return c.json({ 
-        success: false, 
-        error: 'Invalid analysis format. Expected analysis object with riskScore' 
-      }, 400)
+  })
+})
+
+app.post('/api/ai/symptom-triage', async (c) => {
+  const body = await c.req.json()
+  return c.json({
+    success: true,
+    triage: {
+      urgencyScore: 3,
+      category: 'routine',
+      possibleConditions: ['Tension Headache', 'Stress-related', 'Dehydration'],
+      recommendedAction: 'Schedule routine consultation within 48 hours',
+      redFlags: false
     }
-    
-    // Generate SOAP Note from analysis
-    const soapPrompt = `You are a licensed physical therapist. Based on the following biomechanical analysis data, generate a comprehensive SOAP note.
-
-Patient Information:
-- Name: ${patientInfo.name || 'Unknown'}
-- Age: ${patientInfo.age || 'Unknown'}
-- Gender: ${patientInfo.gender || 'Unknown'}
-
-Analysis Results:
-- Overall Risk Score: ${analysis.riskScore}/100
-- ROM Analysis: ${JSON.stringify(analysis.romAnalysis, null, 2)}
-- Functional Movement: ${JSON.stringify(analysis.functionalMovement, null, 2)}
-- Balance Assessment: ${JSON.stringify(analysis.balanceAssessment, null, 2)}
-- Movement Quality: ${JSON.stringify(analysis.movementQuality, null, 2)}
-- Identified Deficiencies: ${JSON.stringify(analysis.deficiencies, null, 2)}
-
-Generate a professional SOAP note with these sections:
-1. Subjective (S): Patient's reported symptoms and functional limitations
-2. Objective (O): Detailed observations, ROM measurements, strength testing, special tests, functional assessment
-3. Assessment (A): Primary diagnosis, contributing factors, prognosis
-4. Plan (P): Treatment frequency, interventions, short-term and long-term goals
-
-Format as JSON with keys: subjective, objective, assessment, plan`
-
-    const soapResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: soapPrompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
-        })
-      }
-    )
-    
-    const soapData = await soapResponse.json()
-    const soapText = soapData.candidates[0].content.parts[0].text
-    
-    // Parse SOAP note (try to extract JSON, fallback to text)
-    let soapNote
-    try {
-      const jsonMatch = soapText.match(/\{[\s\S]*\}/)
-      soapNote = jsonMatch ? JSON.parse(jsonMatch[0]) : { text: soapText }
-    } catch {
-      soapNote = { text: soapText }
-    }
-    
-    // Generate Home Exercise Program
-    const hepPrompt = `Based on the following movement deficiencies, create a Home Exercise Program (HEP).
-
-Deficiencies:
-${analysis.deficiencies.map((d: any) => `- ${d.type}: ${d.joint} (${d.severity})`).join('\n')}
-
-Create 4-6 exercises targeting these deficiencies. For each exercise provide:
-- Exercise name
-- Sets and reps
-- Frequency (daily, 3x/week, etc.)
-- Instructions (brief, clear)
-- Focus area
-
-Format as JSON array of exercises with keys: exercise, sets, reps, frequency, instructions, focus`
-
-    const hepResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: hepPrompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1500 }
-        })
-      }
-    )
-    
-    const hepData = await hepResponse.json()
-    const hepText = hepData.candidates[0].content.parts[0].text
-    
-    // Parse HEP (try to extract JSON array)
-    let hep
-    try {
-      const jsonMatch = hepText.match(/\[[\s\S]*\]/)
-      hep = jsonMatch ? JSON.parse(jsonMatch[0]) : []
-    } catch {
-      hep = []
-    }
-    
-    return c.json({ 
-      success: true,
-      soapNote,
-      homeExerciseProgram: hep,
-      deficiencies: analysis.deficiencies,
-      injuryPredictions: analysis.injuryPredictions,
-      recommendations: analysis.recommendations,
-      riskScore: analysis.riskScore
-    })
-    
-  } catch (error: any) {
-    console.error('Assessment generation error:', error)
-    return c.json({ 
-      success: false,
-      error: 'Failed to generate assessment',
-      message: error.message 
-    }, 500)
-  }
+  })
 })
 
 export default app
