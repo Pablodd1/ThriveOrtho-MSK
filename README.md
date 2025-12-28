@@ -1,70 +1,110 @@
-# Thrive Ortho MSK - AI-Powered Musculoskeletal Assessment Platform
+# Thrive Ortho EHR - AI-Powered MSK Assessment Platform
 
 ## Live Demo
 
 **URL**: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 
-### Quick Access (Skip Login - Demo Mode)
+### Skip Login - Demo Mode (4 Roles)
 
-| Portal | URL | Description |
-|--------|-----|-------------|
-| **Home** | `/` | Landing page |
-| **Login** | `/login` | Role selector (skip login available) |
-| **Provider Dashboard** | `/provider` | PT/Chiropractic clinical dashboard |
-| **MSK Assessment** | `/provider/assessment` | Interactive body map with AI analysis |
-| **Exercise Library** | `/provider/exercises` | Evidence-based exercise prescription |
-| **Video Consultation** | `/provider/video` | HIPAA-compliant video sessions |
-| **EHR Integration** | `/provider/ehr` | Epic, WebPT, Jane App connections |
-| **Admin Dashboard** | `/admin` | System management & analytics |
-| **Patient Portal** | `/patient` | Exercise tracking & progress |
+| Role | URL | Description |
+|------|-----|-------------|
+| **Patient** | `/patient` | Complete intake, view exercises, track progress |
+| **Doctor** | `/doctor` | Clinical evaluation, FMS assessment, medical notes |
+| **Coach** | `/coach` | Movement specialist, training programs |
+| **Administrator** | `/admin` | System management, user management |
+
+### Key Pages
+
+| Page | URL | Description |
+|------|-----|-------------|
+| **Login** | `/login` | Role selector with skip login buttons |
+| **Voice Intake** | `/doctor/intake` | AI-powered voice medical history |
+| **FMS Assessment** | `/doctor/assessment` | 10-movement screen with AI analysis |
+| **Medical Notes** | `/doctor/notes` | AI-generated comprehensive notes |
 
 ---
 
 ## Project Overview
 
-- **Name**: Thrive Ortho MSK
-- **Goal**: AI-powered musculoskeletal assessment platform for Physical Therapy and Chiropractic care
-- **Status**: MVP Running
-- **Design**: Professional glass morphism with medical-grade color palette
+- **Name**: Thrive Ortho EHR
+- **Goal**: Comprehensive EHR platform with AI-powered MSK assessment
+- **Reference**: KinetiSense-style visual movement analysis
+- **Validation**: FMS (Functional Movement Systems) + AMA Guidelines
 
-## Key Features
+## Core Features
 
-### Professional Glass Morphism UI
-- Minimalist, clean design with medical-appropriate colors
-- Inter + Plus Jakarta Sans typography
-- Calming blue-green medical palette
-- Frosted glass card effects with subtle shadows
-- Desktop-optimized layout
+### 1. Skip Login Demonstration
+- **4 User Roles**: Patient, Doctor, Coach, Administrator
+- **One-Click Access**: Skip login buttons for instant demo
+- **Role-Based Dashboards**: Tailored UI for each user type
 
-### Interactive MSK Assessment
-- **15 Body Regions**: Cervical, Thoracic, Lumbar spine, Shoulders, Elbows, Wrists, Hips, Knees, Ankles
-- **Pain Scale**: Visual 1-10 pain level selector with color coding
-- **AI Analysis**: Automated findings, risk assessment, and recommendations
-- **Real-time Updates**: Dynamic UI updates as regions are selected
+### 2. Voice-Powered Medical Intake
+- **Microphone Integration**: Web Speech API for voice recording
+- **8 Intake Categories**: Demographics, Chief Complaint, Pain Assessment, Location, Aggravating Factors, Medical History, Medications, Functional Impact
+- **Real-Time Transcription**: Live text display as patient speaks
+- **Progress Tracking**: Visual step-by-step intake process
 
-### Exercise Library
-- **10+ Evidence-Based Exercises**: McKenzie Extension, Cat-Cow, Pendulum, Dead Bug, etc.
-- **Video Demonstrations**: Ready for video integration
-- **Difficulty Levels**: Beginner, Intermediate, Advanced
-- **Prescription System**: Easy exercise assignment to patients
+### 3. FMS 7-Movement Screen (Validated)
+| # | Movement | Purpose |
+|---|----------|---------|
+| 1 | **Deep Squat** | Hip/knee/ankle mobility, core stability |
+| 2 | **Hurdle Step** | Stride mechanics, single-leg stability |
+| 3 | **Inline Lunge** | Deceleration, directional change |
+| 4 | **Shoulder Mobility** | Scapular mobility, thoracic extension |
+| 5 | **Active Straight Leg Raise** | Hamstring flexibility, pelvic stability |
+| 6 | **Trunk Stability Push-Up** | Core stability in sagittal plane |
+| 7 | **Rotary Stability** | Multi-plane trunk stability |
 
-### EHR Integration
-- **Epic MyChart**: Patient records & appointments
-- **WebPT**: PT documentation
-- **Jane App**: Scheduling & billing
-- **Bi-directional Sync**: Real-time data synchronization
+### 4. AMA ROM Assessment (3 Additional)
+| # | Movement | Purpose |
+|---|----------|---------|
+| 8 | **Cervical ROM** | Neck flexion, extension, rotation |
+| 9 | **Lumbar ROM** | Lower back mobility |
+| 10 | **Gait Analysis** | Walking pattern, symmetry |
 
-### AI Capabilities
-- **MSK Analysis Engine**: Pattern recognition for musculoskeletal conditions
-- **Risk Scoring**: AI-generated risk assessment (0-100)
-- **Treatment Recommendations**: Protocol and exercise suggestions
-- **Progress Tracking**: Automated patient progress analysis
+### 5. AI-Powered Medical Note Generation
+- **Comprehensive Documentation**: SOAP-style notes
+- **FMS Results Integration**: Scores with interpretation
+- **AMA ROM Data**: Range of motion measurements
+- **ICD-10 Coding**: Suggested diagnosis codes
+- **Exercise Prescription**: Tailored corrective exercises
+- **Risk Assessment**: Injury risk based on FMS score
 
-### Video Consultation
-- **HIPAA Compliant**: Ready for Daily.co integration
-- **Waiting Room**: Patient queue management
-- **Session Tools**: Body map, exercises, records access during calls
-- **Recording**: Optional session recording (when enabled)
+### 6. KinetiSense-Style Visual Analysis
+- **Video Feed Interface**: Camera placeholder for AI analysis
+- **Real-Time Scoring**: 0-3 scale per movement
+- **Movement Compensation Detection**: AI identifies dysfunctions
+- **Total Score Tracking**: FMS score out of 21
+- **Risk Stratification**: High (≤11), Moderate (12-14), Low (≥15)
+
+---
+
+## EHR Dashboard Features
+
+### Patient Dashboard
+- Next appointment display
+- Exercise completion tracking
+- FMS score history
+- Recovery progress metrics
+- Care team information
+
+### Doctor Dashboard
+- Patient queue with FMS scores
+- Quick action buttons (Intake, Assessment, Notes)
+- AI insights and priority alerts
+- Appointment schedule
+
+### Coach Dashboard
+- Client list with programs
+- FMS score tracking
+- Progress monitoring
+- Exercise assignment tools
+
+### Admin Dashboard
+- User management (CRUD)
+- System status monitoring
+- Analytics overview
+- Audit logs access
 
 ---
 
@@ -74,12 +114,12 @@
 |----------|------------|
 | **Backend** | Hono Framework |
 | **Runtime** | Cloudflare Workers |
-| **Frontend** | HTML/CSS/JS (Vanilla) |
-| **Styling** | Custom Glass Morphism CSS |
+| **Frontend** | Vanilla HTML/CSS/JS |
+| **Styling** | Custom CSS (Medical Teal theme) |
 | **Typography** | Inter + Plus Jakarta Sans |
-| **Icons** | Font Awesome 6 |
+| **Icons** | Font Awesome 6.5 |
+| **Voice** | Web Speech API |
 | **Build** | Vite |
-| **Deploy** | Cloudflare Pages |
 
 ---
 
@@ -88,38 +128,20 @@
 ### Color Palette
 
 ```css
-/* Primary - Calming Medical Blue */
---primary-500: #0ea5e9;
---primary-600: #0284c7;
+/* Primary - Medical Teal */
+--primary-500: #14b8a6;
+--primary-600: #0d9488;
 
-/* Accent - Healing Green */
---accent-500: #22c55e;
---accent-600: #16a34a;
-
-/* Warm - Wellness */
---warm-500: #f59e0b;
-
-/* Neutral - Professional Slate */
---slate-800: #1e293b;
---slate-500: #64748b;
+/* Role Colors */
+--role-patient: #8b5cf6;  /* Purple */
+--role-doctor: #0ea5e9;   /* Blue */
+--role-coach: #22c55e;    /* Green */
+--role-admin: #f59e0b;    /* Amber */
 ```
 
 ### Typography
-
-- **Display**: Plus Jakarta Sans (headings, brand)
-- **Body**: Inter (content, UI elements)
-
-### Glass Morphism
-
-```css
-.glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-```
+- **Display**: Plus Jakarta Sans (700-800)
+- **Body**: Inter (400-600)
 
 ---
 
@@ -128,34 +150,49 @@
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
-| GET | `/api/demo-users` | Demo user profiles |
-| GET | `/api/body-regions` | Body map regions |
-| GET | `/api/exercises` | Exercise library |
-| GET | `/api/protocols` | Assessment protocols |
+| GET | `/api/users` | Demo user profiles |
+| GET | `/api/movements` | All 10 movements |
+| GET | `/api/fms` | FMS 7 movements only |
+| GET | `/api/intake-questions` | Voice intake questions |
 | GET | `/api/patients` | Patient records |
-| POST | `/api/ai/msk-analysis` | AI MSK analysis |
-| POST | `/api/video/create-room` | Create video room |
+| POST | `/api/ai/generate-note` | Generate medical note |
 
 ---
 
 ## Data Models
 
-### Body Regions
-- 15 anatomical regions with x/y coordinates for body map
-- Region categories: Upper Extremity, Lower Extremity, Spine
+### FMS Movement
+```typescript
+{
+  id: string;
+  name: string;
+  description: string;
+  purpose: string;
+  instructions: string[];
+  scoring: { 0: string, 1: string, 2: string, 3: string };
+  compensations: string[];
+  targetAreas: string[];
+  videoUrl: string;
+  duration: number;
+}
+```
 
-### Exercise Library
-- ID, name, target region, difficulty, duration, reps
-- Video availability flag
-
-### Patient Records
-- Patient info, chief complaint, pain level
-- AI risk score, treatment status
-- Appointment history
-
-### Assessment Protocols
-- Protocol name, target region, duration
-- AI-assisted flag
+### Patient Record
+```typescript
+{
+  id: string;
+  patientName: string;
+  age: number;
+  gender: string;
+  chiefComplaint: string;
+  icd10: string[];
+  painLevel: number;
+  fmsScore: number;
+  status: 'active' | 'urgent' | 'completed';
+  assignedDoctor: string;
+  assignedCoach: string;
+}
+```
 
 ---
 
@@ -164,12 +201,11 @@
 ```
 webapp/
 ├── src/
-│   └── index.tsx          # Main Hono application (90KB)
+│   └── index.tsx          # Main application (104KB)
 ├── migrations/
-│   └── 0001_initial_schema.sql  # Database schema
+│   └── 0001_initial_schema.sql
 ├── dist/                  # Build output
 ├── ARCHITECTURE.md        # System architecture
-├── UPGRADES.md           # AI upgrade recommendations
 ├── README.md             # This file
 ├── package.json
 ├── vite.config.ts
@@ -191,81 +227,65 @@ npm run build
 # Start with PM2
 pm2 start ecosystem.config.cjs
 
-# Or run directly
+# Or direct
 npm run dev:sandbox
 ```
 
 ---
 
-## Demo Users
+## Workflow
 
-| Role | Name | Email |
-|------|------|-------|
-| Admin | Dr. Sarah Mitchell | admin@thriveortho.ai |
-| Provider | Dr. Fabian Rodriguez | dr.fabian@thriveortho.ai |
-| Patient | Michael Chen | michael@patient.com |
+### Standard Patient Flow
+1. **Login** → Select role or skip login
+2. **Voice Intake** → Answer medical history questions
+3. **FMS Assessment** → Complete 10-movement screen
+4. **AI Analysis** → Review movement dysfunctions
+5. **Medical Note** → Generate comprehensive documentation
+6. **Exercise Prescription** → Assign corrective exercises
 
----
+### Scoring Guide
+| Score | Meaning |
+|-------|---------|
+| **3** | Perfect movement pattern |
+| **2** | Compensation observed |
+| **1** | Unable to complete movement |
+| **0** | Pain during movement |
 
-## AI Integration Points
-
-### Current (Demo Mode)
-- Simulated MSK analysis responses
-- Pattern-based recommendations
-- Risk scoring algorithms
-
-### Ready for Integration
-- **OpenAI GPT-4o Vision**: Medical image analysis
-- **Google MedGemma**: Clinical decision support
-- **Legit.Health**: Dermatology imaging (skin conditions)
-- **Shen.ai/Binah.ai**: Video-based vital signs
-
----
-
-## HIPAA Compliance Features
-
-- TLS 1.3 encryption in transit
-- Field-level encryption for PII (ready)
-- Comprehensive audit logging (schema ready)
-- Role-based access control
-- Session timeout management
-- BAA-ready architecture
+### Risk Stratification
+| FMS Score | Risk Level | Action |
+|-----------|------------|--------|
+| ≤ 11 | HIGH | Immediate intervention |
+| 12-14 | MODERATE | Corrective exercise program |
+| ≥ 15 | LOW | Maintenance program |
 
 ---
 
-## Deployment
+## References
 
-### Current: Sandbox
-- URL: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
-
-### Production: Cloudflare Pages (Pending)
-- Requires Cloudflare API key configuration
-- Project name: sobeairehab-telemed
-- D1 Database: Ready for setup
+- **FMS**: Functional Movement Systems - [functionalmovement.com](https://www.functionalmovement.com)
+- **KinetiSense**: 3D Motion Capture - [kinetisense.com](https://www.kinetisense.com)
+- **AMA Guides**: 6th Edition MSK Assessment Guidelines
 
 ---
 
 ## Next Steps
 
 ### Immediate
-- [ ] Configure Cloudflare API key for production deployment
-- [ ] Create D1 database for persistent storage
+- [ ] Deploy to Cloudflare Pages
 - [ ] Connect real OpenAI API for AI analysis
-- [ ] Integrate Daily.co for video consultations
+- [ ] Add exercise video library
 
 ### Short-term
-- [ ] Patient intake forms
-- [ ] Progress note generation
-- [ ] Exercise video library
-- [ ] Mobile-responsive optimization
+- [ ] Real-time pose estimation (TensorFlow.js)
+- [ ] PDF export for medical notes
+- [ ] Patient scheduling system
 
 ### Long-term
-- [ ] EHR OAuth integration
+- [ ] Mobile app (React Native)
+- [ ] EHR integrations (Epic, Cerner)
 - [ ] Insurance verification
-- [ ] Billing system
-- [ ] Mobile apps
 
 ---
 
-*Version: 2.0.0 - Thrive Ortho MSK*  
+*Version: 2.0.0 - Thrive Ortho EHR*  
 *Last Updated: December 2025*
