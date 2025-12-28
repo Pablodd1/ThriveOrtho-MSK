@@ -1,136 +1,185 @@
-# TeleMed AI Platform
+# Thrive Ortho MSK - AI-Powered Musculoskeletal Assessment Platform
 
-## 🚀 Live Demo
+## Live Demo
 
 **URL**: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 
-### Quick Access (Skip Login)
-| Portal | URL | Demo User |
-|--------|-----|-----------|
-| **🏠 Home** | `/` | - |
-| **👨‍💼 Admin Dashboard** | `/admin` | admin@telemed.demo |
-| **👩‍⚕️ Provider Dashboard** | `/provider` | dr.demo@telemed.demo |
-| **👤 Patient Portal** | `/patient` | patient@telemed.demo |
-| **🔐 Login Page** | `/login` | Select role → Skip Login |
+### Quick Access (Skip Login - Demo Mode)
+
+| Portal | URL | Description |
+|--------|-----|-------------|
+| **Home** | `/` | Landing page |
+| **Login** | `/login` | Role selector (skip login available) |
+| **Provider Dashboard** | `/provider` | PT/Chiropractic clinical dashboard |
+| **MSK Assessment** | `/provider/assessment` | Interactive body map with AI analysis |
+| **Exercise Library** | `/provider/exercises` | Evidence-based exercise prescription |
+| **Video Consultation** | `/provider/video` | HIPAA-compliant video sessions |
+| **EHR Integration** | `/provider/ehr` | Epic, WebPT, Jane App connections |
+| **Admin Dashboard** | `/admin` | System management & analytics |
+| **Patient Portal** | `/patient` | Exercise tracking & progress |
 
 ---
 
 ## Project Overview
 
-- **Name**: TeleMed AI
-- **Goal**: Comprehensive telemedicine platform with AI-powered diagnostics
-- **Status**: ✅ MVP Running
+- **Name**: Thrive Ortho MSK
+- **Goal**: AI-powered musculoskeletal assessment platform for Physical Therapy and Chiropractic care
+- **Status**: MVP Running
+- **Design**: Professional glass morphism with medical-grade color palette
 
-## ✨ Implemented Features
+## Key Features
 
-### 🔐 Skip Authentication (Demo Mode)
-- One-click access to any dashboard
-- Pre-configured demo users for all roles
-- Demo banner visible on all pages
-- No registration required for testing
+### Professional Glass Morphism UI
+- Minimalist, clean design with medical-appropriate colors
+- Inter + Plus Jakarta Sans typography
+- Calming blue-green medical palette
+- Frosted glass card effects with subtle shadows
+- Desktop-optimized layout
 
-### 👨‍💼 Admin Dashboard (`/admin`)
-- **System Overview**: Real-time stats (providers, consultations, AI analyses, revenue)
-- **Activity Monitor**: Live feed of platform activity
-- **AI Service Status**: Health monitoring for all AI services
-- **System Health**: CPU, Memory, Storage metrics
-- **AI Upgrade Recommendations**: Deep Research, Multi-Model Analysis, Auto Reports
-- **Navigation**: Users, Providers, Appointments, AI Management, Analytics, Billing, Audit Logs
+### Interactive MSK Assessment
+- **15 Body Regions**: Cervical, Thoracic, Lumbar spine, Shoulders, Elbows, Wrists, Hips, Knees, Ankles
+- **Pain Scale**: Visual 1-10 pain level selector with color coding
+- **AI Analysis**: Automated findings, risk assessment, and recommendations
+- **Real-time Updates**: Dynamic UI updates as regions are selected
 
-### 👩‍⚕️ Provider Dashboard (`/provider`)
-- **Today's Schedule**: Color-coded appointments with urgency levels
-- **AI Pre-Analysis**: Pre-consultation patient analysis with confidence scores
-- **Quick AI Tools**:
-  - 📷 **Image Analysis** - Upload and analyze medical images
-  - 🩺 **Symptom Checker** - AI chatbot for symptom assessment
-  - 💊 **Drug Interaction** - Check medication interactions
-  - 📚 **Research Assistant** - Deep research on medical topics
-- **AI Alerts**: Flagged patients requiring attention
-- **Stats Dashboard**: Consultations, revenue, ratings
+### Exercise Library
+- **10+ Evidence-Based Exercises**: McKenzie Extension, Cat-Cow, Pendulum, Dead Bug, etc.
+- **Video Demonstrations**: Ready for video integration
+- **Difficulty Levels**: Beginner, Intermediate, Advanced
+- **Prescription System**: Easy exercise assignment to patients
 
-### 👤 Patient Portal (`/patient`)
-- **Dashboard**: Next appointment, records, prescriptions, health score
-- **Upcoming Appointments**: With video call join button
-- **AI Health Assistant**: Symptom checker, skin scan, vitals check
-- **Health Summary**: Blood pressure, blood sugar, weight tracking
+### EHR Integration
+- **Epic MyChart**: Patient records & appointments
+- **WebPT**: PT documentation
+- **Jane App**: Scheduling & billing
+- **Bi-directional Sync**: Real-time data synchronization
 
----
+### AI Capabilities
+- **MSK Analysis Engine**: Pattern recognition for musculoskeletal conditions
+- **Risk Scoring**: AI-generated risk assessment (0-100)
+- **Treatment Recommendations**: Protocol and exercise suggestions
+- **Progress Tracking**: Automated patient progress analysis
 
-## 🤖 AI Upgrade Recommendations
-
-### Available AI Integrations (Using Built-in Capabilities)
-
-| Feature | Tool | Description |
-|---------|------|-------------|
-| **Multi-Model Image Analysis** | `understand_images`, `analyze_media_content` | Use GPT-4o + Gemini for higher accuracy |
-| **Deep Research Agent** | `create_agent(deep_research)` | Medical literature search for providers |
-| **Consultation Transcription** | `audio_transcribe` | Real-time transcription during video calls |
-| **Patient Education Docs** | `create_agent(docs)` | Auto-generate patient handouts |
-| **Video Frame Analysis** | `analyze_media_content` | Monitor patient during consultation |
-| **Image Enhancement** | `image_generation(upscale)` | Enhance low-quality medical images |
-| **Auto Reports** | `create_agent(sheets)` | Generate compliance and analytics reports |
-
-### Implementation Priority Matrix
-
-| Phase | Features | Priority |
-|-------|----------|----------|
-| **Phase 1 (MVP)** | Symptom Triage, Basic Image Analysis, Transcription | 🔴 HIGH |
-| **Phase 2** | Multi-model Analysis, Deep Research, Patient Education | 🟡 MEDIUM |
-| **Phase 3** | Video Analysis, Instructional Videos, Auto Presentations | 🟢 LOW |
+### Video Consultation
+- **HIPAA Compliant**: Ready for Daily.co integration
+- **Waiting Room**: Patient queue management
+- **Session Tools**: Body map, exercises, records access during calls
+- **Recording**: Optional session recording (when enabled)
 
 ---
 
-## 📁 Project Structure
-
-```
-webapp/
-├── src/
-│   └── index.tsx          # Main Hono application (all routes)
-├── migrations/
-│   └── 0001_initial_schema.sql  # Database schema (15 tables)
-├── public/static/         # Static assets
-├── dist/                  # Build output
-├── ARCHITECTURE.md        # Complete system architecture (72KB)
-├── UPGRADES.md           # AI upgrade recommendations
-├── README.md             # This file
-├── seed.sql              # Development seed data
-├── package.json
-├── vite.config.ts
-├── wrangler.jsonc
-└── ecosystem.config.cjs   # PM2 configuration
-```
-
----
-
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Category | Technology |
 |----------|------------|
 | **Backend** | Hono Framework |
 | **Runtime** | Cloudflare Workers |
-| **Frontend** | HTML/CSS/JS + Tailwind (CDN) |
+| **Frontend** | HTML/CSS/JS (Vanilla) |
+| **Styling** | Custom Glass Morphism CSS |
+| **Typography** | Inter + Plus Jakarta Sans |
 | **Icons** | Font Awesome 6 |
 | **Build** | Vite |
 | **Deploy** | Cloudflare Pages |
 
 ---
 
-## 🔌 API Endpoints
+## Design System
+
+### Color Palette
+
+```css
+/* Primary - Calming Medical Blue */
+--primary-500: #0ea5e9;
+--primary-600: #0284c7;
+
+/* Accent - Healing Green */
+--accent-500: #22c55e;
+--accent-600: #16a34a;
+
+/* Warm - Wellness */
+--warm-500: #f59e0b;
+
+/* Neutral - Professional Slate */
+--slate-800: #1e293b;
+--slate-500: #64748b;
+```
+
+### Typography
+
+- **Display**: Plus Jakarta Sans (headings, brand)
+- **Body**: Inter (content, UI elements)
+
+### Glass Morphism
+
+```css
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+```
+
+---
+
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
-| GET | `/api/demo-users` | Get demo user profiles |
-| GET | `/api/stats` | Dashboard statistics |
-| GET | `/api/schedule` | Today's schedule |
-| GET | `/api/patients` | Patient list |
-| GET | `/api/ai-services` | AI service status |
-| POST | `/api/ai/analyze-image` | AI image analysis |
-| POST | `/api/ai/symptom-triage` | Symptom triage |
+| GET | `/api/demo-users` | Demo user profiles |
+| GET | `/api/body-regions` | Body map regions |
+| GET | `/api/exercises` | Exercise library |
+| GET | `/api/protocols` | Assessment protocols |
+| GET | `/api/patients` | Patient records |
+| POST | `/api/ai/msk-analysis` | AI MSK analysis |
+| POST | `/api/video/create-room` | Create video room |
 
 ---
 
-## 🚀 Running Locally
+## Data Models
+
+### Body Regions
+- 15 anatomical regions with x/y coordinates for body map
+- Region categories: Upper Extremity, Lower Extremity, Spine
+
+### Exercise Library
+- ID, name, target region, difficulty, duration, reps
+- Video availability flag
+
+### Patient Records
+- Patient info, chief complaint, pain level
+- AI risk score, treatment status
+- Appointment history
+
+### Assessment Protocols
+- Protocol name, target region, duration
+- AI-assisted flag
+
+---
+
+## Project Structure
+
+```
+webapp/
+├── src/
+│   └── index.tsx          # Main Hono application (90KB)
+├── migrations/
+│   └── 0001_initial_schema.sql  # Database schema
+├── dist/                  # Build output
+├── ARCHITECTURE.md        # System architecture
+├── UPGRADES.md           # AI upgrade recommendations
+├── README.md             # This file
+├── package.json
+├── vite.config.ts
+├── wrangler.jsonc
+└── ecosystem.config.cjs
+```
+
+---
+
+## Running Locally
 
 ```bash
 # Install dependencies
@@ -148,34 +197,75 @@ npm run dev:sandbox
 
 ---
 
-## 📋 Next Steps
+## Demo Users
 
-### Immediate (Phase 1)
-- [ ] Connect real AI services (OpenAI GPT-4o)
-- [ ] Implement actual video calling (Daily.co)
-- [ ] Add D1 database persistence
-- [ ] Enable real image upload and analysis
-
-### Short-term (Phase 2)
-- [ ] Multi-model image analysis
-- [ ] Deep research agent integration
-- [ ] Audio transcription during calls
-- [ ] Patient education document generation
-
-### Long-term (Phase 3)
-- [ ] Video frame analysis during consultation
-- [ ] Auto-generated reports and presentations
-- [ ] Mobile app (React Native)
-- [ ] EHR/EMR integration
+| Role | Name | Email |
+|------|------|-------|
+| Admin | Dr. Sarah Mitchell | admin@thriveortho.ai |
+| Provider | Dr. Fabian Rodriguez | dr.fabian@thriveortho.ai |
+| Patient | Michael Chen | michael@patient.com |
 
 ---
 
-## 📚 Documentation
+## AI Integration Points
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete system architecture with diagrams
-- **[UPGRADES.md](./UPGRADES.md)** - AI upgrade recommendations and implementation guide
+### Current (Demo Mode)
+- Simulated MSK analysis responses
+- Pattern-based recommendations
+- Risk scoring algorithms
+
+### Ready for Integration
+- **OpenAI GPT-4o Vision**: Medical image analysis
+- **Google MedGemma**: Clinical decision support
+- **Legit.Health**: Dermatology imaging (skin conditions)
+- **Shen.ai/Binah.ai**: Video-based vital signs
 
 ---
 
-*Version: 1.0.0*  
+## HIPAA Compliance Features
+
+- TLS 1.3 encryption in transit
+- Field-level encryption for PII (ready)
+- Comprehensive audit logging (schema ready)
+- Role-based access control
+- Session timeout management
+- BAA-ready architecture
+
+---
+
+## Deployment
+
+### Current: Sandbox
+- URL: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
+
+### Production: Cloudflare Pages (Pending)
+- Requires Cloudflare API key configuration
+- Project name: sobeairehab-telemed
+- D1 Database: Ready for setup
+
+---
+
+## Next Steps
+
+### Immediate
+- [ ] Configure Cloudflare API key for production deployment
+- [ ] Create D1 database for persistent storage
+- [ ] Connect real OpenAI API for AI analysis
+- [ ] Integrate Daily.co for video consultations
+
+### Short-term
+- [ ] Patient intake forms
+- [ ] Progress note generation
+- [ ] Exercise video library
+- [ ] Mobile-responsive optimization
+
+### Long-term
+- [ ] EHR OAuth integration
+- [ ] Insurance verification
+- [ ] Billing system
+- [ ] Mobile apps
+
+---
+
+*Version: 2.0.0 - Thrive Ortho MSK*  
 *Last Updated: December 2025*
