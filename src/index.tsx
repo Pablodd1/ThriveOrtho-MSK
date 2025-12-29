@@ -2057,14 +2057,21 @@ app.get('/doctor/joints', (c) => {
           <p style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Real-Time Joint Tracking</p>
           <p style="font-size: 13px; color: #64748b; margin-bottom: 24px; text-align: center;">Camera access required for MSK assessment</p>
           
-          <div id="permissionStatus" style="display: none; background: #fef3c7; border: 1px solid #fcd34d; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 12px; color: #92400e; text-align: left; width: 100%; max-width: 280px;">
-            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
-            <span id="permissionText">Checking permissions...</span>
+          <div id="permissionStatus" style="display: none; background: #fef3c7; border: 1px solid #fcd34d; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 12px; color: #92400e; text-align: left; width: 100%; max-width: 300px;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+              <i class="fas fa-exclamation-triangle" style="margin-top: 2px;"></i>
+              <span id="permissionText">Checking permissions...</span>
+            </div>
           </div>
           
           <button class="start-camera-btn" id="startCameraBtn" onclick="requestCameraPermission()" style="font-size: 16px; padding: 16px 32px;">
             <i class="fas fa-video" style="font-size: 20px;"></i>
             <span id="cameraButtonText">Allow Camera Access</span>
+          </button>
+          
+          <button id="reloadBtn" onclick="location.reload()" style="display: none; margin-top: 12px; background: transparent; border: 1px solid #94a3b8; color: #64748b; padding: 10px 20px; border-radius: 8px; font-size: 13px; cursor: pointer;">
+            <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>
+            Reload After Allowing
           </button>
           
           <div style="margin-top: 16px; font-size: 11px; color: #94a3b8;">
@@ -2194,8 +2201,12 @@ app.get('/doctor/joints', (c) => {
                 statusDiv.style.background = '#fee2e2';
                 statusDiv.style.borderColor = '#fca5a5';
                 statusDiv.style.color = '#991b1b';
-                statusText.innerHTML = '<strong>Camera blocked</strong><br>Go to browser settings → Site permissions → Camera → Allow';
-                buttonText.textContent = 'Permission Blocked - Tap for Help';
+                statusText.innerHTML = '<strong>Permission Denied</strong><br>' +
+                  '1. Tap the <strong>lock/info icon</strong> in address bar<br>' +
+                  '2. Find "Camera" → Set to <strong>Allow</strong><br>' +
+                  '3. Tap <strong>Reload</strong> button below';
+                buttonText.textContent = 'Try Again';
+                document.getElementById('reloadBtn').style.display = 'block';
               } else {
                 // prompt state
                 buttonText.textContent = 'Allow Camera Access';
@@ -2395,9 +2406,11 @@ app.get('/doctor/joints', (c) => {
               statusText.innerHTML = '<strong>Permission Denied</strong><br>' +
                 '1. Tap the <strong>lock/info icon</strong> in address bar<br>' +
                 '2. Find "Camera" → Set to <strong>Allow</strong><br>' +
-                '3. <strong>Reload</strong> this page';
+                '3. Tap <strong>Reload</strong> button below';
             }
             if (buttonText) buttonText.textContent = 'Try Again';
+            const reloadBtn = document.getElementById('reloadBtn');
+            if (reloadBtn) reloadBtn.style.display = 'block';
             helpHtml = 
               '<span style="font-weight: bold;">To enable camera on mobile:</span>' +
               '<span style="font-weight: normal;">• <strong>iPhone Safari:</strong> Settings → Safari → Camera → Allow</span>' +
