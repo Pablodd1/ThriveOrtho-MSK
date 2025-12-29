@@ -1703,36 +1703,83 @@ app.get('/doctor', (c) => {
   `, 'Dashboard - Thrive Ortho EHR'))
 })
 
-// Full Body Joint Scan Page - Advanced Real-Time Tracking with Camera Selection
+
+// =============================================================================
+// FULL BODY 3D SCAN - Medical Grade Holistic Tracking
+// Body (33 landmarks) + Face (468 landmarks) + Hands (21 landmarks each)
+// Total: 543 landmarks in real-time
+// =============================================================================
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
-      /* Advanced MSK Assessment - Real-Time Tracking */
+      /* 3D Body Scan - Medical Grade Assessment */
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: -apple-system, sans-serif; background: #000; color: #fff; overflow: hidden; }
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+        background: #000; 
+        color: #fff; 
+        overflow: hidden;
+        touch-action: manipulation;
+      }
       
-      .msk-page { height: 100vh; display: flex; flex-direction: column; }
+      .scan-page { 
+        height: 100vh; 
+        height: 100dvh;
+        display: flex; 
+        flex-direction: column; 
+      }
       
       /* Header */
-      .msk-header {
-        background: #0a0a0a;
-        padding: 8px 12px;
+      .scan-header {
+        background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+        padding: 10px 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        border-bottom: 1px solid #1a1a1a;
         z-index: 100;
       }
-      .msk-header h1 { font-size: 13px; font-weight: 500; color: #666; }
-      .back-link { color: #3b82f6; text-decoration: none; font-size: 12px; }
-      
-      /* Exercise Info */
-      .exercise-bar {
-        background: #0a0a0a;
-        padding: 10px 16px;
-        border-bottom: 1px solid #1a1a1a;
+      .scan-header h1 { 
+        font-size: 14px; 
+        font-weight: 600; 
+        color: #3b82f6;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
-      .exercise-name { font-size: 15px; font-weight: 600; color: #fff; }
-      .exercise-hint { font-size: 11px; color: #555; margin-top: 2px; }
+      .scan-header h1::before {
+        content: '◉';
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      .back-link { 
+        color: #666; 
+        text-decoration: none; 
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        background: #111;
+        border: 1px solid #222;
+      }
+      .back-link:hover { border-color: #3b82f6; color: #3b82f6; }
+      
+      /* Stats Bar */
+      .stats-bar {
+        background: #050505;
+        padding: 8px 16px;
+        display: flex;
+        gap: 16px;
+        font-size: 10px;
+        color: #555;
+        border-bottom: 1px solid #111;
+      }
+      .stat { display: flex; align-items: center; gap: 4px; }
+      .stat .val { color: #3b82f6; font-weight: 600; }
+      .stat.good .val { color: #22c55e; }
+      .stat.warn .val { color: #f59e0b; }
       
       /* Camera Container */
       .camera-wrap {
@@ -1740,1261 +1787,1102 @@ app.get('/doctor/joints', (c) => {
         position: relative;
         background: #000;
         overflow: hidden;
+        min-height: 0;
       }
+      
       #videoElement {
-        width: 100%; height: 100%;
+        width: 100%; 
+        height: 100%;
         object-fit: cover;
+        transform: scaleX(-1);
       }
+      
       #canvasElement {
         position: absolute;
         top: 0; left: 0;
         width: 100%; height: 100%;
         pointer-events: none;
+        transform: scaleX(-1);
       }
       
-      /* Camera Selection */
-      .camera-select-wrap {
-        margin-bottom: 16px;
-        text-align: left;
-        width: 100%;
-        max-width: 300px;
+      /* Tracking Info Overlay */
+      .tracking-info {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(0,0,0,0.85);
+        border: 1px solid #222;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 11px;
+        min-width: 140px;
+        z-index: 50;
       }
-      .camera-select-wrap label {
+      .tracking-info .title {
+        color: #3b82f6;
+        font-weight: 600;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tracking-info .title::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: #3b82f6;
+        border-radius: 50%;
+        animation: blink 1s infinite;
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      .tracking-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+        color: #666;
+      }
+      .tracking-row .label { color: #888; }
+      .tracking-row .value { 
+        color: #fff; 
+        font-weight: 500;
+        font-family: monospace;
+      }
+      .tracking-row.highlight .value { color: #3b82f6; }
+      .tracking-row.good .value { color: #22c55e; }
+      .tracking-row.warn .value { color: #f59e0b; }
+      
+      /* Legend */
+      .legend {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(0,0,0,0.85);
+        border: 1px solid #222;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 10px;
+        z-index: 50;
+      }
+      .legend-title {
+        color: #666;
+        font-size: 9px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 0;
+        color: #888;
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .legend-dot.body { background: #3b82f6; }
+      .legend-dot.face { background: #06b6d4; }
+      .legend-dot.hand { background: #8b5cf6; }
+      
+      /* Start Screen */
+      .start-screen {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.95);
+        z-index: 60;
+        padding: 20px;
+      }
+      
+      .start-icon {
+        width: 80px;
+        height: 80px;
+        border: 3px solid #3b82f6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-bottom: 20px;
+        animation: glow 2s infinite;
+      }
+      @keyframes glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+      }
+      
+      .start-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      .start-subtitle {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+      
+      /* Camera Select */
+      .camera-select-group {
+        width: 100%;
+        max-width: 320px;
+        margin-bottom: 16px;
+      }
+      .camera-select-group label {
         display: block;
         font-size: 11px;
-        color: #888;
+        color: #666;
         margin-bottom: 6px;
       }
       .camera-select {
         width: 100%;
-        background: #1a1a1a;
+        background: #111;
         border: 1px solid #333;
         color: #fff;
-        padding: 10px 12px;
+        padding: 12px;
         border-radius: 8px;
         font-size: 13px;
-        cursor: pointer;
       }
       .camera-select:focus { outline: none; border-color: #3b82f6; }
-      .camera-select option { background: #1a1a1a; }
       
-      /* Model Quality Selector */
-      .model-select-wrap {
-        margin-top: 12px;
-        text-align: left;
+      /* Start Button */
+      .start-btn {
         width: 100%;
+        max-width: 320px;
+        background: #3b82f6;
+        color: #fff;
+        border: none;
+        padding: 16px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: all 0.2s;
+      }
+      .start-btn:hover:not(:disabled) { background: #2563eb; transform: scale(1.02); }
+      .start-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+      
+      .start-note {
+        font-size: 11px;
+        color: #444;
+        margin-top: 16px;
+        text-align: center;
         max-width: 300px;
       }
-      .model-options {
-        display: flex;
-        gap: 8px;
-        margin-top: 6px;
-      }
-      .model-opt {
-        flex: 1;
-        padding: 8px;
-        background: #1a1a1a;
-        border: 1px solid #333;
-        border-radius: 6px;
-        text-align: center;
-        cursor: pointer;
-        font-size: 11px;
-        color: #888;
-      }
-      .model-opt.active {
-        border-color: #3b82f6;
-        color: #3b82f6;
-        background: rgba(59, 130, 246, 0.1);
-      }
-      .model-opt .name { font-weight: 600; }
-      .model-opt .desc { font-size: 9px; margin-top: 2px; opacity: 0.7; }
       
-      /* REP COUNTER */
-      .rep-box {
-        position: absolute;
-        top: 12px; right: 12px;
-        background: rgba(0,0,0,0.9);
-        padding: 10px 16px;
-        border-radius: 10px;
-        text-align: center;
-        z-index: 50;
-        border: 2px solid #3b82f6;
-        min-width: 80px;
-      }
-      .rep-label { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-      .rep-count { font-size: 36px; font-weight: 700; color: #3b82f6; line-height: 1; }
-      .rep-target { font-size: 12px; color: #555; }
-      .rep-progress { width: 100%; height: 3px; background: #222; border-radius: 2px; margin-top: 6px; }
-      .rep-fill { height: 100%; background: #3b82f6; transition: width 0.2s; border-radius: 2px; }
-      
-      /* Joint Angles Display */
-      .angles-box {
-        position: absolute;
-        top: 12px; left: 12px;
-        background: rgba(0,0,0,0.9);
-        padding: 8px 12px;
+      .error-box {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid #dc2626;
+        color: #fca5a5;
+        padding: 12px;
         border-radius: 8px;
-        z-index: 50;
         font-size: 11px;
-        min-width: 120px;
+        margin-top: 16px;
+        max-width: 320px;
+        text-align: left;
       }
-      .angles-box .title { color: #3b82f6; font-weight: 600; margin-bottom: 6px; font-size: 10px; }
-      .angle-row { display: flex; justify-content: space-between; padding: 2px 0; color: #888; }
-      .angle-row .val { color: #fff; font-weight: 500; }
-      .angle-row.warn .val { color: #f59e0b; }
-      .angle-row.good .val { color: #22c55e; }
+      .error-box .error-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #f87171;
+      }
       
-      /* Loading Indicator */
-      .loading-ml {
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center; z-index: 60;
+      /* Loading */
+      .loading-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 70;
       }
-      .loading-ml .spinner {
-        width: 40px; height: 40px;
-        border: 3px solid #333;
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid #222;
         border-top-color: #3b82f6;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin: 0 auto 12px;
+        margin-bottom: 16px;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .loading-ml .text { color: #666; font-size: 12px; }
-      
-      /* Start Button */
-      .camera-start {
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center; z-index: 55;
-        width: 90%;
-        max-width: 320px;
+      .loading-text {
+        color: #888;
+        font-size: 13px;
       }
-      .start-btn {
-        background: #3b82f6; color: #fff; border: none;
-        padding: 16px 32px; border-radius: 10px;
-        font-size: 16px; font-weight: 600; cursor: pointer;
-        width: 100%;
-      }
-      .start-btn:disabled { background: #333; color: #555; }
-      .perm-note { font-size: 11px; color: #555; margin-top: 12px; }
-      .error-msg { 
-        background: rgba(220, 38, 38, 0.2);
-        border: 1px solid #dc2626;
-        color: #fca5a5;
-        padding: 10px 12px;
-        border-radius: 8px;
+      .loading-sub {
+        color: #555;
         font-size: 11px;
-        margin-top: 12px;
-        text-align: left;
+        margin-top: 6px;
       }
-      .error-msg .title { font-weight: 600; margin-bottom: 4px; }
-      .no-cameras { color: #f59e0b; font-size: 12px; margin-top: 8px; }
       
       /* Bottom Controls */
-      .bottom-bar {
-        position: absolute; bottom: 0; left: 0; right: 0;
-        background: linear-gradient(transparent, rgba(0,0,0,0.95));
-        padding: 20px 16px 16px; z-index: 50;
+      .bottom-controls {
+        background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, transparent 100%);
+        padding: 20px 16px 16px;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
       }
-      .ctrl-row { display: flex; gap: 10px; justify-content: center; }
+      .ctrl-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
       .ctrl-btn {
-        background: #1a1a1a; border: 1px solid #333; color: #fff;
-        padding: 12px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+        background: rgba(30,30,30,0.9);
+        border: 1px solid #333;
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
       }
-      .ctrl-btn.primary { background: #3b82f6; border-color: #3b82f6; flex: 1; font-weight: 600; }
-      .ctrl-btn.stop { background: #7f1d1d; border-color: #991b1b; }
-      
-      /* Task List */
-      .task-panel { background: #0a0a0a; padding: 10px 16px; max-height: 25vh; overflow-y: auto; }
-      .task-row {
-        display: flex; align-items: center; gap: 8px;
-        padding: 6px 0; border-bottom: 1px solid #1a1a1a;
-        font-size: 12px; color: #666;
+      .ctrl-btn:hover { border-color: #3b82f6; }
+      .ctrl-btn.primary { 
+        background: #3b82f6; 
+        border-color: #3b82f6;
+        flex: 1;
+        justify-content: center;
+        font-weight: 600;
       }
-      .task-row.active { color: #fff; }
-      .task-row.done { color: #22c55e; }
-      .task-num {
-        width: 20px; height: 20px; border-radius: 50%;
-        background: #222; color: #555;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 10px; font-weight: 600;
+      .ctrl-btn.stop { 
+        background: rgba(127, 29, 29, 0.8); 
+        border-color: #991b1b; 
       }
-      .task-row.active .task-num { background: #3b82f6; color: #fff; }
-      .task-row.done .task-num { background: #22c55e; color: #fff; }
-      .task-row .reps { margin-left: auto; font-size: 10px; }
       
       /* Footer */
-      .action-footer {
-        background: #0a0a0a; padding: 10px 16px;
-        display: flex; gap: 8px; border-top: 1px solid #1a1a1a;
+      .scan-footer {
+        background: #050505;
+        padding: 12px 16px;
+        display: flex;
+        gap: 10px;
+        border-top: 1px solid #111;
       }
-      .action-footer .btn {
-        flex: 1; padding: 12px; border-radius: 8px;
-        font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+      .footer-btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
       }
-      .action-footer .btn.primary { background: #3b82f6; color: #fff; }
-      .action-footer .btn.secondary { background: #1a1a1a; color: #666; }
+      .footer-btn.secondary {
+        background: #1a1a1a;
+        color: #888;
+      }
+      .footer-btn.primary {
+        background: #3b82f6;
+        color: #fff;
+      }
+      .footer-btn:hover { transform: scale(1.02); }
       
-      @media (min-width: 768px) { .msk-page { max-width: 500px; margin: 0 auto; } }
+      /* No detection warning */
+      .no-detection {
+        position: absolute;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(239, 68, 68, 0.9);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 55;
+        display: none;
+      }
+      .no-detection.show { display: block; }
+      
+      /* Responsive */
+      @media (min-width: 768px) {
+        .scan-page { max-width: 500px; margin: 0 auto; }
+      }
     </style>
     
-    <div class="msk-page">
-      <div class="msk-header">
+    <div class="scan-page">
+      <div class="scan-header">
         <a href="/doctor" class="back-link">← Back</a>
-        <h1>MSK Assessment</h1>
-        <span style="width:40px;"></span>
+        <h1>3D Body Scan</h1>
+        <span style="width: 60px;"></span>
       </div>
       
-      <div class="exercise-bar">
-        <div class="exercise-name" id="exerciseName">1. Deep Squat</div>
-        <div class="exercise-hint" id="exerciseHint">Squat down fully - tracking knee, hip, ankle</div>
+      <div class="stats-bar" id="statsBar">
+        <div class="stat">
+          <span>FPS:</span>
+          <span class="val" id="fpsVal">--</span>
+        </div>
+        <div class="stat">
+          <span>Landmarks:</span>
+          <span class="val" id="landmarkCount">0/543</span>
+        </div>
+        <div class="stat">
+          <span>Body:</span>
+          <span class="val" id="bodyStatus">--</span>
+        </div>
+        <div class="stat">
+          <span>Face:</span>
+          <span class="val" id="faceStatus">--</span>
+        </div>
+        <div class="stat">
+          <span>Hands:</span>
+          <span class="val" id="handsStatus">--</span>
+        </div>
       </div>
       
       <div class="camera-wrap">
         <video id="videoElement" autoplay playsinline muted></video>
         <canvas id="canvasElement"></canvas>
         
-        <!-- Joint Angles Display -->
-        <div class="angles-box" id="anglesBox" style="display:none;">
-          <div class="title">LIVE JOINT ANGLES</div>
-          <div id="anglesList"></div>
+        <!-- Tracking Info -->
+        <div class="tracking-info" id="trackingInfo" style="display:none;">
+          <div class="title">LIVE TRACKING</div>
+          <div class="tracking-row highlight">
+            <span class="label">Pose</span>
+            <span class="value" id="poseAngle">--</span>
+          </div>
+          <div class="tracking-row">
+            <span class="label">Knee L</span>
+            <span class="value" id="kneeL">--°</span>
+          </div>
+          <div class="tracking-row">
+            <span class="label">Knee R</span>
+            <span class="value" id="kneeR">--°</span>
+          </div>
+          <div class="tracking-row">
+            <span class="label">Hip</span>
+            <span class="value" id="hipAngle">--°</span>
+          </div>
+          <div class="tracking-row">
+            <span class="label">Shoulder</span>
+            <span class="value" id="shoulderAngle">--°</span>
+          </div>
         </div>
         
-        <!-- Rep Counter -->
-        <div class="rep-box" id="repBox" style="display:none;">
-          <div class="rep-label">REPS</div>
-          <div class="rep-count" id="repCount">0</div>
-          <div class="rep-target" id="repTarget">/ 5</div>
-          <div class="rep-progress"><div class="rep-fill" id="repFill"></div></div>
+        <!-- Legend -->
+        <div class="legend" id="legend" style="display:none;">
+          <div class="legend-title">Tracking</div>
+          <div class="legend-item">
+            <div class="legend-dot body"></div>
+            <span>Body (33 pts)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot face"></div>
+            <span>Face (468 pts)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot hand"></div>
+            <span>Hands (42 pts)</span>
+          </div>
         </div>
         
-        <!-- Loading ML Model -->
-        <div class="loading-ml" id="loadingML" style="display:none;">
-          <div class="spinner"></div>
-          <div class="text">Loading AI Model...</div>
-        </div>
-        
-        <!-- Start Button with Camera Selection -->
-        <div class="camera-start" id="cameraStart">
-          <!-- Camera Selection Dropdown -->
-          <div class="camera-select-wrap">
+        <!-- Start Screen -->
+        <div class="start-screen" id="startScreen">
+          <div class="start-icon">🦴</div>
+          <div class="start-title">3D Body Scanner</div>
+          <div class="start-subtitle">
+            Medical-grade full body tracking<br>
+            Face • Body • Hands • Fingers
+          </div>
+          
+          <div class="camera-select-group">
             <label>Select Camera</label>
-            <select id="cameraSelect" class="camera-select">
-              <option value="">Loading cameras...</option>
+            <select class="camera-select" id="cameraSelect">
+              <option value="">Detecting cameras...</option>
             </select>
           </div>
           
-          <!-- Model Quality Selection -->
-          <div class="model-select-wrap">
-            <label>Tracking Quality</label>
-            <div class="model-options" id="modelOptions">
-              <div class="model-opt active" data-model="heavy">
-                <div class="name">Heavy</div>
-                <div class="desc">Most Accurate</div>
-              </div>
-              <div class="model-opt" data-model="full">
-                <div class="name">Full</div>
-                <div class="desc">Balanced</div>
-              </div>
-              <div class="model-opt" data-model="lite">
-                <div class="name">Lite</div>
-                <div class="desc">Fastest</div>
-              </div>
-            </div>
-          </div>
-          
-          <button class="start-btn" id="startBtn" style="margin-top: 16px;">
-            Start Camera
+          <button class="start-btn" id="startBtn">
+            Start 3D Scan
           </button>
           
-          <div class="perm-note" id="permNote">Real-time 33-point joint tracking with MediaPipe AI</div>
-          <div id="errorMsg"></div>
+          <div class="start-note" id="startNote">
+            543 landmarks • Real-time tracking<br>
+            Body joints • Facial features • Finger positions
+          </div>
+          
+          <div class="error-box" id="errorBox" style="display:none;">
+            <div class="error-title">Camera Access Required</div>
+            <div id="errorMsg">Please allow camera access to use the body scanner.</div>
+          </div>
+        </div>
+        
+        <!-- Loading -->
+        <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+          <div class="loading-spinner"></div>
+          <div class="loading-text" id="loadingText">Loading AI models...</div>
+          <div class="loading-sub" id="loadingSub">This may take 10-20 seconds</div>
+        </div>
+        
+        <!-- No Detection Warning -->
+        <div class="no-detection" id="noDetection">
+          ⚠ No body detected - Stand in frame
         </div>
         
         <!-- Bottom Controls -->
-        <div class="bottom-bar" id="bottomBar" style="display:none;">
+        <div class="bottom-controls" id="bottomControls" style="display:none;">
           <div class="ctrl-row">
-            <button class="ctrl-btn" id="switchCamBtn">Switch Cam</button>
-            <button class="ctrl-btn primary" id="nextBtn">Next Exercise →</button>
-            <button class="ctrl-btn stop" id="stopBtn">Stop</button>
+            <button class="ctrl-btn" id="switchCamBtn">🔄 Switch</button>
+            <button class="ctrl-btn primary" id="captureBtn">📸 Capture</button>
+            <button class="ctrl-btn stop" id="stopBtn">⏹ Stop</button>
           </div>
         </div>
       </div>
       
-      <div class="task-panel" id="taskPanel"></div>
-      
-      <div class="action-footer">
-        <button class="btn secondary" id="restartBtn">Restart</button>
-        <button class="btn primary" id="generateNoteBtn">Generate Note</button>
+      <div class="scan-footer">
+        <button class="footer-btn secondary" id="restartBtn">Restart</button>
+        <button class="footer-btn primary" id="generateBtn">Generate Report</button>
       </div>
     </div>
     
-    <!-- MediaPipe Tasks Vision -->
-    <script type="module">
-      import { PoseLandmarker, FilesetResolver, DrawingUtils } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
+    <!-- MediaPipe Holistic CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+    
+    <script>
+      // ============================================================
+      // MEDICAL-GRADE 3D BODY SCANNER
+      // MediaPipe Holistic: 543 landmarks (33 pose + 468 face + 42 hands)
+      // ============================================================
       
-      // ==========================================
-      // ADVANCED MSK ASSESSMENT WITH MEDIAPIPE
-      // Camera selection + Model quality + Real-time tracking
-      // ==========================================
-      
-      let poseLandmarker = null;
-      let webcamRunning = false;
-      let stream = null;
-      let selectedDeviceId = null;
-      let selectedModel = 'heavy'; // heavy, full, lite
-      let animationId = null;
-      let availableCameras = [];
+      console.log('[3D Scanner] Initializing v6.0...');
       
       // State
-      let currentTaskIdx = 0;
-      let currentReps = 0;
-      let lastAngles = {};
-      let repState = 'up';
-      let assessmentData = [];
+      let holistic = null;
+      let camera = null;
+      let stream = null;
+      let isRunning = false;
+      let selectedDeviceId = null;
+      let availableCameras = [];
+      let lastResults = null;
+      let frameCount = 0;
+      let lastFpsTime = performance.now();
+      let currentFps = 0;
+      let noDetectionFrames = 0;
       
-      // Model URLs - Heavy is most accurate for medical use
-      const MODEL_URLS = {
-        heavy: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task',
-        full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
-        lite: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+      // Captured data for report
+      let capturedData = {
+        poses: [],
+        maxAngles: {},
+        timestamps: []
       };
       
-      // Medical-grade ROM thresholds (degrees)
-      const ROM_STANDARDS = {
-        knee_flexion: { normal: 135, limited: 100, label: 'Knee' },
-        hip_flexion: { normal: 120, limited: 90, label: 'Hip' },
-        ankle_dorsiflexion: { normal: 20, limited: 10, label: 'Ankle' },
-        shoulder_flexion: { normal: 180, limited: 150, label: 'Shoulder' },
-        elbow_flexion: { normal: 145, limited: 120, label: 'Elbow' }
-      };
+      // DOM elements
+      const videoElement = document.getElementById('videoElement');
+      const canvasElement = document.getElementById('canvasElement');
+      const ctx = canvasElement.getContext('2d');
       
-      // Exercises with rep requirements
-      const exercises = [
-        { name: 'Deep Squat', hint: 'Squat down fully - tracking knee, hip, ankle', reps: 5, joints: ['knee_flexion', 'hip_flexion', 'ankle_dorsiflexion'], detectKey: 'knee_flexion', threshold: 90, done: 0, maxAngles: {} },
-        { name: 'Shoulder Raise', hint: 'Raise arms overhead', reps: 5, joints: ['shoulder_flexion'], detectKey: 'shoulder_flexion', threshold: 150, done: 0, maxAngles: {} },
-        { name: 'Arm Curl', hint: 'Bend elbows, curl arms up', reps: 5, joints: ['elbow_flexion'], detectKey: 'elbow_flexion', threshold: 120, done: 0, maxAngles: {} },
-        { name: 'Hip Hinge', hint: 'Bend forward at hips, keep back straight', reps: 5, joints: ['hip_flexion'], detectKey: 'hip_flexion', threshold: 80, done: 0, maxAngles: {} },
-        { name: 'Calf Raise', hint: 'Rise up on toes', reps: 10, joints: ['ankle_dorsiflexion'], detectKey: 'ankle_dorsiflexion', threshold: 30, done: 0, maxAngles: {} },
-        { name: 'Sit to Stand', hint: 'Stand up from imaginary chair', reps: 5, joints: ['knee_flexion', 'hip_flexion'], detectKey: 'knee_flexion', threshold: 100, done: 0, maxAngles: {} },
-        { name: 'Single Leg Balance', hint: 'Lift one foot, balance 3 sec', reps: 4, joints: ['hip_flexion', 'knee_flexion'], detectKey: 'hip_flexion', threshold: 30, done: 0, maxAngles: {} }
-      ];
-      
-      // MediaPipe landmark indices
-      const LANDMARKS = {
-        LEFT_SHOULDER: 11, RIGHT_SHOULDER: 12,
-        LEFT_ELBOW: 13, RIGHT_ELBOW: 14,
-        LEFT_WRIST: 15, RIGHT_WRIST: 16,
-        LEFT_HIP: 23, RIGHT_HIP: 24,
-        LEFT_KNEE: 25, RIGHT_KNEE: 26,
-        LEFT_ANKLE: 27, RIGHT_ANKLE: 28
-      };
-      
-      // ==========================================
-      // CAMERA ENUMERATION & SELECTION
-      // Supports: Built-in, External USB, Virtual cameras
-      // ==========================================
-      
-      let cameraPermissionGranted = false;
-      let debugMode = true; // Enable console logging
-      
-      function log(msg, data) {
-        if (debugMode) {
-          console.log('[MSK Camera]', msg, data || '');
-        }
-      }
-      
-      // Update status indicator
-      function updateStatus(msg, isError = false) {
-        const noteEl = document.getElementById('permNote');
-        if (noteEl) {
-          noteEl.textContent = msg;
-          noteEl.style.color = isError ? '#f87171' : '#888';
-        }
-        log(msg);
-      }
+      // ============================================================
+      // CAMERA ENUMERATION
+      // ============================================================
       
       async function enumerateCameras() {
+        console.log('[3D Scanner] Enumerating cameras...');
         const select = document.getElementById('cameraSelect');
-        const errorDiv = document.getElementById('errorMsg');
         const startBtn = document.getElementById('startBtn');
-        
-        log('Starting camera enumeration...');
-        updateStatus('Detecting cameras...');
+        const errorBox = document.getElementById('errorBox');
         
         try {
-          // Step 1: Check if mediaDevices API exists
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error('MediaDevices API not available. Use HTTPS and modern browser.');
-          }
+          // Request permission first
+          const tempStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false 
+          });
+          tempStream.getTracks().forEach(t => t.stop());
           
-          // Step 2: Try to enumerate first (may work without permission in some browsers)
-          let devices = await navigator.mediaDevices.enumerateDevices();
-          let videoInputs = devices.filter(d => d.kind === 'videoinput');
-          log('Initial enumeration found:', videoInputs.length + ' cameras');
+          // Enumerate devices
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          availableCameras = devices.filter(d => d.kind === 'videoinput');
           
-          // Step 3: If no labels or no cameras, we need permission
-          const needsPermission = videoInputs.length === 0 || videoInputs.every(d => !d.label);
+          console.log('[3D Scanner] Found cameras:', availableCameras.length);
           
-          if (needsPermission) {
-            log('Requesting camera permission...');
-            updateStatus('Requesting camera access...');
-            
-            // Request with flexible constraints - try facingMode first, then any camera
-            let tempStream = null;
-            
-            // Try back camera first (better for medical assessment)
-            try {
-              tempStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: { ideal: 'environment' } },
-                audio: false 
-              });
-              log('Got stream with environment-facing camera');
-            } catch (e1) {
-              log('environment camera failed, trying any camera', e1.message);
-              // Try any camera
-              try {
-                tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                log('Got stream with default camera');
-              } catch (e2) {
-                log('All camera access failed', e2);
-                throw e2;
-              }
-            }
-            
-            // Stop the temp stream
-            if (tempStream) {
-              tempStream.getTracks().forEach(t => {
-                log('Stopping temp track:', t.label);
-                t.stop();
-              });
-            }
-            
-            cameraPermissionGranted = true;
-            
-            // Re-enumerate with permission - now we get labels
-            devices = await navigator.mediaDevices.enumerateDevices();
-            videoInputs = devices.filter(d => d.kind === 'videoinput');
-            log('After permission, found:', videoInputs.length + ' cameras');
-          }
-          
-          availableCameras = videoInputs;
-          
-          // Step 4: Check if we found any cameras
           if (availableCameras.length === 0) {
-            log('No cameras found after enumeration');
-            select.innerHTML = '<option value="">No cameras found</option>';
-            errorDiv.innerHTML = '<div class="error-msg"><div class="title">No Cameras Detected</div>Connect a camera (built-in, USB, or virtual) and reload the page.<br><br>If using external camera, ensure it\'s properly connected.</div>';
-            startBtn.disabled = true;
-            updateStatus('No cameras detected', true);
-            return;
+            throw new Error('No cameras found');
           }
           
-          // Step 5: Populate dropdown with camera names
-          log('Populating camera list:', availableCameras.map(c => c.label));
-          
+          // Populate dropdown
           select.innerHTML = availableCameras.map((cam, i) => {
-            // Generate meaningful label
-            let label = cam.label || '';
-            if (!label) {
-              label = 'Camera ' + (i + 1);
-            }
-            // Shorten long labels
-            if (label.length > 40) {
-              label = label.substring(0, 37) + '...';
-            }
-            return '<option value="' + cam.deviceId + '">' + label + '</option>';
+            const label = cam.label || 'Camera ' + (i + 1);
+            return '<option value="' + cam.deviceId + '">' + label.substring(0, 40) + '</option>';
           }).join('');
           
-          // Select first camera by default (or back camera if available)
-          const backCamIdx = availableCameras.findIndex(c => 
+          // Select back camera by default if available
+          const backIdx = availableCameras.findIndex(c => 
             c.label && (c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'))
           );
-          const defaultIdx = backCamIdx >= 0 ? backCamIdx : 0;
-          selectedDeviceId = availableCameras[defaultIdx].deviceId;
+          selectedDeviceId = availableCameras[backIdx >= 0 ? backIdx : 0].deviceId;
           select.value = selectedDeviceId;
           
-          // Listen for selection change
-          select.addEventListener('change', (e) => {
-            selectedDeviceId = e.target.value;
-            log('Camera selected:', selectedDeviceId);
-          });
+          select.onchange = (e) => { selectedDeviceId = e.target.value; };
           
-          // Enable start button
           startBtn.disabled = false;
-          startBtn.textContent = 'Start Camera';
-          errorDiv.innerHTML = '';
-          
-          const cameraCount = availableCameras.length;
-          updateStatus(cameraCount + ' camera' + (cameraCount > 1 ? 's' : '') + ' ready • Select and start to begin');
-          
-          log('Camera setup complete');
+          startBtn.textContent = 'Start 3D Scan';
+          errorBox.style.display = 'none';
           
         } catch (err) {
-          log('Camera enumeration error:', err);
+          console.error('[3D Scanner] Camera error:', err);
           
-          let errorHtml = '<div class="error-msg"><div class="title">📷 Camera Access Required</div>';
-          
-          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            errorHtml += 'Camera permission was denied.<br><br>';
-            errorHtml += '<strong>How to fix:</strong><br>';
-            errorHtml += '1. Click the 🔒 lock icon in your browser address bar<br>';
-            errorHtml += '2. Find "Camera" and change to "Allow"<br>';
-            errorHtml += '3. Reload this page<br><br>';
-            errorHtml += '<strong>On iPhone Safari:</strong> Settings → Safari → Camera → Allow<br>';
-            errorHtml += '<strong>On Android:</strong> Tap lock icon → Permissions → Camera → Allow';
-          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-            errorHtml += 'No camera was found on this device.<br><br>';
-            errorHtml += '• Ensure your camera is connected and powered on<br>';
-            errorHtml += '• For external USB cameras, try unplugging and reconnecting<br>';
-            errorHtml += '• Check that other apps can access your camera';
-          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-            errorHtml += 'Camera is in use by another application.<br><br>';
-            errorHtml += '• Close Zoom, Skype, Teams, or other video apps<br>';
-            errorHtml += '• Close other browser tabs using the camera<br>';
-            errorHtml += '• Try restarting your browser';
-          } else if (err.name === 'OverconstrainedError') {
-            errorHtml += 'Camera does not support required settings.<br>Trying alternative configuration...';
-          } else if (err.name === 'SecurityError') {
-            errorHtml += 'Security error. This page must be loaded over HTTPS.<br>';
-            errorHtml += 'Current: ' + window.location.protocol;
-          } else {
-            errorHtml += (err.message || 'Unknown error') + '<br><br>';
-            errorHtml += 'Error type: ' + (err.name || 'Unknown') + '<br>';
-            errorHtml += 'Try refreshing the page or using a different browser.';
+          let msg = 'Camera access error: ' + err.message;
+          if (err.name === 'NotAllowedError') {
+            msg = 'Camera permission denied. Click the lock icon in your address bar and allow camera access, then reload.';
+          } else if (err.name === 'NotFoundError') {
+            msg = 'No camera found. Please connect a camera and reload.';
           }
           
-          errorHtml += '</div>';
-          errorDiv.innerHTML = errorHtml;
-          
-          select.innerHTML = '<option value="">⚠️ Camera access needed</option>';
+          document.getElementById('errorMsg').innerHTML = msg;
+          errorBox.style.display = 'block';
           startBtn.disabled = true;
-          startBtn.textContent = 'Camera Unavailable';
-          updateStatus('Camera access required - see instructions above', true);
+          startBtn.textContent = 'Camera Required';
+          select.innerHTML = '<option>No camera access</option>';
         }
       }
       
-      // Model selection
-      function selectModel(model) {
-        selectedModel = model;
-        document.querySelectorAll('.model-opt').forEach(el => {
-          el.classList.toggle('active', el.dataset.model === model);
-        });
-        // Reset landmarker so it reloads with new model
-        poseLandmarker = null;
-        log('Model selected:', model);
-      }
+      // ============================================================
+      // HOLISTIC MODEL INITIALIZATION
+      // ============================================================
       
-      // ==========================================
-      // ANGLE CALCULATIONS
-      // ==========================================
-      
-      function calcAngle(a, b, c) {
-        const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-        let angle = Math.abs(radians * 180 / Math.PI);
-        if (angle > 180) angle = 360 - angle;
-        return Math.round(angle);
-      }
-      
-      function calculateAngles(landmarks) {
-        if (!landmarks || landmarks.length < 33) return {};
+      async function initHolistic() {
+        console.log('[3D Scanner] Initializing MediaPipe Holistic...');
         
-        const angles = {};
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const loadingSub = document.getElementById('loadingSub');
         
-        // Knee flexion (hip-knee-ankle)
-        const kneeL = calcAngle(landmarks[LANDMARKS.LEFT_HIP], landmarks[LANDMARKS.LEFT_KNEE], landmarks[LANDMARKS.LEFT_ANKLE]);
-        const kneeR = calcAngle(landmarks[LANDMARKS.RIGHT_HIP], landmarks[LANDMARKS.RIGHT_KNEE], landmarks[LANDMARKS.RIGHT_ANKLE]);
-        angles.knee_flexion = Math.round((kneeL + kneeR) / 2);
-        
-        // Hip flexion (shoulder-hip-knee)
-        const hipL = calcAngle(landmarks[LANDMARKS.LEFT_SHOULDER], landmarks[LANDMARKS.LEFT_HIP], landmarks[LANDMARKS.LEFT_KNEE]);
-        const hipR = calcAngle(landmarks[LANDMARKS.RIGHT_SHOULDER], landmarks[LANDMARKS.RIGHT_HIP], landmarks[LANDMARKS.RIGHT_KNEE]);
-        angles.hip_flexion = Math.round((hipL + hipR) / 2);
-        
-        // Shoulder flexion (elbow-shoulder-hip)
-        const shoulderL = calcAngle(landmarks[LANDMARKS.LEFT_ELBOW], landmarks[LANDMARKS.LEFT_SHOULDER], landmarks[LANDMARKS.LEFT_HIP]);
-        const shoulderR = calcAngle(landmarks[LANDMARKS.RIGHT_ELBOW], landmarks[LANDMARKS.RIGHT_SHOULDER], landmarks[LANDMARKS.RIGHT_HIP]);
-        angles.shoulder_flexion = Math.round((shoulderL + shoulderR) / 2);
-        
-        // Elbow flexion (shoulder-elbow-wrist)
-        const elbowL = calcAngle(landmarks[LANDMARKS.LEFT_SHOULDER], landmarks[LANDMARKS.LEFT_ELBOW], landmarks[LANDMARKS.LEFT_WRIST]);
-        const elbowR = calcAngle(landmarks[LANDMARKS.RIGHT_SHOULDER], landmarks[LANDMARKS.RIGHT_ELBOW], landmarks[LANDMARKS.RIGHT_WRIST]);
-        angles.elbow_flexion = Math.round((elbowL + elbowR) / 2);
-        
-        // Ankle (simplified)
-        angles.ankle_dorsiflexion = Math.round(180 - angles.knee_flexion * 0.15);
-        
-        return angles;
-      }
-      
-      // ==========================================
-      // MEDIAPIPE INITIALIZATION
-      // ==========================================
-      
-      async function initPoseLandmarker() {
-        const loadingEl = document.getElementById('loadingML');
-        loadingEl.style.display = 'block';
-        document.getElementById('cameraStart').style.display = 'none';
-        
-        const modelUrl = MODEL_URLS[selectedModel];
-        log('Loading MediaPipe model:', selectedModel);
-        log('Model URL:', modelUrl);
-        updateStatus('Loading AI model (' + selectedModel + ')...');
-        
-        // Update loading text
-        loadingEl.innerHTML = '<div class="spinner"></div><div class="text">Loading ' + selectedModel.toUpperCase() + ' AI model...<br><small>This may take 5-10 seconds</small></div>';
+        loadingOverlay.style.display = 'flex';
+        loadingText.textContent = 'Loading AI models...';
+        loadingSub.textContent = 'Pose + Face + Hands (may take 10-20s)';
         
         try {
-          log('Initializing FilesetResolver...');
-          const vision = await FilesetResolver.forVisionTasks(
-            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
-          );
-          log('FilesetResolver ready');
+          holistic = new Holistic({
+            locateFile: (file) => {
+              return 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file;
+            }
+          });
           
-          loadingEl.innerHTML = '<div class="spinner"></div><div class="text">Initializing pose tracker...<br><small>Downloading model weights</small></div>';
+          // Configure holistic for medical-grade accuracy
+          holistic.setOptions({
+            modelComplexity: 2, // Highest accuracy (0, 1, or 2)
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            smoothSegmentation: false,
+            refineFaceLandmarks: true, // More accurate face mesh
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
           
-          // Configure pose landmarker with higher confidence for medical accuracy
-          const config = {
-            baseOptions: {
-              modelAssetPath: modelUrl,
-              delegate: 'GPU' // Try GPU first
-            },
-            runningMode: 'VIDEO',
-            numPoses: 1,
-            minPoseDetectionConfidence: 0.6, // Slightly higher for medical use
-            minPosePresenceConfidence: 0.6,
-            minTrackingConfidence: 0.6
-          };
+          // Set up results callback
+          holistic.onResults(onResults);
           
-          try {
-            poseLandmarker = await PoseLandmarker.createFromOptions(vision, config);
-            log('MediaPipe loaded with GPU delegate');
-          } catch (gpuErr) {
-            // Fallback to CPU if GPU fails
-            log('GPU delegate failed, trying CPU:', gpuErr.message);
-            loadingEl.innerHTML = '<div class="spinner"></div><div class="text">GPU unavailable, using CPU...<br><small>May be slower on this device</small></div>';
-            
-            config.baseOptions.delegate = 'CPU';
-            poseLandmarker = await PoseLandmarker.createFromOptions(vision, config);
-            log('MediaPipe loaded with CPU delegate');
-          }
+          loadingText.textContent = 'AI models ready!';
+          loadingSub.textContent = 'Starting camera...';
           
-          log('MediaPipe Pose Landmarker ready:', selectedModel);
-          loadingEl.style.display = 'none';
-          updateStatus('AI tracking active • 33-point body detection');
+          console.log('[3D Scanner] Holistic initialized successfully');
           return true;
           
         } catch (err) {
-          log('MediaPipe load failed:', err);
-          
-          // Try a lighter model as fallback
-          if (selectedModel !== 'lite') {
-            log('Attempting fallback to lite model...');
-            loadingEl.innerHTML = '<div class="spinner"></div><div class="text">Trying lighter model...<br><small>Heavy model failed</small></div>';
-            
-            try {
-              const vision = await FilesetResolver.forVisionTasks(
-                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
-              );
-              
-              poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-                baseOptions: {
-                  modelAssetPath: MODEL_URLS.lite,
-                  delegate: 'CPU'
-                },
-                runningMode: 'VIDEO',
-                numPoses: 1,
-                minPoseDetectionConfidence: 0.5,
-                minPosePresenceConfidence: 0.5,
-                minTrackingConfidence: 0.5
-              });
-              
-              log('Fallback to lite model successful');
-              selectedModel = 'lite';
-              document.querySelectorAll('.model-opt').forEach(el => {
-                el.classList.toggle('active', el.dataset.model === 'lite');
-              });
-              
-              loadingEl.style.display = 'none';
-              updateStatus('AI tracking active (lite mode)');
-              return true;
-              
-            } catch (fallbackErr) {
-              log('Fallback also failed:', fallbackErr);
-            }
-          }
-          
-          loadingEl.innerHTML = '<div class="text" style="color:#f87171;">❌ AI Model failed to load<br><small>Error: ' + (err.message || 'Unknown') + '</small><br><br><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Reload Page</button></div>';
-          document.getElementById('cameraStart').style.display = 'none';
+          console.error('[3D Scanner] Holistic init error:', err);
+          loadingText.textContent = 'Failed to load AI';
+          loadingSub.textContent = err.message;
           return false;
         }
       }
       
-      // Start camera with selected device
-      // Supports: Built-in, External USB, Virtual cameras
-      async function startCamera() {
-        const video = document.getElementById('videoElement');
-        const errorDiv = document.getElementById('errorMsg');
+      // ============================================================
+      // START CAMERA AND TRACKING
+      // ============================================================
+      
+      async function startScanning() {
+        console.log('[3D Scanner] Starting scan...');
         
-        log('Starting camera with device:', selectedDeviceId);
-        updateStatus('Connecting to camera...');
+        const startBtn = document.getElementById('startBtn');
+        startBtn.disabled = true;
+        startBtn.textContent = 'Starting...';
         
-        // Build constraints based on selected device
-        const constraints = {
-          video: {
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 },
-            frameRate: { ideal: 30, min: 15 }
-          },
-          audio: false
-        };
-        
-        // Use exact device ID if selected
-        if (selectedDeviceId && selectedDeviceId.length > 0) {
-          constraints.video.deviceId = { exact: selectedDeviceId };
-          log('Using exact deviceId constraint');
-        }
-        
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts) {
-          attempts++;
-          log('Camera start attempt:', attempts);
-          
-          try {
-            // Try with current constraints
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            log('Camera stream obtained:', {
-              tracks: stream.getVideoTracks().map(t => ({
-                label: t.label,
-                enabled: t.enabled,
-                readyState: t.readyState
-              }))
-            });
-            break; // Success!
-            
-          } catch (e) {
-            log('Attempt ' + attempts + ' failed:', e.name, e.message);
-            
-            if (attempts === 1 && selectedDeviceId) {
-              // Try without exact deviceId (use ideal instead)
-              log('Retrying with ideal deviceId...');
-              constraints.video.deviceId = { ideal: selectedDeviceId };
-            } else if (attempts === 2) {
-              // Try with minimal constraints
-              log('Retrying with minimal constraints...');
-              delete constraints.video.deviceId;
-              delete constraints.video.width;
-              delete constraints.video.height;
-              delete constraints.video.frameRate;
-            } else {
-              // All attempts failed
-              let errorMsg = 'Could not access camera. ';
-              if (e.name === 'NotReadableError') {
-                errorMsg += 'Camera may be in use by another app.';
-              } else if (e.name === 'NotAllowedError') {
-                errorMsg += 'Permission denied.';
-              } else {
-                errorMsg += e.message || 'Unknown error.';
-              }
-              errorDiv.innerHTML = '<div class="error-msg"><div class="title">Camera Error</div>' + errorMsg + '</div>';
-              throw e;
+        try {
+          // Initialize holistic if not done
+          if (!holistic) {
+            const success = await initHolistic();
+            if (!success) {
+              startBtn.disabled = false;
+              startBtn.textContent = 'Retry';
+              return;
             }
           }
+          
+          // Build constraints
+          const constraints = {
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 }
+            }
+          };
+          
+          if (selectedDeviceId) {
+            constraints.video.deviceId = { exact: selectedDeviceId };
+          }
+          
+          // Get camera stream
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          } catch (e) {
+            console.warn('[3D Scanner] Preferred constraints failed, using fallback');
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          }
+          
+          videoElement.srcObject = stream;
+          
+          await new Promise((resolve) => {
+            videoElement.onloadedmetadata = () => {
+              videoElement.play().then(resolve);
+            };
+          });
+          
+          // Set canvas size
+          canvasElement.width = videoElement.videoWidth;
+          canvasElement.height = videoElement.videoHeight;
+          
+          console.log('[3D Scanner] Video ready:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+          
+          // Hide start screen, show controls
+          document.getElementById('startScreen').style.display = 'none';
+          document.getElementById('loadingOverlay').style.display = 'none';
+          document.getElementById('trackingInfo').style.display = 'block';
+          document.getElementById('legend').style.display = 'block';
+          document.getElementById('bottomControls').style.display = 'block';
+          
+          isRunning = true;
+          
+          // Start processing loop
+          processFrame();
+          
+        } catch (err) {
+          console.error('[3D Scanner] Start error:', err);
+          document.getElementById('errorMsg').textContent = err.message;
+          document.getElementById('errorBox').style.display = 'block';
+          startBtn.disabled = false;
+          startBtn.textContent = 'Try Again';
+          document.getElementById('loadingOverlay').style.display = 'none';
         }
-        
-        // Set video source
-        video.srcObject = stream;
-        
-        // Wait for video to be ready
-        return new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Video load timeout - camera may not be responding'));
-          }, 10000); // 10 second timeout
-          
-          video.onloadedmetadata = () => {
-            log('Video metadata loaded:', {
-              width: video.videoWidth,
-              height: video.videoHeight
-            });
-            
-            video.play().then(() => {
-              clearTimeout(timeout);
-              
-              const canvas = document.getElementById('canvasElement');
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              
-              log('Camera started successfully:', video.videoWidth + 'x' + video.videoHeight);
-              updateStatus('Camera active • AI tracking loading...');
-              resolve();
-              
-            }).catch(err => {
-              clearTimeout(timeout);
-              log('Video play failed:', err);
-              reject(err);
-            });
-          };
-          
-          video.onerror = (e) => {
-            clearTimeout(timeout);
-            log('Video element error:', e);
-            reject(new Error('Video element error'));
-          };
-        });
       }
       
-      // Stop camera
-      function stopCamera() {
+      // ============================================================
+      // FRAME PROCESSING LOOP
+      // ============================================================
+      
+      async function processFrame() {
+        if (!isRunning || !holistic) return;
+        
+        // Calculate FPS
+        frameCount++;
+        const now = performance.now();
+        if (now - lastFpsTime >= 1000) {
+          currentFps = frameCount;
+          frameCount = 0;
+          lastFpsTime = now;
+          document.getElementById('fpsVal').textContent = currentFps;
+        }
+        
+        // Send frame to holistic
+        await holistic.send({ image: videoElement });
+        
+        // Continue loop
+        requestAnimationFrame(processFrame);
+      }
+      
+      // ============================================================
+      // RESULTS CALLBACK - Draw Landmarks
+      // ============================================================
+      
+      function onResults(results) {
+        lastResults = results;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        // Count detected landmarks
+        let totalLandmarks = 0;
+        let bodyDetected = false;
+        let faceDetected = false;
+        let handsDetected = false;
+        
+        const w = canvasElement.width;
+        const h = canvasElement.height;
+        
+        // ================== POSE (33 landmarks) ==================
+        if (results.poseLandmarks && results.poseLandmarks.length > 0) {
+          bodyDetected = true;
+          totalLandmarks += results.poseLandmarks.length;
+          
+          // Draw pose connections (blue)
+          drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
+            color: '#3b82f6',
+            lineWidth: 3
+          });
+          
+          // Draw pose landmarks (blue dots)
+          drawLandmarks(ctx, results.poseLandmarks, {
+            color: '#93c5fd',
+            fillColor: '#3b82f6',
+            lineWidth: 1,
+            radius: 4
+          });
+          
+          // Calculate joint angles
+          calculateAngles(results.poseLandmarks);
+        }
+        
+        // ================== FACE (468 landmarks) ==================
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+          faceDetected = true;
+          totalLandmarks += results.faceLandmarks.length;
+          
+          // Draw face mesh (cyan)
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {
+            color: 'rgba(6, 182, 212, 0.3)',
+            lineWidth: 1
+          });
+          
+          // Draw face contours
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_FACE_OVAL, {
+            color: '#06b6d4',
+            lineWidth: 2
+          });
+          
+          // Draw eyes
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_LEFT_EYE, {
+            color: '#06b6d4',
+            lineWidth: 1
+          });
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_RIGHT_EYE, {
+            color: '#06b6d4',
+            lineWidth: 1
+          });
+          
+          // Draw lips
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_LIPS, {
+            color: '#06b6d4',
+            lineWidth: 1
+          });
+        }
+        
+        // ================== LEFT HAND (21 landmarks) ==================
+        if (results.leftHandLandmarks && results.leftHandLandmarks.length > 0) {
+          handsDetected = true;
+          totalLandmarks += results.leftHandLandmarks.length;
+          
+          // Draw hand connections (purple)
+          drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, {
+            color: '#8b5cf6',
+            lineWidth: 2
+          });
+          
+          // Draw hand landmarks
+          drawLandmarks(ctx, results.leftHandLandmarks, {
+            color: '#c4b5fd',
+            fillColor: '#8b5cf6',
+            lineWidth: 1,
+            radius: 3
+          });
+        }
+        
+        // ================== RIGHT HAND (21 landmarks) ==================
+        if (results.rightHandLandmarks && results.rightHandLandmarks.length > 0) {
+          handsDetected = true;
+          totalLandmarks += results.rightHandLandmarks.length;
+          
+          // Draw hand connections (purple)
+          drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, {
+            color: '#8b5cf6',
+            lineWidth: 2
+          });
+          
+          // Draw hand landmarks
+          drawLandmarks(ctx, results.rightHandLandmarks, {
+            color: '#c4b5fd',
+            fillColor: '#8b5cf6',
+            lineWidth: 1,
+            radius: 3
+          });
+        }
+        
+        // Update stats
+        document.getElementById('landmarkCount').textContent = totalLandmarks + '/543';
+        document.getElementById('bodyStatus').textContent = bodyDetected ? '✓' : '--';
+        document.getElementById('faceStatus').textContent = faceDetected ? '✓' : '--';
+        document.getElementById('handsStatus').textContent = handsDetected ? '✓' : '--';
+        
+        // Show/hide no detection warning
+        if (!bodyDetected) {
+          noDetectionFrames++;
+          if (noDetectionFrames > 30) {
+            document.getElementById('noDetection').classList.add('show');
+          }
+        } else {
+          noDetectionFrames = 0;
+          document.getElementById('noDetection').classList.remove('show');
+        }
+      }
+      
+      // ============================================================
+      // ANGLE CALCULATIONS
+      // ============================================================
+      
+      function calculateAngles(landmarks) {
+        if (!landmarks || landmarks.length < 33) return;
+        
+        // Pose landmark indices
+        const LEFT_SHOULDER = 11, RIGHT_SHOULDER = 12;
+        const LEFT_ELBOW = 13, RIGHT_ELBOW = 14;
+        const LEFT_WRIST = 15, RIGHT_WRIST = 16;
+        const LEFT_HIP = 23, RIGHT_HIP = 24;
+        const LEFT_KNEE = 25, RIGHT_KNEE = 26;
+        const LEFT_ANKLE = 27, RIGHT_ANKLE = 28;
+        
+        // Calculate angle between three points
+        function calcAngle(a, b, c) {
+          const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+          let angle = Math.abs(radians * 180 / Math.PI);
+          if (angle > 180) angle = 360 - angle;
+          return Math.round(angle);
+        }
+        
+        // Left knee angle
+        const kneeL = calcAngle(
+          landmarks[LEFT_HIP],
+          landmarks[LEFT_KNEE],
+          landmarks[LEFT_ANKLE]
+        );
+        document.getElementById('kneeL').textContent = kneeL + '°';
+        
+        // Right knee angle
+        const kneeR = calcAngle(
+          landmarks[RIGHT_HIP],
+          landmarks[RIGHT_KNEE],
+          landmarks[RIGHT_ANKLE]
+        );
+        document.getElementById('kneeR').textContent = kneeR + '°';
+        
+        // Hip angle (average)
+        const hipL = calcAngle(
+          landmarks[LEFT_SHOULDER],
+          landmarks[LEFT_HIP],
+          landmarks[LEFT_KNEE]
+        );
+        const hipR = calcAngle(
+          landmarks[RIGHT_SHOULDER],
+          landmarks[RIGHT_HIP],
+          landmarks[RIGHT_KNEE]
+        );
+        const hipAvg = Math.round((hipL + hipR) / 2);
+        document.getElementById('hipAngle').textContent = hipAvg + '°';
+        
+        // Shoulder angle
+        const shoulderL = calcAngle(
+          landmarks[LEFT_ELBOW],
+          landmarks[LEFT_SHOULDER],
+          landmarks[LEFT_HIP]
+        );
+        const shoulderR = calcAngle(
+          landmarks[RIGHT_ELBOW],
+          landmarks[RIGHT_SHOULDER],
+          landmarks[RIGHT_HIP]
+        );
+        const shoulderAvg = Math.round((shoulderL + shoulderR) / 2);
+        document.getElementById('shoulderAngle').textContent = shoulderAvg + '°';
+        
+        // Determine pose state
+        let poseState = 'Standing';
+        if (kneeL < 130 && kneeR < 130) poseState = 'Squatting';
+        else if (hipAvg < 120) poseState = 'Bending';
+        else if (shoulderAvg > 140) poseState = 'Arms Raised';
+        document.getElementById('poseAngle').textContent = poseState;
+        
+        // Track max angles
+        if (!capturedData.maxAngles.kneeL || kneeL > capturedData.maxAngles.kneeL) {
+          capturedData.maxAngles.kneeL = kneeL;
+        }
+        if (!capturedData.maxAngles.kneeR || kneeR > capturedData.maxAngles.kneeR) {
+          capturedData.maxAngles.kneeR = kneeR;
+        }
+        if (!capturedData.maxAngles.hip || hipAvg > capturedData.maxAngles.hip) {
+          capturedData.maxAngles.hip = hipAvg;
+        }
+        if (!capturedData.maxAngles.shoulder || shoulderAvg > capturedData.maxAngles.shoulder) {
+          capturedData.maxAngles.shoulder = shoulderAvg;
+        }
+      }
+      
+      // ============================================================
+      // CONTROL FUNCTIONS
+      // ============================================================
+      
+      function stopScanning() {
+        console.log('[3D Scanner] Stopping...');
+        isRunning = false;
+        
         if (stream) {
           stream.getTracks().forEach(t => t.stop());
           stream = null;
         }
-        webcamRunning = false;
-        if (animationId) {
-          cancelAnimationFrame(animationId);
-          animationId = null;
-        }
+        
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        document.getElementById('startScreen').style.display = 'flex';
+        document.getElementById('trackingInfo').style.display = 'none';
+        document.getElementById('legend').style.display = 'none';
+        document.getElementById('bottomControls').style.display = 'none';
+        document.getElementById('noDetection').classList.remove('show');
+        
+        const startBtn = document.getElementById('startBtn');
+        startBtn.disabled = false;
+        startBtn.textContent = 'Resume Scan';
       }
       
-      // Switch to different camera
-      window.switchCamera = async function() {
+      function switchCamera() {
         if (availableCameras.length < 2) return;
         
         const currentIdx = availableCameras.findIndex(c => c.deviceId === selectedDeviceId);
         const nextIdx = (currentIdx + 1) % availableCameras.length;
         selectedDeviceId = availableCameras[nextIdx].deviceId;
-        
         document.getElementById('cameraSelect').value = selectedDeviceId;
         
-        if (stream) {
-          stopCamera();
-          await startCamera();
-          webcamRunning = true;
-          predictWebcam();
+        console.log('[3D Scanner] Switching to camera:', nextIdx + 1);
+        
+        if (isRunning) {
+          stopScanning();
+          setTimeout(startScanning, 500);
         }
-      };
+      }
       
-      // Main prediction loop
-      let lastVideoTime = -1;
-      let frameCount = 0;
-      let lastFpsTime = performance.now();
-      let currentFps = 0;
-      let noDetectionCount = 0;
-      
-      function predictWebcam() {
-        if (!webcamRunning || !poseLandmarker) {
-          log('Prediction stopped:', !webcamRunning ? 'webcam off' : 'no landmarker');
-          return;
-        }
+      function captureFrame() {
+        if (!lastResults) return;
         
-        const video = document.getElementById('videoElement');
-        const canvas = document.getElementById('canvasElement');
-        const ctx = canvas.getContext('2d');
+        console.log('[3D Scanner] Capturing frame...');
         
-        // Ensure canvas matches video
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          log('Canvas resized:', canvas.width + 'x' + canvas.height);
-        }
-        
-        const startTimeMs = performance.now();
-        
-        // Calculate FPS
-        frameCount++;
-        if (startTimeMs - lastFpsTime >= 1000) {
-          currentFps = frameCount;
-          frameCount = 0;
-          lastFpsTime = startTimeMs;
-        }
-        
-        // Only process if video time changed (new frame)
-        if (video.currentTime !== lastVideoTime && video.readyState >= 2) {
-          lastVideoTime = video.currentTime;
-          
-          try {
-            const results = poseLandmarker.detectForVideo(video, startTimeMs);
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (results.landmarks && results.landmarks.length > 0) {
-              const landmarks = results.landmarks[0];
-              noDetectionCount = 0; // Reset no-detection counter
-              
-              // Calculate average visibility (tracking quality indicator)\n              const avgVisibility = landmarks.reduce((sum, l) => sum + (l.visibility || 0), 0) / landmarks.length;
-              
-              // Draw skeleton with blue color
-              drawBlueSkeleton(ctx, landmarks, canvas.width, canvas.height);
-              
-              // Calculate angles
-              const angles = calculateAngles(landmarks);
-              lastAngles = angles;
-              
-              // Update angles display with FPS and quality
-              updateAnglesDisplay(angles, currentFps, avgVisibility);
-              
-              // Check for rep completion
-              checkRepCompletion(angles);
-              
-              // Track max angles for current exercise
-              trackMaxAngles(angles);
-              
-            } else {
-              noDetectionCount++;
-              
-              // Show \"no person detected\" hint after 30 frames (~1 second)
-              if (noDetectionCount > 30) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';\n                ctx.fillRect(0, canvas.height/2 - 40, canvas.width, 80);\n                ctx.fillStyle = '#f87171';\n                ctx.font = '16px sans-serif';\n                ctx.textAlign = 'center';\n                ctx.fillText('⚠ No person detected', canvas.width/2, canvas.height/2 - 10);\n                ctx.fillStyle = '#888';\n                ctx.font = '12px sans-serif';\n                ctx.fillText('Stand in frame with full body visible', canvas.width/2, canvas.height/2 + 15);\n              }\n            }\n          } catch (e) {\n            log('Detection error:', e.message);\n          }\n        }\n        \n        animationId = requestAnimationFrame(predictWebcam);\n      }
-      
-      // Draw blue skeleton
-      function drawBlueSkeleton(ctx, landmarks, w, h) {
-        const connections = PoseLandmarker.POSE_CONNECTIONS;
-        
-        // Draw connections (blue lines)
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 3;
-        
-        connections.forEach(([start, end]) => {
-          const p1 = landmarks[start];
-          const p2 = landmarks[end];
-          if (p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x * w, p1.y * h);
-            ctx.lineTo(p2.x * w, p2.y * h);
-            ctx.stroke();
-          }
+        // Save current state
+        capturedData.poses.push({
+          timestamp: Date.now(),
+          hasBody: !!lastResults.poseLandmarks,
+          hasFace: !!lastResults.faceLandmarks,
+          hasLeftHand: !!lastResults.leftHandLandmarks,
+          hasRightHand: !!lastResults.rightHandLandmarks,
+          angles: { ...capturedData.maxAngles }
         });
         
-        // Draw landmarks (blue dots)
-        landmarks.forEach((landmark, i) => {
-          if (landmark.visibility > 0.5) {
-            ctx.beginPath();
-            ctx.arc(landmark.x * w, landmark.y * h, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = '#3b82f6';
-            ctx.fill();
-            ctx.strokeStyle = '#93c5fd';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
-        });
+        // Flash effect
+        canvasElement.style.opacity = '0.5';
+        setTimeout(() => { canvasElement.style.opacity = '1'; }, 100);
+        
+        alert('Frame captured! ' + capturedData.poses.length + ' frames saved.');
       }
       
-      // Update angles display with FPS and tracking quality
-      function updateAnglesDisplay(angles, fps = 0, quality = 0) {
-        const exercise = exercises[currentTaskIdx];
-        if (!exercise) return;
+      function restartScan() {
+        console.log('[3D Scanner] Restarting...');
+        capturedData = { poses: [], maxAngles: {}, timestamps: [] };
         
-        let html = '';
-        
-        // Add FPS and quality indicator
-        const qualityPercent = Math.round(quality * 100);
-        const qualityColor = qualityPercent > 70 ? '#22c55e' : (qualityPercent > 40 ? '#f59e0b' : '#ef4444');
-        html += '<div class="angle-row" style="border-bottom:1px solid #333;margin-bottom:4px;padding-bottom:4px;">';
-        html += '<span style="font-size:9px;">FPS: ' + fps + '</span>';
-        html += '<span style="font-size:9px;color:' + qualityColor + '">Quality: ' + qualityPercent + '%</span>';
-        html += '</div>';
-        
-        // Joint angles
-        exercise.joints.forEach(joint => {
-          const val = angles[joint] || 0;
-          const std = ROM_STANDARDS[joint];
-          let cls = '';
-          if (std) {
-            if (val >= std.normal * 0.9) cls = 'good';
-            else if (val < std.limited) cls = 'warn';
-          }
-          html += '<div class="angle-row ' + cls + '"><span>' + (std?.label || joint) + '</span><span class="val">' + val + '°</span></div>';
-        });
-        
-        document.getElementById('anglesList').innerHTML = html;
-      }
-      
-      // Track max angles reached during exercise
-      function trackMaxAngles(angles) {
-        const exercise = exercises[currentTaskIdx];
-        if (!exercise) return;
-        
-        exercise.joints.forEach(joint => {
-          const val = angles[joint] || 0;
-          if (!exercise.maxAngles[joint] || val > exercise.maxAngles[joint]) {
-            exercise.maxAngles[joint] = val;
-          }
-        });
-      }
-      
-      // Check for rep completion based on movement
-      function checkRepCompletion(angles) {
-        const exercise = exercises[currentTaskIdx];
-        if (!exercise || exercise.done >= exercise.reps) return;
-        
-        const key = exercise.detectKey;
-        const val = angles[key] || 0;
-        const threshold = exercise.threshold;
-        
-        // Simple state machine for rep detection
-        if (repState === 'up' && val >= threshold) {
-          repState = 'down';
-        } else if (repState === 'down' && val < threshold - 20) {
-          repState = 'up';
-          currentReps++;
-          updateRepDisplay();
-          
-          // Check if exercise complete
-          if (currentReps >= exercise.reps) {
-            exercise.done = currentReps;
-            renderTaskList();
-          }
-        }
-      }
-      
-      // Update rep display
-      function updateRepDisplay() {
-        const exercise = exercises[currentTaskIdx];
-        const target = exercise ? exercise.reps : 0;
-        
-        document.getElementById('repCount').textContent = currentReps;
-        document.getElementById('repTarget').textContent = '/ ' + target;
-        document.getElementById('repFill').style.width = (target > 0 ? (currentReps / target * 100) : 0) + '%';
-      }
-      
-      // Update exercise display
-      function updateExerciseDisplay() {
-        const exercise = exercises[currentTaskIdx];
-        if (exercise) {
-          document.getElementById('exerciseName').textContent = (currentTaskIdx + 1) + '. ' + exercise.name;
-          document.getElementById('exerciseHint').textContent = exercise.hint;
-        } else {
-          document.getElementById('exerciseName').textContent = 'Assessment Complete';
-          document.getElementById('exerciseHint').textContent = 'All exercises finished';
-        }
-      }
-      
-      // Render task list
-      function renderTaskList() {
-        let html = '';
-        exercises.forEach((ex, i) => {
-          let cls = '';
-          if (ex.done >= ex.reps) cls = 'done';
-          else if (i === currentTaskIdx) cls = 'active';
-          
-          const repsShow = ex.done >= ex.reps ? ex.done : (i === currentTaskIdx ? currentReps : 0);
-          html += '<div class="task-row ' + cls + '">' +
-            '<div class="task-num">' + (ex.done >= ex.reps ? '✓' : (i + 1)) + '</div>' +
-            '<span>' + ex.name + '</span>' +
-            '<span class="reps">' + repsShow + '/' + ex.reps + '</span>' +
-          '</div>';
-        });
-        document.getElementById('taskPanel').innerHTML = html;
-      }
-      
-      // Next exercise
-      function nextExercise() {
-        const exercise = exercises[currentTaskIdx];
-        if (exercise) {
-          exercise.done = Math.max(exercise.done, currentReps);
+        if (isRunning) {
+          stopScanning();
         }
         
-        currentTaskIdx++;
-        currentReps = 0;
-        repState = 'up';
-        
-        if (currentTaskIdx >= exercises.length) {
-          document.getElementById('nextBtn').textContent = 'Done ✓';
-          document.getElementById('nextBtn').disabled = true;
-        }
-        
-        updateExerciseDisplay();
-        updateRepDisplay();
-        renderTaskList();
+        // Reset UI
+        document.getElementById('kneeL').textContent = '--°';
+        document.getElementById('kneeR').textContent = '--°';
+        document.getElementById('hipAngle').textContent = '--°';
+        document.getElementById('shoulderAngle').textContent = '--°';
+        document.getElementById('poseAngle').textContent = '--';
+        document.getElementById('landmarkCount').textContent = '0/543';
       }
       
-      // Start assessment
-      async function startAssessment() {
-        const btn = document.getElementById('startBtn');
-        btn.textContent = 'Starting...';
-        btn.disabled = true;
+      function generateReport() {
+        console.log('[3D Scanner] Generating report...');
         
-        log('Starting assessment...');
-        
-        try {
-          // Init MediaPipe if not done
-          if (!poseLandmarker) {
-            log('Loading MediaPipe model...');
-            const loaded = await initPoseLandmarker();
-            if (!loaded) {
-              btn.textContent = 'Model Failed - Retry';
-              btn.disabled = false;
-              return;
-            }
+        const reportData = {
+          scanDate: new Date().toISOString(),
+          totalCaptures: capturedData.poses.length,
+          maxAngles: capturedData.maxAngles,
+          assessment: {
+            kneeROM: capturedData.maxAngles.kneeL ? 
+              (capturedData.maxAngles.kneeL >= 120 ? 'Normal' : 'Limited') : 'Not measured',
+            hipROM: capturedData.maxAngles.hip ? 
+              (capturedData.maxAngles.hip >= 100 ? 'Normal' : 'Limited') : 'Not measured',
+            shoulderROM: capturedData.maxAngles.shoulder ? 
+              (capturedData.maxAngles.shoulder >= 150 ? 'Normal' : 'Limited') : 'Not measured'
           }
-          
-          log('Starting camera...');
-          await startCamera();
-          
-          document.getElementById('cameraStart').style.display = 'none';
-          document.getElementById('anglesBox').style.display = 'block';
-          document.getElementById('repBox').style.display = 'block';
-          document.getElementById('bottomBar').style.display = 'block';
-          
-          webcamRunning = true;
-          currentReps = 0;
-          repState = 'up';
-          updateExerciseDisplay();
-          updateRepDisplay();
-          renderTaskList();
-          
-          log('Starting prediction loop...');
-          predictWebcam();
-          
-        } catch (err) {
-          log('Start error:', err);
-          console.error('Start error:', err);
-          btn.textContent = 'Try Again';
-          btn.disabled = false;
-          document.getElementById('permNote').textContent = 'Error: ' + (err.message || 'Camera access required');
-        }
+        };
+        
+        // Store for notes page
+        sessionStorage.setItem('bodyScanner', JSON.stringify(reportData));
+        sessionStorage.setItem('jointAnalysis', JSON.stringify([{
+          name: '3D Body Scan',
+          maxAngles: capturedData.maxAngles,
+          captures: capturedData.poses.length
+        }]));
+        
+        // Navigate to notes
+        window.location.href = '/doctor/notes';
       }
       
-      // Stop assessment
-      function stopAssessment() {
-        log('Stopping assessment...');
-        stopCamera();
-        
-        document.getElementById('cameraStart').style.display = 'block';
-        document.getElementById('anglesBox').style.display = 'none';
-        document.getElementById('repBox').style.display = 'none';
-        document.getElementById('bottomBar').style.display = 'none';
-        
-        const ctx = document.getElementById('canvasElement').getContext('2d');
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        
-        document.getElementById('startBtn').textContent = 'Resume';
-        document.getElementById('startBtn').disabled = false;
-      }
+      // ============================================================
+      // INITIALIZATION
+      // ============================================================
       
-      // Restart all
-      function restartAll() {
-        log('Restarting assessment...');
-        exercises.forEach(ex => { ex.done = 0; ex.maxAngles = {}; });
-        currentTaskIdx = 0;
-        currentReps = 0;
-        repState = 'up';
-        
-        updateExerciseDisplay();
-        updateRepDisplay();
-        renderTaskList();
-        
-        document.getElementById('nextBtn').textContent = 'Next Exercise →';
-        document.getElementById('nextBtn').disabled = false;
-      }
-      
-      // Generate note
-      function generateNote() {
-        log('Generating note...');
-        const scores = {};
-        const jointData = [];
-        
-        exercises.forEach(ex => {
-          if (ex.done > 0) {
-            // Score: 3 = complete, 2 = partial, 1 = attempted
-            scores[ex.name] = ex.done >= ex.reps ? 3 : (ex.done >= ex.reps / 2 ? 2 : 1);
-            jointData.push({
-              name: ex.name,
-              reps: ex.done,
-              target: ex.reps,
-              maxAngles: ex.maxAngles
-            });
-          }
-        });
-        
-        sessionStorage.setItem('fmsScores', JSON.stringify(scores));
-        sessionStorage.setItem('jointAnalysis', JSON.stringify(jointData));
-        location.href = '/doctor/notes';
-      }
-      
-      // Initialize on load
       document.addEventListener('DOMContentLoaded', async () => {
-        log('=== MSK Assessment v5.3 Initializing ===');
-        log('Protocol:', window.location.protocol);
-        log('User Agent:', navigator.userAgent);
+        console.log('[3D Scanner] DOM ready, setting up...');
         
-        // ==========================================
-        // ATTACH EVENT LISTENERS (critical for module scope)
-        // ==========================================
+        // Attach event listeners
+        document.getElementById('startBtn').addEventListener('click', startScanning);
+        document.getElementById('switchCamBtn').addEventListener('click', switchCamera);
+        document.getElementById('stopBtn').addEventListener('click', stopScanning);
+        document.getElementById('captureBtn').addEventListener('click', captureFrame);
+        document.getElementById('restartBtn').addEventListener('click', restartScan);
+        document.getElementById('generateBtn').addEventListener('click', generateReport);
         
-        // Start button
-        document.getElementById('startBtn').addEventListener('click', startAssessment);
-        
-        // Model selection
-        document.querySelectorAll('.model-opt').forEach(el => {
-          el.addEventListener('click', () => selectModel(el.dataset.model));
-        });
-        
-        // Bottom controls
-        document.getElementById('switchCamBtn')?.addEventListener('click', switchCamera);
-        document.getElementById('nextBtn')?.addEventListener('click', nextExercise);
-        document.getElementById('stopBtn')?.addEventListener('click', stopAssessment);
-        
-        // Footer buttons
-        document.getElementById('restartBtn')?.addEventListener('click', restartAll);
-        document.getElementById('generateNoteBtn')?.addEventListener('click', generateNote);
-        
-        log('Event listeners attached');
-        
-        // ==========================================
-        // INITIALIZE UI
-        // ==========================================
-        
-        renderTaskList();
-        updateExerciseDisplay();
-        
-        const startBtn = document.getElementById('startBtn');
-        const errorDiv = document.getElementById('errorMsg');
-        
-        // Check HTTPS (required for camera on most browsers)
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-          log('WARNING: Not HTTPS - camera may not work');
-        }
-        
-        // Check for mediaDevices API
-        if (!navigator.mediaDevices) {
-          log('ERROR: navigator.mediaDevices not available');
-          startBtn.textContent = 'Camera Not Available';
-          startBtn.disabled = true;
-          errorDiv.innerHTML = '<div class="error-msg"><div class="title">Browser Not Supported</div>navigator.mediaDevices API not available.<br><br>Possible causes:<br>• Not using HTTPS<br>• Old browser version<br>• Private/incognito mode restrictions<br><br>Try: Chrome, Firefox, Safari, or Edge on HTTPS</div>';
-          updateStatus('Browser does not support camera access', true);
+        // Check for mediaDevices
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          document.getElementById('errorMsg').textContent = 
+            'Camera API not available. Use HTTPS and a modern browser.';
+          document.getElementById('errorBox').style.display = 'block';
+          document.getElementById('startBtn').disabled = true;
           return;
         }
         
-        if (!navigator.mediaDevices.getUserMedia) {
-          log('ERROR: getUserMedia not available');
-          startBtn.textContent = 'Camera Not Available';
-          startBtn.disabled = true;
-          errorDiv.innerHTML = '<div class="error-msg"><div class="title">Camera API Missing</div>getUserMedia not supported.<br><br>Use a modern browser (Chrome 53+, Firefox 36+, Safari 11+, Edge 12+)</div>';
-          updateStatus('getUserMedia not available', true);
-          return;
-        }
-        
-        log('MediaDevices API available');
-        updateStatus('Initializing camera detection...');
-        
-        // Enumerate available cameras
+        // Enumerate cameras
         await enumerateCameras();
         
-        // Listen for device changes (camera plugged in/out)
-        navigator.mediaDevices.addEventListener('devicechange', async () => {
-          log('Device change detected - re-enumerating cameras');
-          await enumerateCameras();
-        });
+        // Listen for device changes
+        navigator.mediaDevices.addEventListener('devicechange', enumerateCameras);
         
-        log('=== Initialization complete ===');
+        console.log('[3D Scanner] Setup complete');
       });
     </script>
-  `, 'MSK Assessment - Thrive Ortho EHR'))
+  `, '3D Body Scanner - Thrive Ortho EHR'))
 })
+
 
 // MSK Assessment (redirects to joints)
 app.get('/doctor/assessment', (c) => c.redirect('/doctor/joints'))
