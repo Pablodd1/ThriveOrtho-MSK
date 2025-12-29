@@ -1877,7 +1877,7 @@ app.get('/doctor/joints', (c) => {
       
       <div class="exercise-bar">
         <div class="exercise-name" id="exerciseName">1. Deep Squat</div>
-        <div class="exercise-hint" id="exerciseHint">Squat down fully - tracking knee, hip, ankle angles</div>
+        <div class="exercise-hint" id="exerciseHint">Squat down fully - tracking knee, hip, ankle</div>
       </div>
       
       <div class="camera-wrap">
