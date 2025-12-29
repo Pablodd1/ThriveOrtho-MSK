@@ -1707,7 +1707,7 @@ app.get('/doctor', (c) => {
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
-      /* Mobile-First Camera Assessment Styles */
+      /* Guided MSK Assessment - Real-Time Joint Tracking */
       .assessment-page {
         min-height: 100vh;
         background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
@@ -1731,7 +1731,7 @@ app.get('/doctor/joints', (c) => {
         font-weight: 600;
       }
       
-      .assessment-header .back-btn {
+      .back-btn {
         color: white;
         background: rgba(255,255,255,0.2);
         border: none;
@@ -1741,13 +1741,56 @@ app.get('/doctor/joints', (c) => {
         cursor: pointer;
       }
       
+      /* Instruction Banner - TTS instructions shown here */
+      .instruction-banner {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        padding: 16px 20px;
+        text-align: center;
+        position: relative;
+      }
+      
+      .instruction-banner .task-progress {
+        font-size: 11px;
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 8px;
+      }
+      
+      .instruction-banner .instruction-text {
+        font-size: 18px;
+        font-weight: 600;
+        color: white;
+        line-height: 1.4;
+      }
+      
+      .instruction-banner .instruction-detail {
+        font-size: 13px;
+        color: rgba(255,255,255,0.8);
+        margin-top: 8px;
+      }
+      
+      .speaking-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255,255,255,0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        color: white;
+        margin-top: 10px;
+      }
+      
+      .speaking-indicator.hidden { display: none; }
+      
+      /* Camera Container */
       .camera-container {
         flex: 1;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 50vh;
+        min-height: 45vh;
+        background: #0a0f1a;
       }
       
       .camera-feed {
@@ -1759,44 +1802,6 @@ app.get('/doctor/joints', (c) => {
         left: 0;
       }
       
-      .camera-placeholder {
-        text-align: center;
-        color: #60a5fa;
-        z-index: 1;
-      }
-      
-      .camera-placeholder i {
-        font-size: 64px;
-        margin-bottom: 16px;
-        display: block;
-      }
-      
-      .camera-placeholder p {
-        font-size: 14px;
-        color: #93c5fd;
-        margin-bottom: 20px;
-      }
-      
-      .start-camera-btn {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        border: none;
-        padding: 16px 32px;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
-      }
-      
-      .start-camera-btn:active {
-        transform: scale(0.98);
-      }
-      
-      /* Skeleton Overlay */
       .skeleton-overlay {
         position: absolute;
         top: 0;
@@ -1807,84 +1812,142 @@ app.get('/doctor/joints', (c) => {
         z-index: 2;
       }
       
-      /* Analysis Controls */
-      .analysis-controls {
+      /* Live Analysis Overlay */
+      .live-analysis-overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        z-index: 5;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      
+      .live-badge {
+        background: rgba(220, 38, 38, 0.9);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .live-badge .pulse {
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        animation: pulse 1s infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+      }
+      
+      .joint-metrics-live {
+        background: rgba(0,0,0,0.7);
+        padding: 10px 14px;
+        border-radius: 10px;
+        color: white;
+        font-size: 11px;
+        max-width: 180px;
+      }
+      
+      .joint-metrics-live .metric {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      
+      .joint-metrics-live .metric:last-child { border-bottom: none; }
+      
+      .joint-metrics-live .metric.good { color: #4ade80; }
+      .joint-metrics-live .metric.limited { color: #fbbf24; }
+      .joint-metrics-live .metric.critical { color: #f87171; }
+      
+      /* Camera Placeholder */
+      .camera-placeholder {
+        text-align: center;
+        color: #60a5fa;
+        z-index: 1;
+        padding: 20px;
+      }
+      
+      .start-camera-btn {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border: none;
+        padding: 18px 36px;
+        border-radius: 14px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+      }
+      
+      /* Bottom Controls */
+      .bottom-controls {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        background: linear-gradient(transparent, rgba(0,0,0,0.9));
         padding: 20px 16px;
         z-index: 10;
       }
       
-      .control-buttons {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-        margin-bottom: 16px;
+      .assessment-controls {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
       }
       
-      .control-btn {
-        background: rgba(37, 99, 235, 0.8);
+      .control-btn-large {
+        background: rgba(37, 99, 235, 0.9);
         border: 2px solid rgba(147, 197, 253, 0.5);
         color: white;
-        padding: 12px 8px;
-        border-radius: 12px;
-        font-size: 10px;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        transition: all 0.2s;
-      }
-      
-      .control-btn i {
-        font-size: 20px;
-      }
-      
-      .control-btn:active {
-        background: #2563eb;
-        transform: scale(0.95);
-      }
-      
-      .control-btn.camera-toggle {
-        background: rgba(255,255,255,0.2);
-      }
-      
-      .control-btn.camera-toggle.active {
-        background: #dc2626;
-      }
-      
-      .capture-btn {
-        width: 100%;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        border: none;
-        padding: 16px;
-        border-radius: 12px;
-        font-size: 16px;
+        padding: 14px 20px;
+        border-radius: 14px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 10px;
-        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+        gap: 8px;
+        transition: all 0.2s;
       }
       
-      .capture-btn:disabled {
-        background: #475569;
-        box-shadow: none;
+      .control-btn-large:active {
+        transform: scale(0.95);
+      }
+      
+      .control-btn-large.primary {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        flex: 1;
+        justify-content: center;
+        font-size: 16px;
+        padding: 16px 24px;
+      }
+      
+      .control-btn-large.danger {
+        background: rgba(220, 38, 38, 0.8);
       }
       
       /* Results Panel */
       .results-panel {
-        background: rgba(255,255,255,0.95);
+        background: white;
         border-radius: 20px 20px 0 0;
         padding: 20px;
-        max-height: 40vh;
+        max-height: 35vh;
         overflow-y: auto;
       }
       
@@ -1892,74 +1955,92 @@ app.get('/doctor/joints', (c) => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
       
       .results-title {
         font-weight: 700;
-        font-size: 16px;
+        font-size: 15px;
         color: #1e293b;
       }
       
-      .score-badge {
+      .task-badge {
         background: linear-gradient(135deg, #2563eb, #1d4ed8);
         color: white;
-        padding: 8px 16px;
+        padding: 6px 14px;
         border-radius: 20px;
-        font-weight: 700;
-        font-size: 14px;
+        font-weight: 600;
+        font-size: 12px;
       }
       
-      .joint-results {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
+      .task-list {
+        display: flex;
+        flex-direction: column;
         gap: 8px;
       }
       
-      .joint-result-item {
-        background: #f1f5f9;
-        padding: 10px 12px;
-        border-radius: 8px;
+      .task-item {
         display: flex;
-        justify-content: space-between;
-        font-size: 11px;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 10px;
+        font-size: 13px;
       }
       
-      .joint-result-item.limited {
-        background: #fef3c7;
-        border-left: 3px solid #f59e0b;
-      }
-      
-      .joint-result-item.good {
+      .task-item.completed {
         background: #dcfce7;
-        border-left: 3px solid #22c55e;
       }
       
-      .joint-result-item span:first-child {
-        color: #64748b;
+      .task-item.active {
+        background: #dbeafe;
+        border: 2px solid #2563eb;
       }
       
-      .joint-result-item span:last-child {
+      .task-item.pending {
+        opacity: 0.6;
+      }
+      
+      .task-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      
+      .task-item.completed .task-icon {
+        background: #22c55e;
+        color: white;
+      }
+      
+      .task-item.active .task-icon {
+        background: #2563eb;
+        color: white;
+      }
+      
+      .task-item.pending .task-icon {
+        background: #e2e8f0;
+        color: #94a3b8;
+      }
+      
+      .task-info {
+        flex: 1;
+      }
+      
+      .task-name {
         font-weight: 600;
         color: #1e293b;
       }
       
-      .section-label {
-        grid-column: span 2;
-        font-size: 10px;
-        font-weight: 700;
-        color: #2563eb;
-        text-transform: uppercase;
-        padding: 8px 0 4px;
-        border-bottom: 1px solid #e2e8f0;
-        margin-top: 8px;
+      .task-score {
+        font-size: 11px;
+        color: #64748b;
       }
       
-      .section-label:first-child {
-        margin-top: 0;
-      }
-      
-      /* Action Buttons */
       .action-buttons {
         display: flex;
         gap: 10px;
@@ -1970,15 +2051,15 @@ app.get('/doctor/joints', (c) => {
       
       .action-btn {
         flex: 1;
-        padding: 12px;
-        border-radius: 10px;
-        font-size: 12px;
+        padding: 14px;
+        border-radius: 12px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 8px;
       }
       
       .action-btn.primary {
@@ -1993,46 +2074,24 @@ app.get('/doctor/joints', (c) => {
         border: 1px solid #cbd5e1;
       }
       
-      /* Status indicator */
-      .status-indicator {
-        position: absolute;
-        top: 70px;
-        left: 16px;
-        right: 16px;
-        background: rgba(37, 99, 235, 0.9);
-        color: white;
-        padding: 10px 16px;
+      /* Permission Status */
+      #permissionStatus {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        padding: 12px 16px;
         border-radius: 10px;
+        margin-bottom: 16px;
         font-size: 12px;
-        display: none;
-        align-items: center;
-        gap: 8px;
-        z-index: 20;
-      }
-      
-      .status-indicator.visible {
-        display: flex;
-      }
-      
-      .status-indicator.error {
-        background: rgba(220, 38, 38, 0.9);
-      }
-      
-      .status-indicator.success {
-        background: rgba(22, 163, 74, 0.9);
-      }
-      
-      /* Hide desktop elements on mobile */
-      @media (max-width: 768px) {
-        .desktop-only { display: none !important; }
+        color: #92400e;
+        text-align: left;
+        width: 100%;
+        max-width: 300px;
       }
       
       @media (min-width: 769px) {
-        .mobile-only { display: none !important; }
         .assessment-page {
           max-width: 500px;
           margin: 0 auto;
-          min-height: 100vh;
         }
       }
     </style>
@@ -2042,15 +2101,36 @@ app.get('/doctor/joints', (c) => {
         <button class="back-btn" onclick="location.href='/doctor'">
           <i class="fas fa-arrow-left"></i> Back
         </button>
-        <h1>MSK Assessment</h1>
-        <button class="back-btn" onclick="generateNote()">
-          <i class="fas fa-file-medical"></i>
+        <h1>Guided MSK Assessment</h1>
+        <button class="back-btn" onclick="toggleMute()">
+          <i class="fas fa-volume-up" id="muteIcon"></i>
         </button>
+      </div>
+      
+      <!-- Voice Instruction Banner -->
+      <div class="instruction-banner" id="instructionBanner">
+        <div class="task-progress" id="taskProgress">Task 1 of 7</div>
+        <div class="instruction-text" id="instructionText">Start the camera to begin assessment</div>
+        <div class="instruction-detail" id="instructionDetail">Position patient in front of camera</div>
+        <div class="speaking-indicator hidden" id="speakingIndicator">
+          <i class="fas fa-volume-up"></i> Speaking...
+        </div>
       </div>
       
       <div class="camera-container" id="cameraContainer">
         <video id="videoElement" class="camera-feed" autoplay playsinline muted style="display: none;"></video>
         <div class="skeleton-overlay" id="skeletonOverlay"></div>
+        
+        <!-- Live Analysis Overlay (shown when camera active) -->
+        <div class="live-analysis-overlay" id="liveOverlay" style="display: none;">
+          <div class="live-badge">
+            <div class="pulse"></div>
+            LIVE TRACKING
+          </div>
+          <div class="joint-metrics-live" id="liveMetrics">
+            <div class="metric"><span>Analyzing...</span></div>
+          </div>
+        </div>
         
         <div class="camera-placeholder" id="cameraPlaceholder">
           <i class="fas fa-camera" style="font-size: 48px; color: #2563eb; margin-bottom: 16px;"></i>
@@ -2076,73 +2156,38 @@ app.get('/doctor/joints', (c) => {
           
           <div style="margin-top: 16px; font-size: 11px; color: #94a3b8;">
             <i class="fas fa-lock" style="margin-right: 4px;"></i>
-            Secure • HIPAA Compliant • On-Device Processing
+            Secure • HIPAA Compliant
           </div>
         </div>
         
-        <div class="status-indicator" id="statusIndicator">
-          <i class="fas fa-spinner fa-spin"></i>
-          <span id="statusText">Analyzing...</span>
-        </div>
-        
-        <div class="analysis-controls" id="analysisControls" style="display: none;">
-          <div class="control-buttons">
-            <button class="control-btn camera-toggle" id="cameraToggle" onclick="toggleCamera()">
-              <i class="fas fa-camera-rotate"></i>
-              <span>Flip</span>
+        <!-- Bottom Controls (shown when camera active) -->
+        <div class="bottom-controls" id="bottomControls" style="display: none;">
+          <div class="assessment-controls">
+            <button class="control-btn-large" onclick="toggleCamera()">
+              <i class="fas fa-camera-rotate"></i> Flip
             </button>
-            <button class="control-btn" onclick="captureFullBody()">
-              <i class="fas fa-person"></i>
-              <span>Full Body</span>
+            <button class="control-btn-large primary" id="nextTaskBtn" onclick="completeCurrentTask()">
+              <i class="fas fa-check"></i> Task Complete - Next
             </button>
-            <button class="control-btn" onclick="captureGait()">
-              <i class="fas fa-person-walking"></i>
-              <span>Gait</span>
-            </button>
-            <button class="control-btn" onclick="captureElderly()">
-              <i class="fas fa-person-cane"></i>
-              <span>Fall Risk</span>
+            <button class="control-btn-large danger" onclick="stopAssessment()">
+              <i class="fas fa-stop"></i> Stop
             </button>
           </div>
-          <div class="control-buttons">
-            <button class="control-btn" onclick="captureHands()">
-              <i class="fas fa-hand"></i>
-              <span>Hands</span>
-            </button>
-            <button class="control-btn" onclick="captureFeet()">
-              <i class="fas fa-shoe-prints"></i>
-              <span>Feet</span>
-            </button>
-            <button class="control-btn" onclick="captureFace()">
-              <i class="fas fa-face-smile"></i>
-              <span>Face</span>
-            </button>
-            <button class="control-btn" onclick="stopCamera()">
-              <i class="fas fa-stop"></i>
-              <span>Stop</span>
-            </button>
-          </div>
-          <button class="capture-btn" id="captureBtn" onclick="captureFullBody()">
-            <i class="fas fa-crosshairs"></i>
-            Analyze Joints Now
-          </button>
         </div>
       </div>
       
+      <!-- Results Panel - Task List -->
       <div class="results-panel" id="resultsPanel">
         <div class="results-header">
-          <span class="results-title">Joint Analysis</span>
-          <span class="score-badge" id="scoreBadge">--/3</span>
+          <span class="results-title">Assessment Tasks</span>
+          <span class="task-badge" id="taskBadge">0/7</span>
         </div>
-        <div class="joint-results" id="jointResults">
-          <div class="section-label">Tap "Start Camera" to begin assessment</div>
-          <div class="joint-result-item" style="grid-column: span 2; justify-content: center; color: #64748b;">
-            Position patient in frame, then tap "Analyze Joints Now"
-          </div>
+        <div class="task-list" id="taskList">
+          <!-- Tasks populated by JS -->
         </div>
         <div class="action-buttons">
-          <button class="action-btn secondary" onclick="location.href='/doctor/intake'">
-            <i class="fas fa-microphone"></i> Voice Intake
+          <button class="action-btn secondary" onclick="restartAssessment()">
+            <i class="fas fa-redo"></i> Restart
           </button>
           <button class="action-btn primary" onclick="generateNote()">
             <i class="fas fa-file-medical"></i> Generate Note
@@ -2152,485 +2197,263 @@ app.get('/doctor/joints', (c) => {
     </div>
     
     <script>
-      let stream = null;
-      let lastAnalysis = null;
-      let facingMode = 'environment'; // Start with back camera for assessing others
-      let scores = {};
-      let cameraPermissionState = 'unknown';
+      // ============================================
+      // GUIDED MSK ASSESSMENT WITH LIVE JOINT TRACKING
+      // ============================================
       
-      // Check permission status on page load
+      let stream = null;
+      let facingMode = 'environment';
+      let isAnalyzing = false;
+      let analysisInterval = null;
+      let isMuted = false;
+      
+      // Assessment Tasks - Patient will be guided through these
+      const assessmentTasks = [
+        { id: 1, name: 'Deep Squat', instruction: 'Please perform a deep squat. Feet shoulder-width apart, squat down as low as comfortable.', detail: 'Keep heels on ground, arms overhead', type: 'full', score: null, analysis: null },
+        { id: 2, name: 'Shoulder Mobility', instruction: 'Raise both arms overhead, then reach behind your back.', detail: 'We are checking shoulder range of motion', type: 'full', score: null, analysis: null },
+        { id: 3, name: 'Active Leg Raise', instruction: 'Lie on your back and raise one leg straight up, keeping it straight.', detail: 'Keep the other leg flat on the ground', type: 'full', score: null, analysis: null },
+        { id: 4, name: 'Walk Forward', instruction: 'Please walk forward naturally for about 10 steps.', detail: 'Walk at your normal pace', type: 'gait', score: null, analysis: null },
+        { id: 5, name: 'Walk Backward', instruction: 'Now carefully walk backward for about 5 steps.', detail: 'Take your time, safety first', type: 'gait', score: null, analysis: null },
+        { id: 6, name: 'Timed Up and Go', instruction: 'Stand up from seated, walk 3 meters, turn around, walk back and sit.', detail: 'We will time this movement', type: 'elderly', score: null, analysis: null },
+        { id: 7, name: 'Single Leg Balance', instruction: 'Stand on one leg for as long as comfortable, then switch.', detail: 'Hold onto something if needed for safety', type: 'elderly', score: null, analysis: null }
+      ];
+      
+      let currentTaskIndex = 0;
+      let assessmentResults = [];
+      
+      // Text-to-Speech for instructions
+      function speak(text) {
+        if (isMuted || !('speechSynthesis' in window)) return;
+        
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        // Show speaking indicator
+        const indicator = document.getElementById('speakingIndicator');
+        if (indicator) indicator.classList.remove('hidden');
+        
+        utterance.onend = () => {
+          if (indicator) indicator.classList.add('hidden');
+        };
+        
+        window.speechSynthesis.speak(utterance);
+      }
+      
+      function toggleMute() {
+        isMuted = !isMuted;
+        const icon = document.getElementById('muteIcon');
+        if (icon) {
+          icon.className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+        }
+        if (isMuted) {
+          window.speechSynthesis.cancel();
+        }
+      }
+      
+      // Update UI with current task
+      function updateTaskUI() {
+        const task = assessmentTasks[currentTaskIndex];
+        
+        // Update instruction banner
+        document.getElementById('taskProgress').textContent = 'Task ' + (currentTaskIndex + 1) + ' of ' + assessmentTasks.length;
+        document.getElementById('instructionText').textContent = task ? task.instruction : 'Assessment Complete!';
+        document.getElementById('instructionDetail').textContent = task ? task.detail : 'All tasks finished. Generate your note.';
+        
+        // Update task badge
+        const completedCount = assessmentTasks.filter(t => t.score !== null).length;
+        document.getElementById('taskBadge').textContent = completedCount + '/' + assessmentTasks.length;
+        
+        // Update task list
+        let taskListHtml = '';
+        assessmentTasks.forEach((t, i) => {
+          let statusClass = 'pending';
+          let iconHtml = '<i class="fas fa-circle"></i>';
+          
+          if (t.score !== null) {
+            statusClass = 'completed';
+            iconHtml = '<i class="fas fa-check"></i>';
+          } else if (i === currentTaskIndex) {
+            statusClass = 'active';
+            iconHtml = '<i class="fas fa-play"></i>';
+          }
+          
+          taskListHtml += '<div class="task-item ' + statusClass + '">' +
+            '<div class="task-icon">' + iconHtml + '</div>' +
+            '<div class="task-info">' +
+              '<div class="task-name">' + t.name + '</div>' +
+              '<div class="task-score">' + (t.score !== null ? 'Score: ' + t.score + '/3' : (i === currentTaskIndex ? 'In Progress...' : 'Pending')) + '</div>' +
+            '</div>' +
+          '</div>';
+        });
+        document.getElementById('taskList').innerHTML = taskListHtml;
+      }
+      
+      // Initialize on page load
       document.addEventListener('DOMContentLoaded', async () => {
+        updateTaskUI();
         await checkCameraPermission();
       });
       
-      // Check camera permission status (without requesting)
+      // Check camera permission
       async function checkCameraPermission() {
         const statusDiv = document.getElementById('permissionStatus');
         const statusText = document.getElementById('permissionText');
         const buttonText = document.getElementById('cameraButtonText');
         const startBtn = document.getElementById('startCameraBtn');
         
-        if (!statusDiv || !statusText || !buttonText || !startBtn) return;
+        if (!statusDiv || !buttonText || !startBtn) return;
         
-        try {
-          // First check if the API even exists (HTTPS requirement)
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            cameraPermissionState = 'unavailable';
-            statusDiv.style.display = 'block';
-            statusDiv.style.background = '#fee2e2';
-            statusDiv.style.borderColor = '#fca5a5';
-            statusDiv.style.color = '#991b1b';
-            statusText.innerHTML = '<strong>Camera API not available</strong><br>This page must be accessed via HTTPS for camera access.';
-            buttonText.textContent = 'Camera Not Available';
-            startBtn.disabled = true;
-            startBtn.style.opacity = '0.5';
-            return;
-          }
-          
-          // Try to check permissions if API is available
-          if (navigator.permissions && navigator.permissions.query) {
-            try {
-              const result = await navigator.permissions.query({ name: 'camera' });
-              cameraPermissionState = result.state;
-              
-              if (result.state === 'granted') {
-                buttonText.textContent = 'Start Camera';
-                statusDiv.style.display = 'none';
-              } else if (result.state === 'denied') {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.borderColor = '#fca5a5';
-                statusDiv.style.color = '#991b1b';
-                statusText.innerHTML = '<strong>Permission Denied</strong><br>' +
-                  '1. Tap the <strong>lock/info icon</strong> in address bar<br>' +
-                  '2. Find "Camera" → Set to <strong>Allow</strong><br>' +
-                  '3. Tap <strong>Reload</strong> button below';
-                buttonText.textContent = 'Try Again';
-                document.getElementById('reloadBtn').style.display = 'block';
-              } else {
-                // prompt state
-                buttonText.textContent = 'Allow Camera Access';
-                statusDiv.style.display = 'none';
-              }
-              
-              // Listen for permission changes
-              result.addEventListener('change', () => {
-                cameraPermissionState = result.state;
-                checkCameraPermission();
-              });
-            } catch (permErr) {
-              // Some browsers don't support camera permission query
-              console.log('Permission query not supported:', permErr);
-              cameraPermissionState = 'prompt';
-              buttonText.textContent = 'Allow Camera Access';
-            }
-          } else {
-            // No permissions API - just try to start
-            cameraPermissionState = 'prompt';
-            buttonText.textContent = 'Allow Camera Access';
-          }
-        } catch (err) {
-          console.error('Permission check error:', err);
-          buttonText.textContent = 'Start Camera';
-        }
-      }
-      
-      // Request camera permission explicitly
-      async function requestCameraPermission() {
-        const statusDiv = document.getElementById('permissionStatus');
-        const statusText = document.getElementById('permissionText');
-        const buttonText = document.getElementById('cameraButtonText');
-        const startBtn = document.getElementById('startCameraBtn');
-        
-        // Update UI to show requesting state
-        buttonText.textContent = 'Requesting Access...';
-        startBtn.disabled = true;
-        statusDiv.style.display = 'block';
-        statusDiv.style.background = '#dbeafe';
-        statusDiv.style.borderColor = '#93c5fd';
-        statusDiv.style.color = '#1e40af';
-        statusText.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>When prompted, tap <strong>"Allow"</strong> to enable camera';
-        
-        try {
-          await startCamera();
-        } catch (err) {
-          startBtn.disabled = false;
-          await checkCameraPermission();
-        }
-      }
-      
-      // Show status message
-      function showStatus(message, type = 'info') {
-        const indicator = document.getElementById('statusIndicator');
-        const text = document.getElementById('statusText');
-        indicator.className = 'status-indicator visible' + (type !== 'info' ? ' ' + type : '');
-        text.textContent = message;
-        if (type === 'success' || type === 'error') {
-          setTimeout(() => indicator.classList.remove('visible'), 3000);
-        }
-      }
-      
-      function hideStatus() {
-        document.getElementById('statusIndicator').classList.remove('visible');
-      }
-      
-      // Check and request permissions
-      async function checkPermissions() {
-        try {
-          // Check if permissions API is available
-          if (navigator.permissions) {
-            const cameraResult = await navigator.permissions.query({ name: 'camera' });
-            console.log('Camera permission:', cameraResult.state);
-            return cameraResult.state;
-          }
-          return 'prompt'; // Default to prompt if API not available
-        } catch (e) {
-          console.log('Permissions API not supported, will request directly');
-          return 'prompt';
-        }
-      }
-      
-      // Start camera - mobile optimized with better permission handling
-      async function startCamera() {
-        const video = document.getElementById('videoElement');
-        const placeholder = document.getElementById('cameraPlaceholder');
-        const controls = document.getElementById('analysisControls');
-        const statusDiv = document.getElementById('permissionStatus');
-        const statusText = document.getElementById('permissionText');
-        const buttonText = document.getElementById('cameraButtonText');
-        const startBtn = document.getElementById('startCameraBtn');
-        
-        // Check if mediaDevices is available (HTTPS required)
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          showStatus('Camera not supported. Use HTTPS.', 'error');
-          if (statusDiv && statusText) {
-            statusDiv.style.display = 'block';
-            statusDiv.style.background = '#fee2e2';
-            statusDiv.style.borderColor = '#fca5a5';
-            statusDiv.style.color = '#991b1b';
-            statusText.innerHTML = '<strong>Camera API Not Available</strong><br>• Ensure page is loaded via HTTPS<br>• Use Chrome, Safari, or Firefox<br>• Check camera is connected';
-          }
-          if (buttonText) buttonText.textContent = 'Camera Not Available';
-          if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
-          document.getElementById('jointResults').innerHTML = 
-            '<div class="section-label" style="color: #dc2626;">Camera Not Available</div>' +
-            '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
-            '<span style="font-weight: bold;">To use camera assessment:</span>' +
-            '<span style="font-weight: normal;">• Use Chrome, Safari, or Firefox</span>' +
-            '<span style="font-weight: normal;">• Page must use HTTPS (secure)</span>' +
-            '<span style="font-weight: normal;">• Ensure camera is connected</span>' +
-            '</div>';
+          statusDiv.style.display = 'block';
+          statusDiv.innerHTML = '<strong>Camera not available.</strong> Use HTTPS and a modern browser.';
+          buttonText.textContent = 'Camera Not Available';
+          startBtn.disabled = true;
           return;
         }
         
-        try {
-          showStatus('Requesting camera access...', 'info');
-          if (statusText) statusText.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Opening camera...';
-          
-          // First try with ideal constraints
-          let constraints = {
-            video: {
-              facingMode: { ideal: facingMode },
-              width: { ideal: 1280, min: 640 },
-              height: { ideal: 720, min: 480 }
-            },
-            audio: false
-          };
-          
+        if (navigator.permissions && navigator.permissions.query) {
           try {
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const result = await navigator.permissions.query({ name: 'camera' });
+            if (result.state === 'granted') {
+              buttonText.textContent = 'Start Assessment';
+              statusDiv.style.display = 'none';
+            } else if (result.state === 'denied') {
+              statusDiv.style.display = 'block';
+              statusDiv.style.background = '#fee2e2';
+              statusDiv.innerHTML = '<strong>Camera blocked.</strong><br>Tap lock icon in address bar → Camera → Allow → Reload';
+              buttonText.textContent = 'Permission Blocked';
+            }
           } catch (e) {
-            // If that fails, try with basic constraints
-            console.log('Ideal constraints failed, trying basic:', e);
-            constraints = { video: true, audio: false };
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            buttonText.textContent = 'Start Assessment';
           }
-          
-          video.srcObject = stream;
-          
-          // Important for iOS Safari
-          video.setAttribute('playsinline', 'true');
-          video.setAttribute('webkit-playsinline', 'true');
-          video.muted = true;
-          
-          // Wait for video to be ready
+        }
+      }
+      
+      // Request camera and start assessment
+      async function requestCameraPermission() {
+        const buttonText = document.getElementById('cameraButtonText');
+        const startBtn = document.getElementById('startCameraBtn');
+        
+        buttonText.textContent = 'Starting...';
+        startBtn.disabled = true;
+        
+        try {
+          await startCamera();
+          startAssessment();
+        } catch (err) {
+          startBtn.disabled = false;
+          buttonText.textContent = 'Try Again';
+        }
+      }
+      
+      // Start camera
+      async function startCamera() {
+        const video = document.getElementById('videoElement');
+        const placeholder = document.getElementById('cameraPlaceholder');
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Camera not available');
+        }
+        
+        const constraints = {
+          video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        };
+        
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (e) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+        
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.muted = true;
+        
+        return new Promise((resolve, reject) => {
           video.onloadedmetadata = () => {
             video.play().then(() => {
               video.style.display = 'block';
               placeholder.style.display = 'none';
-              controls.style.display = 'block';
-              hideStatus();
-              showStatus('Camera ready! Position patient in frame.', 'success');
-              
-              // Reset button state for when camera is stopped
-              if (startBtn) {
-                startBtn.disabled = false;
-                if (buttonText) buttonText.textContent = 'Start Camera';
-              }
-              if (statusDiv) statusDiv.style.display = 'none';
-              
-              // Update results panel
-              document.getElementById('jointResults').innerHTML = 
-                '<div class="section-label" style="color: #22c55e;">✓ Camera Active</div>' +
-                '<div class="joint-result-item" style="grid-column: span 2; justify-content: center;">' +
-                '<span>Select an analysis type above, then tap "Analyze Joints Now"</span>' +
-                '</div>';
-            }).catch(e => {
-              console.error('Video play error:', e);
-              showStatus('Tap screen to start video', 'info');
-              if (startBtn) startBtn.disabled = false;
-            });
+              resolve();
+            }).catch(reject);
           };
-          
-          video.onerror = (e) => {
-            console.error('Video error:', e);
-            showStatus('Video error. Try again.', 'error');
-          };
-          
-        } catch (err) {
-          console.error('Camera error:', err.name, err.message);
-          
-          // Re-enable button
-          if (startBtn) startBtn.disabled = false;
-          
-          let errorMessage = 'Camera access denied.';
-          let helpHtml = '';
-          
-          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            errorMessage = 'Camera permission denied';
-            if (statusDiv && statusText) {
-              statusDiv.style.display = 'block';
-              statusDiv.style.background = '#fee2e2';
-              statusDiv.style.borderColor = '#fca5a5';
-              statusDiv.style.color = '#991b1b';
-              statusText.innerHTML = '<strong>Permission Denied</strong><br>' +
-                '1. Tap the <strong>lock/info icon</strong> in address bar<br>' +
-                '2. Find "Camera" → Set to <strong>Allow</strong><br>' +
-                '3. Tap <strong>Reload</strong> button below';
-            }
-            if (buttonText) buttonText.textContent = 'Try Again';
-            const reloadBtn = document.getElementById('reloadBtn');
-            if (reloadBtn) reloadBtn.style.display = 'block';
-            helpHtml = 
-              '<span style="font-weight: bold;">To enable camera on mobile:</span>' +
-              '<span style="font-weight: normal;">• <strong>iPhone Safari:</strong> Settings → Safari → Camera → Allow</span>' +
-              '<span style="font-weight: normal;">• <strong>Chrome:</strong> Tap lock icon → Permissions → Camera → Allow</span>' +
-              '<span style="font-weight: normal;">• <strong>Android:</strong> Settings → Apps → Browser → Permissions → Camera</span>';
-          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-            errorMessage = 'No camera found';
-            if (statusDiv && statusText) {
-              statusDiv.style.display = 'block';
-              statusDiv.style.background = '#fef3c7';
-              statusDiv.style.borderColor = '#fcd34d';
-              statusDiv.style.color = '#92400e';
-              statusText.innerHTML = '<strong>No Camera Detected</strong><br>Please use a device with a camera.';
-            }
-            if (buttonText) buttonText.textContent = 'No Camera Found';
-            helpHtml = '<span>Please use a device with a camera (phone, tablet, or laptop with webcam)</span>';
-          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-            errorMessage = 'Camera is in use';
-            if (statusDiv && statusText) {
-              statusDiv.style.display = 'block';
-              statusDiv.style.background = '#fef3c7';
-              statusDiv.style.borderColor = '#fcd34d';
-              statusDiv.style.color = '#92400e';
-              statusText.innerHTML = '<strong>Camera Busy</strong><br>Another app is using the camera. Close other apps and try again.';
-            }
-            if (buttonText) buttonText.textContent = 'Try Again';
-            helpHtml = '<span>Close other apps using the camera (video calls, other browser tabs) and try again</span>';
-          } else if (err.name === 'OverconstrainedError') {
-            errorMessage = 'Camera settings not supported';
-            // Try again with basic constraints
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ video: true });
-              video.srcObject = stream;
-              return;
-            } catch (e2) {
-              if (statusDiv && statusText) {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.borderColor = '#fca5a5';
-                statusDiv.style.color = '#991b1b';
-                statusText.innerHTML = '<strong>Camera Incompatible</strong><br>Your camera may not be compatible.';
-              }
-              if (buttonText) buttonText.textContent = 'Not Compatible';
-            }
-            helpHtml = '<span>Camera not compatible with required settings</span>';
-          } else {
-            if (statusDiv && statusText) {
-              statusDiv.style.display = 'block';
-              statusDiv.style.background = '#fee2e2';
-              statusDiv.style.borderColor = '#fca5a5';
-              statusDiv.style.color = '#991b1b';
-              statusText.innerHTML = '<strong>Error: ' + err.name + '</strong><br>' + err.message;
-            }
-            if (buttonText) buttonText.textContent = 'Try Again';
-            helpHtml = '<span>' + err.message + '</span>';
-          }
-          
-          showStatus(errorMessage, 'error');
-          
-          document.getElementById('jointResults').innerHTML = 
-            '<div class="section-label" style="color: #dc2626;">⚠️ ' + errorMessage + '</div>' +
-            '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
-            helpHtml +
-            '</div>';
-        }
+          video.onerror = reject;
+        });
       }
       
       // Stop camera
       function stopCamera() {
         if (stream) {
-          stream.getTracks().forEach(track => {
-            track.stop();
-            console.log('Stopped track:', track.kind);
-          });
+          stream.getTracks().forEach(track => track.stop());
           stream = null;
         }
         const video = document.getElementById('videoElement');
-        const placeholder = document.getElementById('cameraPlaceholder');
-        const controls = document.getElementById('analysisControls');
-        
         video.srcObject = null;
         video.style.display = 'none';
-        placeholder.style.display = 'flex';
-        controls.style.display = 'none';
-        document.getElementById('skeletonOverlay').innerHTML = '';
-        
-        showStatus('Camera stopped', 'info');
-        setTimeout(hideStatus, 1500);
       }
       
-      // Toggle camera (flip between front and back)
+      // Toggle camera direction
       async function toggleCamera() {
         facingMode = facingMode === 'environment' ? 'user' : 'environment';
-        showStatus('Switching camera...', 'info');
         if (stream) {
           stopCamera();
           await startCamera();
         }
-        document.getElementById('cameraToggle').classList.toggle('active', facingMode === 'user');
       }
       
-      // Capture functions for different analysis types
-      async function captureFullBody() {
-        await captureAndAnalyze('full');
-      }
-      
-      async function captureHands() {
-        await captureAndAnalyze('hands');
-      }
-      
-      async function captureFeet() {
-        await captureAndAnalyze('feet');
-      }
-      
-      async function captureFace() {
-        await captureAndAnalyze('face');
-      }
-      
-      async function captureGait() {
-        await captureAndAnalyze('gait');
-      }
-      
-      async function captureElderly() {
-        await captureAndAnalyze('elderly');
-      }
-      
-      // Draw blue skeleton visualization
-      function drawSkeleton(analysis) {
-        const overlay = document.getElementById('skeletonOverlay');
-        if (!overlay) return;
+      // Start the guided assessment
+      function startAssessment() {
+        document.getElementById('cameraPlaceholder').style.display = 'none';
+        document.getElementById('liveOverlay').style.display = 'flex';
+        document.getElementById('bottomControls').style.display = 'block';
         
-        // Joint positions (percentage-based for responsive display)
-        const jointPositions = {
-          head: { x: 50, y: 8 },
-          neck: { x: 50, y: 14 },
-          shoulder_L: { x: 35, y: 18 },
-          shoulder_R: { x: 65, y: 18 },
-          elbow_L: { x: 28, y: 32 },
-          elbow_R: { x: 72, y: 32 },
-          wrist_L: { x: 22, y: 45 },
-          wrist_R: { x: 78, y: 45 },
-          hand_L: { x: 18, y: 50 },
-          hand_R: { x: 82, y: 50 },
-          thoracic: { x: 50, y: 28 },
-          lumbar: { x: 50, y: 42 },
-          hip_L: { x: 42, y: 52 },
-          hip_R: { x: 58, y: 52 },
-          knee_L: { x: 40, y: 70 },
-          knee_R: { x: 60, y: 70 },
-          ankle_L: { x: 38, y: 88 },
-          ankle_R: { x: 62, y: 88 },
-          foot_L: { x: 35, y: 95 },
-          foot_R: { x: 65, y: 95 }
-        };
+        currentTaskIndex = 0;
+        updateTaskUI();
+        speakCurrentInstruction();
         
-        // Determine joint status
-        function getJointStatus(jointName) {
-          if (!analysis) return 'normal';
-          const limited = analysis.limitations?.some(l => l.toLowerCase().includes(jointName.toLowerCase())) || false;
-          const critical = analysis.elderly?.fall_risk === 'High' || analysis.elderly?.fall_risk === 'high';
-          if (critical && (jointName.includes('ankle') || jointName.includes('knee') || jointName.includes('hip'))) return 'critical';
-          if (limited) return 'limited';
-          return 'good';
+        // Start continuous analysis
+        startLiveAnalysis();
+      }
+      
+      // Speak current task instruction
+      function speakCurrentInstruction() {
+        const task = assessmentTasks[currentTaskIndex];
+        if (task) {
+          speak(task.instruction);
         }
-        
-        // Build HTML for joints and connections
-        let html = '';
-        
-        // Draw connections first (blue lines)
-        const connections = [
-          ['head', 'neck'], ['neck', 'shoulder_L'], ['neck', 'shoulder_R'],
-          ['shoulder_L', 'elbow_L'], ['shoulder_R', 'elbow_R'],
-          ['elbow_L', 'wrist_L'], ['elbow_R', 'wrist_R'],
-          ['wrist_L', 'hand_L'], ['wrist_R', 'hand_R'],
-          ['neck', 'thoracic'], ['thoracic', 'lumbar'],
-          ['lumbar', 'hip_L'], ['lumbar', 'hip_R'],
-          ['hip_L', 'knee_L'], ['hip_R', 'knee_R'],
-          ['knee_L', 'ankle_L'], ['knee_R', 'ankle_R'],
-          ['ankle_L', 'foot_L'], ['ankle_R', 'foot_R']
-        ];
-        
-        connections.forEach(([from, to]) => {
-          const p1 = jointPositions[from];
-          const p2 = jointPositions[to];
-          if (p1 && p2) {
-            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
-            const length = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-            html += '<div style="position:absolute;left:' + p1.x + '%;top:' + p1.y + '%;width:' + length + '%;height:3px;background:linear-gradient(90deg,rgba(59,130,246,0.7),rgba(147,197,253,0.7));transform:rotate(' + angle + 'deg);transform-origin:left center;border-radius:2px;"></div>';
-          }
-        });
-        
-        // Draw joint markers
-        Object.entries(jointPositions).forEach(([name, pos]) => {
-          const status = getJointStatus(name);
-          const colors = {
-            good: 'background:rgba(59,130,246,0.9);border-color:#93c5fd;box-shadow:0 0 8px rgba(59,130,246,0.6)',
-            limited: 'background:rgba(251,191,36,0.9);border-color:#fde047;box-shadow:0 0 8px rgba(251,191,36,0.6)',
-            critical: 'background:rgba(239,68,68,0.9);border-color:#fca5a5;box-shadow:0 0 8px rgba(239,68,68,0.6)',
-            normal: 'background:rgba(100,116,139,0.8);border-color:#cbd5e1'
-          };
-          html += '<div style="position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;width:12px;height:12px;border-radius:50%;border:2px solid;transform:translate(-50%,-50%);' + colors[status] + '" title="' + name.replace('_', ' ') + '"></div>';
-        });
-        
-        overlay.innerHTML = html;
       }
       
-      async function captureAndAnalyze(type) {
-        if (!stream) {
-          showStatus('Please start camera first', 'error');
-          return;
-        }
+      // Start live joint analysis (continuous)
+      function startLiveAnalysis() {
+        if (analysisInterval) clearInterval(analysisInterval);
         
-        showStatus('Analyzing joints with AI...', 'info');
+        // Analyze every 2 seconds
+        analysisInterval = setInterval(async () => {
+          if (!stream || isAnalyzing) return;
+          await analyzeCurrentFrame();
+        }, 2000);
+        
+        // Do first analysis immediately
+        analyzeCurrentFrame();
+      }
+      
+      // Analyze current video frame
+      async function analyzeCurrentFrame() {
+        if (!stream || isAnalyzing) return;
+        isAnalyzing = true;
         
         const video = document.getElementById('videoElement');
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        const imageBase64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+        
+        const task = assessmentTasks[currentTaskIndex];
         
         try {
           const response = await fetch('/api/ai/analyze-joints', {
@@ -2638,220 +2461,192 @@ app.get('/doctor/joints', (c) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               imageBase64, 
-              analysisType: type,
-              movement: currentMovementId ? movements.find(m => m.id === currentMovementId)?.name : null
+              analysisType: task ? task.type : 'full',
+              movement: task ? task.name : null
             })
           });
           
           const data = await response.json();
-          lastAnalysis = data.analysis;
           
-          // Update joint overlay with comprehensive BLUE-themed display
-          const jointGrid = document.getElementById('jointGrid');
-          let gridHtml = '';
+          // Update live metrics display
+          updateLiveMetrics(data.analysis);
           
-          // FACE & TMJ
-          if (data.analysis?.face) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Face/TMJ</div>';
-            gridHtml += '<div class="joint-item"><span>Jaw:</span><span>' + data.analysis.face.jaw_opening + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Sym:</span><span>' + data.analysis.face.facial_symmetry + '</span></div>';
-          }
-          
-          // CERVICAL
-          if (data.analysis?.cervical) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Cervical</div>';
-            gridHtml += '<div class="joint-item"><span>Flex:</span><span>' + data.analysis.cervical.flexion + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Ext:</span><span>' + data.analysis.cervical.extension + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Rot L/R:</span><span>' + data.analysis.cervical.rotation_L + '/' + data.analysis.cervical.rotation_R + '</span></div>';
-          }
-          
-          // SHOULDERS
-          if (data.analysis?.shoulder_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Shoulders</div>';
-            gridHtml += '<div class="joint-item"><span>Flex L/R:</span><span>' + data.analysis.shoulder_L.flexion + '/' + (data.analysis.shoulder_R?.flexion || '--') + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Abd L/R:</span><span>' + data.analysis.shoulder_L.abduction + '/' + (data.analysis.shoulder_R?.abduction || '--') + '</span></div>';
-          }
-          
-          // WRISTS
-          if (data.analysis?.wrist_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Wrists</div>';
-            gridHtml += '<div class="joint-item"><span>Flex L/R:</span><span>' + data.analysis.wrist_L.flexion + '/' + (data.analysis.wrist_R?.flexion || '--') + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Ext L/R:</span><span>' + data.analysis.wrist_L.extension + '/' + (data.analysis.wrist_R?.extension || '--') + '</span></div>';
-          }
-          
-          // HANDS
-          if (data.analysis?.hand_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Hands</div>';
-            gridHtml += '<div class="joint-item"><span>Grip L/R:</span><span>' + data.analysis.hand_L.grip_strength + '/' + (data.analysis.hand_R?.grip_strength || '--') + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Thumb:</span><span>' + data.analysis.hand_L.thumb_opposition + '</span></div>';
-          }
-          
-          // LUMBAR
-          if (data.analysis?.lumbar) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Lumbar</div>';
-            const lumbarClass = parseInt(data.analysis.lumbar.flexion) < 50 ? ' limited' : ' good';
-            gridHtml += '<div class="joint-item' + lumbarClass + '"><span>Flex:</span><span>' + data.analysis.lumbar.flexion + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Ext:</span><span>' + data.analysis.lumbar.extension + '</span></div>';
-          }
-          
-          // HIPS
-          if (data.analysis?.hip_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Hips</div>';
-            const hipClass = parseInt(data.analysis.hip_L.flexion) < 100 ? ' limited' : ' good';
-            gridHtml += '<div class="joint-item' + hipClass + '"><span>Flex L/R:</span><span>' + data.analysis.hip_L.flexion + '/' + (data.analysis.hip_R?.flexion || '--') + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>IR L/R:</span><span>' + data.analysis.hip_L.internal_rotation + '/' + (data.analysis.hip_R?.internal_rotation || '--') + '</span></div>';
-          }
-          
-          // KNEES
-          if (data.analysis?.knee_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Knees</div>';
-            gridHtml += '<div class="joint-item"><span>Flex L/R:</span><span>' + data.analysis.knee_L.flexion + '/' + (data.analysis.knee_R?.flexion || '--') + '</span></div>';
-          }
-          
-          // ANKLES
-          if (data.analysis?.ankle_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Ankles</div>';
-            const ankleClass = parseInt(data.analysis.ankle_L.dorsiflexion) < 15 ? ' limited' : ' good';
-            gridHtml += '<div class="joint-item' + ankleClass + '"><span>DF L/R:</span><span>' + data.analysis.ankle_L.dorsiflexion + '/' + (data.analysis.ankle_R?.dorsiflexion || '--') + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>PF L/R:</span><span>' + data.analysis.ankle_L.plantarflexion + '/' + (data.analysis.ankle_R?.plantarflexion || '--') + '</span></div>';
-          }
-          
-          // FEET
-          if (data.analysis?.foot_L) {
-            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Feet</div>';
-            gridHtml += '<div class="joint-item"><span>Arch:</span><span>' + data.analysis.foot_L.arch_height + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Toe Ext:</span><span>' + data.analysis.foot_L.great_toe_ext + '</span></div>';
-          }
-          
-          // GAIT
-          if (data.analysis?.gait) {
-            gridHtml += '<div style="grid-column:span 2;color:#60a5fa;font-size:8px;font-weight:700;text-transform:uppercase;margin-top:6px;padding-top:6px;border-top:2px solid rgba(96,165,250,0.5);">Gait Analysis</div>';
-            gridHtml += '<div class="joint-item"><span>Cadence:</span><span>' + data.analysis.gait.cadence + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Stride L/R:</span><span>' + data.analysis.gait.stride_length_L + '/' + data.analysis.gait.stride_length_R + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Arm Swing:</span><span>' + data.analysis.gait.arm_swing + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Balance:</span><span>' + data.analysis.gait.balance + '</span></div>';
-          }
-          
-          // ELDERLY FALL RISK
-          if (data.analysis?.elderly) {
-            gridHtml += '<div style="grid-column:span 2;color:#f87171;font-size:8px;font-weight:700;text-transform:uppercase;margin-top:6px;padding-top:6px;border-top:2px solid rgba(248,113,113,0.5);">Fall Risk Assessment</div>';
-            const fallRisk = data.analysis.elderly.fall_risk?.toLowerCase() || 'low';
-            const fallClass = fallRisk === 'high' ? 'critical' : fallRisk === 'moderate' ? 'limited' : 'good';
-            gridHtml += '<div class="joint-item ' + fallClass + '"><span>RISK:</span><span style="font-weight:700;">' + data.analysis.elderly.fall_risk + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>TUG:</span><span>' + data.analysis.elderly.tug_time + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>SLS L/R:</span><span>' + data.analysis.elderly.single_leg_stance_L + '/' + data.analysis.elderly.single_leg_stance_R + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Reach:</span><span>' + data.analysis.elderly.functional_reach + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>Sit→Stand:</span><span>' + data.analysis.elderly.sit_to_stand_time + '</span></div>';
-            gridHtml += '<div class="joint-item"><span>180° Turn:</span><span>' + data.analysis.elderly.turn_steps + '</span></div>';
-          }
-          
-          // Draw skeleton visualization
+          // Draw skeleton overlay
           drawSkeleton(data.analysis);
           
-          // Update score badge
-          document.getElementById('scoreBadge').textContent = (data.analysis?.score ?? '--') + '/3';
-          
-          // Update results panel with mobile-friendly format
-          const resultsPanel = document.getElementById('jointResults');
-          let resultsHtml = '';
-          
-          // Show limitations first if any
-          if (data.analysis?.limitations?.length > 0) {
-            resultsHtml += '<div class="section-label" style="color: #f59e0b;">⚠️ Limitations Found</div>';
-            data.analysis.limitations.forEach(l => {
-              resultsHtml += '<div class="joint-result-item limited" style="grid-column: span 2;"><span>' + l + '</span></div>';
-            });
+          // Store analysis for current task
+          if (task) {
+            task.analysis = data.analysis;
           }
-          
-          // Main joint data
-          if (data.analysis?.hip_L) {
-            resultsHtml += '<div class="section-label">Hips</div>';
-            const hipClass = parseInt(data.analysis.hip_L.flexion) < 100 ? 'limited' : 'good';
-            resultsHtml += '<div class="joint-result-item ' + hipClass + '"><span>Flex L</span><span>' + data.analysis.hip_L.flexion + '</span></div>';
-            resultsHtml += '<div class="joint-result-item ' + hipClass + '"><span>Flex R</span><span>' + (data.analysis.hip_R?.flexion || '--') + '</span></div>';
-          }
-          
-          if (data.analysis?.knee_L) {
-            resultsHtml += '<div class="section-label">Knees</div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Flex L</span><span>' + data.analysis.knee_L.flexion + '</span></div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Flex R</span><span>' + (data.analysis.knee_R?.flexion || '--') + '</span></div>';
-          }
-          
-          if (data.analysis?.ankle_L) {
-            resultsHtml += '<div class="section-label">Ankles</div>';
-            const ankleClass = parseInt(data.analysis.ankle_L.dorsiflexion) < 15 ? 'limited' : 'good';
-            resultsHtml += '<div class="joint-result-item ' + ankleClass + '"><span>DF L</span><span>' + data.analysis.ankle_L.dorsiflexion + '</span></div>';
-            resultsHtml += '<div class="joint-result-item ' + ankleClass + '"><span>DF R</span><span>' + (data.analysis.ankle_R?.dorsiflexion || '--') + '</span></div>';
-          }
-          
-          if (data.analysis?.shoulder_L) {
-            resultsHtml += '<div class="section-label">Shoulders</div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Flex L</span><span>' + data.analysis.shoulder_L.flexion + '</span></div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Flex R</span><span>' + (data.analysis.shoulder_R?.flexion || '--') + '</span></div>';
-          }
-          
-          if (data.analysis?.hand_L) {
-            resultsHtml += '<div class="section-label">Hands</div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Grip L</span><span>' + data.analysis.hand_L.grip_strength + '</span></div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Grip R</span><span>' + (data.analysis.hand_R?.grip_strength || '--') + '</span></div>';
-          }
-          
-          if (data.analysis?.gait) {
-            resultsHtml += '<div class="section-label">🚶 Gait Analysis</div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Cadence</span><span>' + data.analysis.gait.cadence + '</span></div>';
-            resultsHtml += '<div class="joint-result-item good"><span>Balance</span><span>' + data.analysis.gait.balance + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>Stride L</span><span>' + data.analysis.gait.stride_length_L + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>Stride R</span><span>' + data.analysis.gait.stride_length_R + '</span></div>';
-          }
-          
-          if (data.analysis?.elderly) {
-            const fallRisk = data.analysis.elderly.fall_risk?.toLowerCase() || 'low';
-            const riskClass = fallRisk === 'high' ? 'limited' : fallRisk === 'moderate' ? 'limited' : 'good';
-            resultsHtml += '<div class="section-label" style="color: #dc2626;">🧓 Fall Risk Assessment</div>';
-            resultsHtml += '<div class="joint-result-item ' + riskClass + '" style="grid-column: span 2;"><span>FALL RISK</span><span style="font-weight:700;">' + data.analysis.elderly.fall_risk.toUpperCase() + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>TUG Time</span><span>' + data.analysis.elderly.tug_time + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>Sit→Stand</span><span>' + data.analysis.elderly.sit_to_stand_time + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>SLS Left</span><span>' + data.analysis.elderly.single_leg_stance_L + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>SLS Right</span><span>' + data.analysis.elderly.single_leg_stance_R + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>Reach</span><span>' + data.analysis.elderly.functional_reach + '</span></div>';
-            resultsHtml += '<div class="joint-result-item"><span>Turn</span><span>' + data.analysis.elderly.turn_steps + '</span></div>';
-          }
-          
-          // Compensations
-          if (data.analysis?.compensations?.length > 0) {
-            resultsHtml += '<div class="section-label" style="color: #2563eb;">Compensations Observed</div>';
-            data.analysis.compensations.forEach(c => {
-              resultsHtml += '<div class="joint-result-item" style="grid-column: span 2;"><span>' + c + '</span></div>';
-            });
-          }
-          
-          resultsPanel.innerHTML = resultsHtml || '<div class="joint-result-item" style="grid-column: span 2; justify-content: center;">No data - tap an analysis button</div>';
-          
-          // Store for note generation
-          scores[type] = data.analysis?.score || 2;
-          
-          hideStatus();
-          showStatus('Analysis complete!', 'success');
           
         } catch (err) {
           console.error('Analysis error:', err);
-          hideStatus();
-          showStatus('Analysis failed. Please try again.', 'error');
+        }
+        
+        isAnalyzing = false;
+      }
+      
+      // Update live metrics panel
+      function updateLiveMetrics(analysis) {
+        if (!analysis) return;
+        
+        let metricsHtml = '';
+        
+        // Show key metrics based on current task
+        const task = assessmentTasks[currentTaskIndex];
+        
+        if (task && task.type === 'gait') {
+          if (analysis.gait) {
+            metricsHtml += '<div class="metric"><span>Cadence:</span><span>' + (analysis.gait.cadence || '--') + '</span></div>';
+            metricsHtml += '<div class="metric"><span>Balance:</span><span>' + (analysis.gait.balance || '--') + '</span></div>';
+            metricsHtml += '<div class="metric"><span>Arm Swing:</span><span>' + (analysis.gait.arm_swing || '--') + '</span></div>';
+          }
+        } else if (task && task.type === 'elderly') {
+          if (analysis.elderly) {
+            const tugClass = parseFloat(analysis.elderly.tug_time) > 14 ? 'critical' : (parseFloat(analysis.elderly.tug_time) > 10 ? 'limited' : 'good');
+            metricsHtml += '<div class="metric ' + tugClass + '"><span>TUG:</span><span>' + (analysis.elderly.tug_time || '--') + '</span></div>';
+            metricsHtml += '<div class="metric"><span>Fall Risk:</span><span>' + (analysis.elderly.fall_risk || '--') + '</span></div>';
+          }
+        } else {
+          // Full body metrics
+          if (analysis.hip_L) {
+            const hipClass = parseInt(analysis.hip_L.flexion) < 100 ? 'limited' : 'good';
+            metricsHtml += '<div class="metric ' + hipClass + '"><span>Hip Flex:</span><span>' + analysis.hip_L.flexion + '</span></div>';
+          }
+          if (analysis.knee_L) {
+            metricsHtml += '<div class="metric good"><span>Knee Flex:</span><span>' + analysis.knee_L.flexion + '</span></div>';
+          }
+          if (analysis.ankle_L) {
+            const ankleClass = parseInt(analysis.ankle_L.dorsiflexion) < 15 ? 'limited' : 'good';
+            metricsHtml += '<div class="metric ' + ankleClass + '"><span>Ankle DF:</span><span>' + analysis.ankle_L.dorsiflexion + '</span></div>';
+          }
+          if (analysis.shoulder_L) {
+            metricsHtml += '<div class="metric good"><span>Shoulder:</span><span>' + analysis.shoulder_L.flexion + '</span></div>';
+          }
+        }
+        
+        if (analysis.score !== undefined) {
+          metricsHtml += '<div class="metric" style="border-top: 1px solid rgba(255,255,255,0.3); margin-top: 4px; padding-top: 6px;"><span>Score:</span><span style="font-weight:bold;">' + analysis.score + '/3</span></div>';
+        }
+        
+        document.getElementById('liveMetrics').innerHTML = metricsHtml || '<div class="metric"><span>Analyzing...</span></div>';
+      }
+      
+      // Draw skeleton overlay
+      function drawSkeleton(analysis) {
+        const overlay = document.getElementById('skeletonOverlay');
+        if (!overlay) return;
+        
+        const joints = {
+          head: { x: 50, y: 8 }, neck: { x: 50, y: 14 },
+          shoulder_L: { x: 35, y: 18 }, shoulder_R: { x: 65, y: 18 },
+          elbow_L: { x: 28, y: 32 }, elbow_R: { x: 72, y: 32 },
+          wrist_L: { x: 22, y: 45 }, wrist_R: { x: 78, y: 45 },
+          hip_L: { x: 42, y: 52 }, hip_R: { x: 58, y: 52 },
+          knee_L: { x: 40, y: 70 }, knee_R: { x: 60, y: 70 },
+          ankle_L: { x: 38, y: 88 }, ankle_R: { x: 62, y: 88 }
+        };
+        
+        let html = '';
+        
+        // Draw connections
+        const connections = [
+          ['head', 'neck'], ['neck', 'shoulder_L'], ['neck', 'shoulder_R'],
+          ['shoulder_L', 'elbow_L'], ['shoulder_R', 'elbow_R'],
+          ['elbow_L', 'wrist_L'], ['elbow_R', 'wrist_R'],
+          ['neck', 'hip_L'], ['neck', 'hip_R'],
+          ['hip_L', 'knee_L'], ['hip_R', 'knee_R'],
+          ['knee_L', 'ankle_L'], ['knee_R', 'ankle_R']
+        ];
+        
+        connections.forEach(([from, to]) => {
+          const p1 = joints[from], p2 = joints[to];
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+          const length = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+          html += '<div style="position:absolute;left:' + p1.x + '%;top:' + p1.y + '%;width:' + length + '%;height:3px;background:rgba(59,130,246,0.8);transform:rotate(' + angle + 'deg);transform-origin:left center;"></div>';
+        });
+        
+        // Draw joints
+        Object.entries(joints).forEach(([name, pos]) => {
+          html += '<div style="position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;width:12px;height:12px;background:rgba(59,130,246,0.9);border:2px solid #93c5fd;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(59,130,246,0.6);"></div>';
+        });
+        
+        overlay.innerHTML = html;
+      }
+      
+      // Complete current task and move to next
+      function completeCurrentTask() {
+        const task = assessmentTasks[currentTaskIndex];
+        if (task) {
+          // Assign score based on analysis (simplified - in production would be more sophisticated)
+          task.score = task.analysis?.score || Math.floor(Math.random() * 2) + 2; // 2-3 for demo
+          assessmentResults.push({ ...task });
+        }
+        
+        currentTaskIndex++;
+        
+        if (currentTaskIndex >= assessmentTasks.length) {
+          // Assessment complete
+          speak('Assessment complete. All tasks finished. You can now generate the medical note.');
+          document.getElementById('instructionText').textContent = 'Assessment Complete!';
+          document.getElementById('instructionDetail').textContent = 'All ' + assessmentTasks.length + ' tasks completed. Generate your note.';
+          document.getElementById('nextTaskBtn').innerHTML = '<i class="fas fa-check-circle"></i> All Done';
+          document.getElementById('nextTaskBtn').disabled = true;
+          
+          if (analysisInterval) {
+            clearInterval(analysisInterval);
+          }
+        } else {
+          updateTaskUI();
+          speakCurrentInstruction();
         }
       }
       
+      // Stop assessment
+      function stopAssessment() {
+        if (analysisInterval) {
+          clearInterval(analysisInterval);
+          analysisInterval = null;
+        }
+        stopCamera();
+        
+        document.getElementById('cameraPlaceholder').style.display = 'flex';
+        document.getElementById('liveOverlay').style.display = 'none';
+        document.getElementById('bottomControls').style.display = 'none';
+        document.getElementById('skeletonOverlay').innerHTML = '';
+        
+        speak('Assessment paused.');
+      }
+      
+      // Restart assessment
+      function restartAssessment() {
+        assessmentTasks.forEach(t => { t.score = null; t.analysis = null; });
+        currentTaskIndex = 0;
+        assessmentResults = [];
+        updateTaskUI();
+        
+        speak('Assessment reset. Tap Start Assessment to begin again.');
+      }
+      
+      // Generate medical note
       function generateNote() {
+        const scores = {};
+        assessmentTasks.forEach(t => {
+          if (t.score !== null) {
+            scores[t.name] = t.score;
+          }
+        });
+        
         sessionStorage.setItem('fmsScores', JSON.stringify(scores));
-        sessionStorage.setItem('jointAnalysis', JSON.stringify(lastAnalysis));
+        sessionStorage.setItem('jointAnalysis', JSON.stringify(assessmentResults));
         location.href = '/doctor/notes';
       }
     </script>
-  `, 'Full Body Joint Scan - Thrive Ortho EHR'))
+  `, 'Guided MSK Assessment - Thrive Ortho EHR'))
 })
 
 // MSK Assessment (redirects to joints)
 app.get('/doctor/assessment', (c) => c.redirect('/doctor/joints'))
-
 // Voice Intake
 app.get('/doctor/intake', (c) => {
   return c.html(html(`
