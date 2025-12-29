@@ -2,8 +2,9 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 // ============================================================================
-// THRIVE ORTHO EHR - Professional MSK Assessment Platform v3.0
-// Ultra-Minimal Design | Dashboard RIGHT | Gemini AI Integration
+// THRIVE ORTHO EHR - Professional MSK Assessment Platform v3.1
+// BLUE Theme | Full Body Joint Tracking | Elderly-Specific Assessments
+// Dashboard RIGHT | Gemini AI Integration
 // ============================================================================
 
 type Bindings = {
@@ -16,35 +17,144 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.use('/api/*', cors())
 
 // ============================================================================
-// DATA - FMS + AMA Validated Movements
+// COMPREHENSIVE JOINT DATA - All Body Joints
+// ============================================================================
+
+const allJoints = {
+  // HEAD & FACE
+  face: ['jaw_TMJ', 'eyebrow_elevation', 'eye_tracking', 'mouth_opening', 'facial_symmetry'],
+  cervical: ['c_flexion', 'c_extension', 'c_lateral_L', 'c_lateral_R', 'c_rotation_L', 'c_rotation_R'],
+  
+  // UPPER BODY
+  shoulder_L: ['sh_flexion_L', 'sh_extension_L', 'sh_abduction_L', 'sh_adduction_L', 'sh_internal_rot_L', 'sh_external_rot_L'],
+  shoulder_R: ['sh_flexion_R', 'sh_extension_R', 'sh_abduction_R', 'sh_adduction_R', 'sh_internal_rot_R', 'sh_external_rot_R'],
+  elbow_L: ['elbow_flexion_L', 'elbow_extension_L', 'forearm_supination_L', 'forearm_pronation_L'],
+  elbow_R: ['elbow_flexion_R', 'elbow_extension_R', 'forearm_supination_R', 'forearm_pronation_R'],
+  wrist_L: ['wrist_flexion_L', 'wrist_extension_L', 'wrist_radial_L', 'wrist_ulnar_L'],
+  wrist_R: ['wrist_flexion_R', 'wrist_extension_R', 'wrist_radial_R', 'wrist_ulnar_R'],
+  
+  // HANDS
+  hand_L: ['thumb_opposition_L', 'finger_flexion_L', 'finger_extension_L', 'grip_strength_L', 'pinch_strength_L'],
+  hand_R: ['thumb_opposition_R', 'finger_flexion_R', 'finger_extension_R', 'grip_strength_R', 'pinch_strength_R'],
+  
+  // SPINE
+  thoracic: ['t_flexion', 't_extension', 't_rotation_L', 't_rotation_R'],
+  lumbar: ['l_flexion', 'l_extension', 'l_lateral_L', 'l_lateral_R', 'l_rotation_L', 'l_rotation_R'],
+  
+  // LOWER BODY
+  hip_L: ['hip_flexion_L', 'hip_extension_L', 'hip_abduction_L', 'hip_adduction_L', 'hip_internal_rot_L', 'hip_external_rot_L'],
+  hip_R: ['hip_flexion_R', 'hip_extension_R', 'hip_abduction_R', 'hip_adduction_R', 'hip_internal_rot_R', 'hip_external_rot_R'],
+  knee_L: ['knee_flexion_L', 'knee_extension_L'],
+  knee_R: ['knee_flexion_R', 'knee_extension_R'],
+  ankle_L: ['ankle_dorsiflexion_L', 'ankle_plantarflexion_L', 'ankle_inversion_L', 'ankle_eversion_L'],
+  ankle_R: ['ankle_dorsiflexion_R', 'ankle_plantarflexion_R', 'ankle_inversion_R', 'ankle_eversion_R'],
+  
+  // FEET
+  foot_L: ['toe_flexion_L', 'toe_extension_L', 'arch_height_L', 'great_toe_mobility_L'],
+  foot_R: ['toe_flexion_R', 'toe_extension_R', 'arch_height_R', 'great_toe_mobility_R']
+}
+
+// Normal ROM values for reference
+const normalROM = {
+  // Cervical
+  c_flexion: { normal: 45, min: 35 },
+  c_extension: { normal: 45, min: 35 },
+  c_lateral_L: { normal: 45, min: 35 },
+  c_lateral_R: { normal: 45, min: 35 },
+  c_rotation_L: { normal: 80, min: 60 },
+  c_rotation_R: { normal: 80, min: 60 },
+  
+  // Shoulder
+  sh_flexion: { normal: 180, min: 150 },
+  sh_extension: { normal: 60, min: 40 },
+  sh_abduction: { normal: 180, min: 150 },
+  sh_internal_rot: { normal: 70, min: 50 },
+  sh_external_rot: { normal: 90, min: 70 },
+  
+  // Elbow
+  elbow_flexion: { normal: 150, min: 130 },
+  elbow_extension: { normal: 0, min: -10 },
+  
+  // Wrist
+  wrist_flexion: { normal: 80, min: 60 },
+  wrist_extension: { normal: 70, min: 50 },
+  
+  // Hip
+  hip_flexion: { normal: 120, min: 90 },
+  hip_extension: { normal: 30, min: 20 },
+  hip_abduction: { normal: 45, min: 30 },
+  hip_internal_rot: { normal: 40, min: 25 },
+  hip_external_rot: { normal: 45, min: 30 },
+  
+  // Knee
+  knee_flexion: { normal: 140, min: 120 },
+  knee_extension: { normal: 0, min: -5 },
+  
+  // Ankle
+  ankle_dorsiflexion: { normal: 20, min: 10 },
+  ankle_plantarflexion: { normal: 50, min: 40 }
+}
+
+// ============================================================================
+// MOVEMENTS - Standard + Elderly-Specific
 // ============================================================================
 
 const movements = [
-  { id: 1, name: 'Deep Squat', category: 'FMS', joints: ['hip', 'knee', 'ankle'], description: 'Bilateral, symmetrical mobility of hips, knees, and ankles', cpt: '97161', instructions: 'Stand with feet shoulder-width apart, arms overhead. Squat as deep as possible while keeping heels on ground and arms up.' },
-  { id: 2, name: 'Hurdle Step', category: 'FMS', joints: ['hip', 'knee'], description: 'Stride mechanics with stance leg stability and stepping leg mobility', cpt: '97161', instructions: 'Stand on one leg, step over hurdle at knee height. Return to start without touching hurdle.' },
-  { id: 3, name: 'Inline Lunge', category: 'FMS', joints: ['hip', 'knee', 'ankle'], description: 'Hip mobility/stability, quad flexibility, ankle stability', cpt: '97161', instructions: 'Place feet on line, front foot flat, rear foot on toe. Lower rear knee to touch board behind front heel.' },
-  { id: 4, name: 'Shoulder Mobility', category: 'FMS', joints: ['shoulder', 'scapula'], description: 'Bilateral shoulder ROM combining extension and flexion', cpt: '97161', instructions: 'Make fist, one arm reaches overhead behind back, other behind low back. Try to touch fists.' },
-  { id: 5, name: 'Active Straight Leg Raise', category: 'FMS', joints: ['hip', 'pelvis'], description: 'Hamstring and gastroc-soleus flexibility with pelvic control', cpt: '97161', instructions: 'Lie flat, raise one leg as high as possible keeping knee straight and opposite leg flat on ground.' },
-  { id: 6, name: 'Trunk Stability Push-Up', category: 'FMS', joints: ['spine', 'shoulder'], description: 'Core stabilization in closed kinetic chain movement', cpt: '97161', instructions: 'Lie prone, hands shoulder-width. Push up in one motion, body rising as unit without spine sagging.' },
-  { id: 7, name: 'Rotary Stability', category: 'FMS', joints: ['spine', 'hip', 'shoulder'], description: 'Multi-plane pelvis, core and shoulder stability', cpt: '97161', instructions: 'Quadruped position, extend same-side arm and leg. Touch elbow to knee and extend again.' },
-  { id: 8, name: 'Cervical ROM', category: 'AMA', joints: ['cervical'], description: 'Flexion, extension, lateral flexion, rotation', cpt: '97162', instructions: 'Assess active range: chin to chest, look up, ear to shoulder both sides, turn head both sides.' },
-  { id: 9, name: 'Lumbar ROM', category: 'AMA', joints: ['lumbar'], description: 'Flexion, extension, lateral flexion assessment', cpt: '97162', instructions: 'Assess: touch toes (flexion), bend backward (extension), side bend both directions.' },
-  { id: 10, name: 'Gait Analysis', category: 'AMA', joints: ['hip', 'knee', 'ankle'], description: 'Walking pattern, cadence, stride length symmetry', cpt: '97164', instructions: 'Walk naturally for 20 feet. Observe heel strike, push-off, arm swing, trunk rotation.' }
+  // Standard FMS
+  { id: 1, name: 'Deep Squat', category: 'FMS', joints: ['hip', 'knee', 'ankle'], description: 'Bilateral mobility of hips, knees, and ankles', cpt: '97161', forElderly: true },
+  { id: 2, name: 'Hurdle Step', category: 'FMS', joints: ['hip', 'knee'], description: 'Stride mechanics and stance leg stability', cpt: '97161', forElderly: false },
+  { id: 3, name: 'Inline Lunge', category: 'FMS', joints: ['hip', 'knee', 'ankle'], description: 'Hip mobility/stability, ankle stability', cpt: '97161', forElderly: false },
+  { id: 4, name: 'Shoulder Mobility', category: 'FMS', joints: ['shoulder', 'scapula'], description: 'Bilateral shoulder ROM', cpt: '97161', forElderly: true },
+  { id: 5, name: 'Active Straight Leg Raise', category: 'FMS', joints: ['hip', 'pelvis'], description: 'Hamstring flexibility with pelvic control', cpt: '97161', forElderly: true },
+  { id: 6, name: 'Trunk Stability Push-Up', category: 'FMS', joints: ['spine', 'shoulder'], description: 'Core stabilization', cpt: '97161', forElderly: false },
+  { id: 7, name: 'Rotary Stability', category: 'FMS', joints: ['spine', 'hip', 'shoulder'], description: 'Multi-plane core stability', cpt: '97161', forElderly: false },
+  
+  // AMA Standard
+  { id: 8, name: 'Cervical ROM', category: 'AMA', joints: ['cervical'], description: 'Neck range of motion all planes', cpt: '97162', forElderly: true },
+  { id: 9, name: 'Lumbar ROM', category: 'AMA', joints: ['lumbar'], description: 'Lower back range of motion', cpt: '97162', forElderly: true },
+  { id: 10, name: 'Gait Analysis', category: 'AMA', joints: ['hip', 'knee', 'ankle'], description: 'Walking pattern assessment', cpt: '97164', forElderly: true },
+  
+  // ELDERLY-SPECIFIC ASSESSMENTS
+  { id: 11, name: 'Timed Up and Go (TUG)', category: 'ELDERLY', joints: ['hip', 'knee', 'ankle', 'balance'], description: 'Rise from chair, walk 3m, turn, return, sit. <10s normal, >14s fall risk', cpt: '97164', forElderly: true },
+  { id: 12, name: 'Walk Forward 20ft', category: 'ELDERLY', joints: ['hip', 'knee', 'ankle', 'gait'], description: 'Observe heel strike, arm swing, posture, cadence', cpt: '97164', forElderly: true },
+  { id: 13, name: 'Walk Backward 10ft', category: 'ELDERLY', joints: ['hip', 'knee', 'ankle', 'balance'], description: 'Assess backward gait, fall risk, coordination', cpt: '97164', forElderly: true },
+  { id: 14, name: 'Tandem Walk', category: 'ELDERLY', joints: ['ankle', 'balance', 'vestibular'], description: 'Heel-to-toe walking for balance assessment', cpt: '97164', forElderly: true },
+  { id: 15, name: 'Single Leg Stance', category: 'ELDERLY', joints: ['hip', 'ankle', 'balance'], description: 'Stand on one leg, eyes open then closed. <5s = high fall risk', cpt: '97164', forElderly: true },
+  { id: 16, name: 'Sit to Stand x5', category: 'ELDERLY', joints: ['hip', 'knee', 'quadriceps'], description: 'Rise from chair 5 times without arms. >12s indicates weakness', cpt: '97164', forElderly: true },
+  { id: 17, name: 'Functional Reach', category: 'ELDERLY', joints: ['balance', 'ankle'], description: 'Reach forward as far as possible without stepping. <6in = fall risk', cpt: '97164', forElderly: true },
+  { id: 18, name: '180° Turn', category: 'ELDERLY', joints: ['hip', 'ankle', 'vestibular'], description: 'Turn around completely. >4 steps = balance concern', cpt: '97164', forElderly: true },
+  
+  // HAND & FINE MOTOR
+  { id: 19, name: 'Hand Grip Strength', category: 'HAND', joints: ['hand', 'forearm'], description: 'Grip dynamometry both hands', cpt: '97162', forElderly: true },
+  { id: 20, name: 'Finger Dexterity', category: 'HAND', joints: ['hand', 'fingers'], description: 'Fine motor: pinch, opposition, coordination', cpt: '97162', forElderly: true },
+  { id: 21, name: 'Wrist ROM', category: 'HAND', joints: ['wrist'], description: 'Flexion, extension, radial/ulnar deviation', cpt: '97162', forElderly: true },
+  
+  // FOOT & ANKLE
+  { id: 22, name: 'Ankle ROM', category: 'FOOT', joints: ['ankle'], description: 'Dorsiflexion, plantarflexion, inversion, eversion', cpt: '97162', forElderly: true },
+  { id: 23, name: 'Toe Mobility', category: 'FOOT', joints: ['foot', 'toes'], description: 'Great toe extension, toe spread, flexion', cpt: '97162', forElderly: true },
+  { id: 24, name: 'Arch Assessment', category: 'FOOT', joints: ['foot'], description: 'Arch height, pronation/supination pattern', cpt: '97162', forElderly: true },
+  
+  // FACE & JAW
+  { id: 25, name: 'TMJ Assessment', category: 'FACE', joints: ['jaw'], description: 'Jaw opening, deviation, clicking, pain', cpt: '97162', forElderly: true },
+  { id: 26, name: 'Facial Symmetry', category: 'FACE', joints: ['face'], description: 'Muscle symmetry, expression capability', cpt: '97162', forElderly: true }
 ]
 
 const exercises = [
-  { id: 'E001', name: 'Hip Flexor Stretch', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '30s hold', frequency: '2x daily', instructions: 'Kneel on affected side, push hips forward, maintain upright posture. Hold 30 seconds.' },
-  { id: 'E002', name: 'Piriformis Stretch', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '30s hold', frequency: '2x daily', instructions: 'Cross affected leg over opposite knee, pull knee toward opposite shoulder.' },
-  { id: 'E003', name: 'Dead Bug', target: 'core', difficulty: 'Intermediate', sets: 3, reps: '10 each side', frequency: 'daily', instructions: 'Lie supine, extend opposite arm/leg while maintaining neutral spine. Alternate sides.' },
-  { id: 'E004', name: 'Bird Dog', target: 'core', difficulty: 'Beginner', sets: 3, reps: '10 each side', frequency: 'daily', instructions: 'Quadruped position, extend opposite arm/leg, maintain level pelvis. Hold 3 seconds.' },
-  { id: 'E005', name: 'Cat-Cow Stretch', target: 'spine', difficulty: 'Beginner', sets: 1, reps: '10 cycles', frequency: '2x daily', instructions: 'Quadruped, alternate flexion (cat) and extension (cow) through full spine.' },
-  { id: 'E006', name: 'Cervical Retraction', target: 'cervical', difficulty: 'Beginner', sets: 3, reps: '10', frequency: '3x daily', instructions: 'Tuck chin straight back (double chin), hold 5 seconds, return to neutral.' },
-  { id: 'E007', name: 'Shoulder ER/IR', target: 'shoulder', difficulty: 'Intermediate', sets: 3, reps: '15', frequency: 'daily', instructions: 'Elbow at 90°, rotate forearm outward/inward against resistance band.' },
-  { id: 'E008', name: 'Clamshells', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '15', frequency: 'daily', instructions: 'Sidelying, knees bent at 45°, lift top knee while keeping feet together.' },
-  { id: 'E009', name: 'Ankle Alphabet', target: 'ankle', difficulty: 'Beginner', sets: 1, reps: 'A-Z', frequency: '2x daily', instructions: 'Seated with leg extended, draw each letter of alphabet with big toe.' },
-  { id: 'E010', name: 'McKenzie Extension', target: 'lumbar', difficulty: 'Beginner', sets: 10, reps: '1', frequency: 'every 2 hours', instructions: 'Prone, press up through arms keeping hips on surface. Hold 2 seconds at top.' },
-  { id: 'E011', name: 'Glute Bridge', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '15', frequency: 'daily', instructions: 'Supine, knees bent, squeeze glutes and lift hips. Hold 2 seconds at top.' },
-  { id: 'E012', name: 'Side Plank', target: 'core', difficulty: 'Intermediate', sets: 3, reps: '30s hold', frequency: 'daily', instructions: 'Sidelying on elbow, lift hips creating straight line. Hold position.' }
+  { id: 'E001', name: 'Hip Flexor Stretch', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '30s hold', frequency: '2x daily', forElderly: true },
+  { id: 'E002', name: 'Piriformis Stretch', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '30s hold', frequency: '2x daily', forElderly: true },
+  { id: 'E003', name: 'Dead Bug', target: 'core', difficulty: 'Intermediate', sets: 3, reps: '10 each', frequency: 'daily', forElderly: false },
+  { id: 'E004', name: 'Bird Dog', target: 'core', difficulty: 'Beginner', sets: 3, reps: '10 each', frequency: 'daily', forElderly: true },
+  { id: 'E005', name: 'Cat-Cow Stretch', target: 'spine', difficulty: 'Beginner', sets: 1, reps: '10 cycles', frequency: '2x daily', forElderly: true },
+  { id: 'E006', name: 'Cervical Retraction', target: 'cervical', difficulty: 'Beginner', sets: 3, reps: '10', frequency: '3x daily', forElderly: true },
+  { id: 'E007', name: 'Ankle Circles', target: 'ankle', difficulty: 'Beginner', sets: 2, reps: '10 each direction', frequency: '2x daily', forElderly: true },
+  { id: 'E008', name: 'Seated Marching', target: 'hip', difficulty: 'Beginner', sets: 3, reps: '20', frequency: 'daily', forElderly: true },
+  { id: 'E009', name: 'Heel Raises', target: 'ankle', difficulty: 'Beginner', sets: 3, reps: '15', frequency: 'daily', forElderly: true },
+  { id: 'E010', name: 'Finger Spreads', target: 'hand', difficulty: 'Beginner', sets: 3, reps: '10', frequency: '2x daily', forElderly: true },
+  { id: 'E011', name: 'Wrist Circles', target: 'wrist', difficulty: 'Beginner', sets: 2, reps: '10 each', frequency: '2x daily', forElderly: true },
+  { id: 'E012', name: 'Chair Stand', target: 'legs', difficulty: 'Beginner', sets: 2, reps: '10', frequency: 'daily', forElderly: true },
+  { id: 'E013', name: 'Wall Push-ups', target: 'upper body', difficulty: 'Beginner', sets: 2, reps: '10', frequency: 'daily', forElderly: true },
+  { id: 'E014', name: 'Tandem Balance', target: 'balance', difficulty: 'Beginner', sets: 3, reps: '30s hold', frequency: 'daily', forElderly: true },
+  { id: 'E015', name: 'Toe Yoga', target: 'feet', difficulty: 'Beginner', sets: 2, reps: '10', frequency: 'daily', forElderly: true }
 ]
 
 const demoUsers = {
@@ -55,36 +165,14 @@ const demoUsers = {
 }
 
 const painKeywords = {
-  red: ['numbness', 'tingling', 'weakness', 'bowel', 'bladder', 'night pain', 'fever', 'weight loss', 'cancer', 'trauma', 'fall', 'accident', 'bilateral', 'progressive'],
+  red: ['numbness', 'tingling', 'weakness', 'bowel', 'bladder', 'night pain', 'fever', 'weight loss', 'cancer', 'trauma', 'fall', 'accident', 'bilateral', 'progressive', 'dizziness', 'vision changes'],
   yellow: ['stress', 'anxiety', 'depression', 'fear', 'catastrophizing', 'work', 'compensation', 'litigation', 'hopeless', 'frustrated'],
-  severity: ['severe', 'excruciating', 'unbearable', 'worst', 'intense', 'sharp', 'shooting', 'burning', 'stabbing', 'constant']
-}
-
-// ICD-10 and CPT code mappings
-const dxCodes = {
-  'M54.5': 'Low back pain',
-  'M54.16': 'Radiculopathy, lumbar region',
-  'M54.2': 'Cervicalgia',
-  'M25.561': 'Pain in right knee',
-  'M25.562': 'Pain in left knee',
-  'M75.101': 'Adhesive capsulitis of right shoulder',
-  'M79.3': 'Panniculitis, unspecified',
-  'M62.838': 'Muscle spasm, other',
-  'M99.03': 'Segmental dysfunction, lumbar'
-}
-
-const cptCodes = {
-  '97161': 'PT Evaluation - Low Complexity',
-  '97162': 'PT Evaluation - Moderate Complexity',
-  '97163': 'PT Evaluation - High Complexity',
-  '97110': 'Therapeutic Exercise',
-  '97140': 'Manual Therapy',
-  '97530': 'Therapeutic Activities',
-  '97542': 'Wheelchair Management'
+  severity: ['severe', 'excruciating', 'unbearable', 'worst', 'intense', 'sharp', 'shooting', 'burning', 'stabbing', 'constant'],
+  elderly: ['fall', 'unsteady', 'dizzy', 'tripped', 'lost balance', 'weak legs', 'can\'t get up', 'stumble']
 }
 
 // ============================================================================
-// ULTRA-MINIMAL DESIGN SYSTEM
+// BLUE DESIGN SYSTEM
 // ============================================================================
 
 const styles = `
@@ -92,33 +180,36 @@ const styles = `
 
 :root {
   /* Monochrome base */
-  --gray-50: #fafafa;
-  --gray-100: #f4f4f5;
-  --gray-200: #e4e4e7;
-  --gray-300: #d4d4d8;
-  --gray-400: #a1a1aa;
-  --gray-500: #71717a;
-  --gray-600: #52525b;
-  --gray-700: #3f3f46;
-  --gray-800: #27272a;
-  --gray-900: #18181b;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
   
-  /* Single accent - medical teal */
-  --accent: #0d9488;
-  --accent-dark: #0f766e;
-  --accent-light: #ccfbf1;
+  /* BLUE accent - medical blue */
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --accent-light: #dbeafe;
+  --accent-lighter: #eff6ff;
   
-  /* Semantic - muted */
+  /* Semantic */
   --error: #dc2626;
   --error-light: #fef2f2;
   --warning: #d97706;
   --warning-light: #fffbeb;
   --success: #059669;
   --success-light: #ecfdf5;
+  --info: #0891b2;
+  --info-light: #ecfeff;
   
   /* Layout */
   --sidebar-w: 180px;
-  --panel-w: 280px;
+  --panel-w: 320px;
   --radius: 6px;
   --radius-lg: 8px;
 }
@@ -139,10 +230,6 @@ body {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr var(--panel-w);
   min-height: 100vh;
-}
-
-.layout--no-panel {
-  grid-template-columns: var(--sidebar-w) 1fr;
 }
 
 /* Sidebar */
@@ -176,11 +263,7 @@ body {
   font-size: 10px;
 }
 
-.logo-text {
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--gray-900);
-}
+.logo-text { font-weight: 700; font-size: 13px; color: var(--gray-900); }
 
 .nav { flex: 1; }
 
@@ -256,7 +339,7 @@ body {
 .title { font-size: 18px; font-weight: 700; color: var(--gray-900); }
 .subtitle { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
 
-/* Right Panel */
+/* Right Panel - Wider for joint data */
 .panel {
   background: white;
   border-left: 1px solid var(--gray-200);
@@ -278,7 +361,7 @@ body {
 .panel-card {
   background: var(--gray-50);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 10px;
 }
 
 .panel-card + .panel-card { margin-top: 6px; }
@@ -286,13 +369,14 @@ body {
 /* Score Display */
 .score-display {
   text-align: center;
-  padding: 16px;
-  background: var(--gray-50);
+  padding: 14px;
+  background: var(--accent-lighter);
   border-radius: var(--radius);
+  border: 1px solid var(--accent-light);
 }
 
 .score-value {
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
@@ -320,12 +404,7 @@ body {
   align-items: center;
 }
 
-.card-title {
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--gray-900);
-}
-
+.card-title { font-weight: 600; font-size: 12px; color: var(--gray-900); }
 .card-body { padding: 14px; }
 .card-body-sm { padding: 10px; }
 
@@ -355,7 +434,6 @@ body {
 .btn-ghost:hover { background: var(--gray-100); }
 
 .btn-danger { background: var(--error); color: white; }
-
 .btn-sm { padding: 4px 8px; font-size: 10px; }
 .btn-lg { padding: 9px 14px; font-size: 12px; }
 .btn-icon { width: 28px; height: 28px; padding: 0; }
@@ -395,10 +473,11 @@ body {
 .badge-danger { background: var(--error-light); color: var(--error); }
 .badge-neutral { background: var(--gray-100); color: var(--gray-600); }
 .badge-accent { background: var(--accent-light); color: var(--accent); }
+.badge-info { background: var(--info-light); color: var(--info); }
 
 /* Forms */
 .form-group { margin-bottom: 12px; }
-.form-label { display: block; font-size: 10px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.form-label { display: block; font-size: 10px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; text-transform: uppercase; }
 
 .form-input {
   width: 100%;
@@ -413,15 +492,15 @@ body {
 .form-input:focus { outline: none; border-color: var(--accent); }
 .form-textarea { min-height: 80px; resize: vertical; font-family: inherit; }
 
-/* Movement Grid */
+/* Movement Grid - Smaller for more items */
 .movement-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
 }
 
 .movement-card {
-  padding: 10px 8px;
+  padding: 8px 6px;
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
   cursor: pointer;
@@ -430,36 +509,37 @@ body {
   text-align: center;
 }
 
-.movement-card:hover { border-color: var(--gray-400); }
+.movement-card:hover { border-color: var(--accent); }
 .movement-card.active { border-color: var(--accent); background: var(--accent-light); }
 .movement-card.scored { border-color: var(--success); }
+.movement-card.elderly { border-left: 3px solid var(--info); }
 
 .movement-num {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: var(--gray-100);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   color: var(--gray-600);
-  margin: 0 auto 6px;
+  margin: 0 auto 4px;
 }
 
 .movement-card.scored .movement-num { background: var(--success); color: white; }
-.movement-name { font-weight: 600; font-size: 10px; color: var(--gray-900); margin-bottom: 2px; }
-.movement-category { font-size: 9px; color: var(--gray-500); }
-.movement-score { font-weight: 700; font-size: 14px; color: var(--gray-400); margin-top: 4px; }
+.movement-name { font-weight: 600; font-size: 9px; color: var(--gray-900); margin-bottom: 2px; line-height: 1.2; }
+.movement-category { font-size: 8px; color: var(--gray-500); }
+.movement-score { font-weight: 700; font-size: 12px; color: var(--gray-400); margin-top: 2px; }
 .movement-card.scored .movement-score { color: var(--success); }
 
 /* Score Buttons */
 .score-btns { display: flex; gap: 6px; justify-content: center; }
 
 .score-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   background: white;
@@ -473,9 +553,9 @@ body {
 .score-btn:hover { border-color: var(--accent); color: var(--accent); }
 .score-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
 
-/* Video */
+/* Video - BLUE Theme */
 .video-box {
-  background: var(--gray-900);
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #172554 100%);
   border-radius: var(--radius-lg);
   aspect-ratio: 16/9;
   position: relative;
@@ -483,27 +563,29 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2px solid var(--accent);
+  box-shadow: 0 4px 24px rgba(37, 99, 235, 0.3), inset 0 0 60px rgba(37, 99, 235, 0.1);
 }
 
-.video-placeholder { text-align: center; color: var(--gray-600); }
-.video-placeholder i { font-size: 32px; margin-bottom: 8px; }
-.video-placeholder p { font-size: 11px; }
+.video-placeholder { text-align: center; color: #60a5fa; }
+.video-placeholder i { font-size: 40px; margin-bottom: 10px; color: #3b82f6; }
+.video-placeholder p { font-size: 11px; color: #93c5fd; }
 
 .video-overlay {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  right: 10px;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
 }
 
-.video-controls { display: flex; gap: 6px; }
+.video-controls { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .video-btn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -511,26 +593,56 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  transition: all 0.15s;
+  transition: all 0.2s;
 }
 
-.video-btn-light { background: rgba(255,255,255,0.2); color: white; }
-.video-btn-light:hover { background: rgba(255,255,255,0.3); }
-.video-btn-accent { background: var(--accent); color: white; }
-.video-btn-danger { background: var(--error); color: white; }
+.video-btn-light { background: rgba(59, 130, 246, 0.4); color: white; border: 1px solid rgba(147, 197, 253, 0.4); }
+.video-btn-light:hover { background: rgba(59, 130, 246, 0.6); transform: scale(1.1); }
+.video-btn-accent { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.5); }
+.video-btn-accent:hover { transform: scale(1.15); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.7); }
+.video-btn-danger { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
 
+/* Joint Data Overlay - BLUE Theme */
 .joint-overlay {
-  background: rgba(0,0,0,0.75);
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.95), rgba(29, 78, 216, 0.95));
   color: white;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  font-size: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 9px;
+  max-width: 300px;
   display: none;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+  border: 1px solid rgba(147, 197, 253, 0.3);
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .joint-overlay.visible { display: block; }
-.joint-overlay div { margin-bottom: 2px; }
-.joint-overlay strong { color: var(--accent-light); }
+.joint-overlay-title { 
+  font-weight: 600; 
+  font-size: 11px; 
+  color: #bfdbfe; 
+  margin-bottom: 8px; 
+  border-bottom: 1px solid rgba(147, 197, 253, 0.3); 
+  padding-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.joint-overlay-title i { color: #60a5fa; }
+
+.joint-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px 10px;
+}
+
+.joint-item { display: flex; justify-content: space-between; padding: 1px 0; }
+.joint-item span:first-child { color: rgba(191, 219, 254, 0.7); font-size: 8px; }
+.joint-item span:last-child { font-weight: 600; color: #bfdbfe; }
+.joint-item.limited span:last-child { color: #fde047; }
+.joint-item.good span:last-child { color: #86efac; }
+.joint-item.critical span:last-child { color: #fca5a5; font-weight: 700; }
 
 /* Voice */
 .voice-area { text-align: center; padding: 24px; }
@@ -571,9 +683,11 @@ body {
 
 .flag-red { background: var(--error-light); border-color: var(--error); }
 .flag-yellow { background: var(--warning-light); border-color: var(--warning); }
+.flag-elderly { background: var(--info-light); border-color: var(--info); }
 .flag i { margin-top: 1px; flex-shrink: 0; }
 .flag-red i { color: var(--error); }
 .flag-yellow i { color: var(--warning); }
+.flag-elderly i { color: var(--info); }
 
 /* Medical Note */
 .medical-note {
@@ -595,7 +709,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gray-100);
+  background: linear-gradient(135deg, var(--accent-lighter) 0%, var(--gray-100) 100%);
 }
 
 .login-box {
@@ -605,21 +719,22 @@ body {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-lg);
   padding: 28px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
 .login-header { text-align: center; margin-bottom: 20px; }
 
 .login-logo {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   background: var(--accent);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   margin: 0 auto 10px;
 }
 
@@ -643,7 +758,7 @@ body {
   transition: all 0.15s;
 }
 
-.role-btn:hover { border-color: var(--gray-400); }
+.role-btn:hover { border-color: var(--accent); }
 .role-btn.selected { border-color: var(--accent); background: var(--accent-light); }
 .role-btn i { font-size: 18px; color: var(--accent); margin-bottom: 6px; display: block; }
 .role-btn span { font-weight: 600; font-size: 11px; color: var(--gray-800); }
@@ -752,6 +867,29 @@ body {
   font-size: 9px;
 }
 
+/* Category tabs */
+.category-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.category-tab {
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: none;
+  transition: all 0.15s;
+}
+
+.category-tab:hover { background: var(--gray-200); }
+.category-tab.active { background: var(--accent); color: white; }
+
 /* Utilities */
 .flex { display: flex; }
 .items-center { align-items: center; }
@@ -799,6 +937,7 @@ const sidebar = (role: string, active: string) => {
       { id: 'patients', icon: 'fa-users', label: 'Patients', href: '/doctor/patients' },
       { id: 'intake', icon: 'fa-microphone', label: 'Voice Intake', href: '/doctor/intake' },
       { id: 'assessment', icon: 'fa-person-running', label: 'MSK Assessment', href: '/doctor/assessment' },
+      { id: 'joints', icon: 'fa-bone', label: 'Full Body Scan', href: '/doctor/joints' },
       { id: 'notes', icon: 'fa-file-medical', label: 'Medical Notes', href: '/doctor/notes' },
       { id: 'video', icon: 'fa-video', label: 'Telemedicine', href: '/doctor/video' },
       { id: 'tasks', icon: 'fa-list-check', label: 'Tasks', href: '/doctor/tasks' },
@@ -808,20 +947,17 @@ const sidebar = (role: string, active: string) => {
       { id: 'clients', icon: 'fa-users', label: 'Clients', href: '/coach/clients' },
       { id: 'assessment', icon: 'fa-person-running', label: 'Assessment', href: '/coach/assessment' },
       { id: 'programs', icon: 'fa-dumbbell', label: 'Programs', href: '/coach/programs' },
-      { id: 'tasks', icon: 'fa-list-check', label: 'Tasks', href: '/coach/tasks' },
     ],
     patient: [
       { id: 'dashboard', icon: 'fa-grid-2', label: 'My Dashboard', href: '/patient' },
       { id: 'exercises', icon: 'fa-dumbbell', label: 'Exercises', href: '/patient/exercises' },
       { id: 'appointments', icon: 'fa-calendar', label: 'Appointments', href: '/patient/appointments' },
       { id: 'video', icon: 'fa-video', label: 'Video Visit', href: '/patient/video' },
-      { id: 'progress', icon: 'fa-chart-line', label: 'Progress', href: '/patient/progress' },
     ],
     admin: [
       { id: 'dashboard', icon: 'fa-grid-2', label: 'Overview', href: '/admin' },
       { id: 'users', icon: 'fa-users-gear', label: 'Users', href: '/admin/users' },
       { id: 'analytics', icon: 'fa-chart-line', label: 'Analytics', href: '/admin/analytics' },
-      { id: 'settings', icon: 'fa-gear', label: 'Settings', href: '/admin/settings' },
     ]
   }
   
@@ -853,14 +989,14 @@ const sidebar = (role: string, active: string) => {
   `
 }
 
-// Right Panel
+// Right Panel with full joint data
 const rightPanel = (data: any = {}) => `
   <aside class="panel">
     <div class="panel-section">
-      <div class="panel-label">FMS Score</div>
+      <div class="panel-label">Assessment Score</div>
       <div class="score-display">
         <div class="score-value" id="fmsScore">${data.fmsScore ?? '--'}</div>
-        <div class="score-label">of 21 points</div>
+        <div class="score-label">of 21 points (FMS)</div>
       </div>
       <div class="mt-1 text-center">
         <span class="badge ${data.fmsScore <= 11 ? 'badge-danger' : data.fmsScore <= 14 ? 'badge-warning' : data.fmsScore ? 'badge-success' : 'badge-neutral'}" id="riskBadge">
@@ -879,19 +1015,27 @@ const rightPanel = (data: any = {}) => `
             <div class="user-meta">39 y/o Female</div>
           </div>
         </div>
-        <div class="text-sm text-muted" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--gray-200);">
-          <strong>CC:</strong> LBP w/ radiculopathy<br>
-          <strong>Duration:</strong> 6 weeks
+        <div class="text-sm text-muted" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--gray-200);">
+          <strong>CC:</strong> LBP w/ radiculopathy
         </div>
       </div>
     </div>
     
     <div class="panel-section">
-      <div class="panel-label">AI Flags</div>
+      <div class="panel-label">AI Joint Analysis</div>
+      <div class="panel-card" id="jointAnalysisPanel">
+        <div class="text-center text-sm text-muted" style="padding: 10px;">
+          <i class="fas fa-bone" style="font-size: 18px; margin-bottom: 4px; display: block; color: var(--accent);"></i>
+          Capture to analyze all joints
+        </div>
+      </div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="panel-label">Clinical Flags</div>
       <div id="flagsContainer">
-        <div class="panel-card text-center text-sm text-muted" style="padding: 14px;">
-          <i class="fas fa-shield-halved" style="font-size: 16px; margin-bottom: 4px; display: block;"></i>
-          Complete voice intake to detect clinical flags
+        <div class="panel-card text-center text-sm text-muted" style="padding: 10px;">
+          Complete intake for flags
         </div>
       </div>
     </div>
@@ -901,8 +1045,8 @@ const rightPanel = (data: any = {}) => `
       <a href="/doctor/intake" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;">
         <i class="fas fa-microphone"></i> Voice Intake
       </a>
-      <a href="/doctor/assessment" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;">
-        <i class="fas fa-person-running"></i> Assessment
+      <a href="/doctor/joints" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;">
+        <i class="fas fa-bone"></i> Full Body Scan
       </a>
       <a href="/doctor/notes" class="btn btn-primary" style="width: 100%;">
         <i class="fas fa-file-medical"></i> Generate Note
@@ -920,69 +1064,193 @@ app.get('/api/health', (c) => {
   return c.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    services: { gemini: true, openai: true, d1: true }
+    services: { gemini: true, openai: true, d1: true },
+    version: '3.1'
   })
 })
 
-// Gemini AI - Real-time Joint Tracking Analysis
+// COMPREHENSIVE JOINT ANALYSIS - All Body Parts
 app.post('/api/ai/analyze-joints', async (c) => {
-  const { imageBase64, movement } = await c.req.json()
+  const { imageBase64, movement, analysisType } = await c.req.json()
   const geminiKey = c.env?.GEMINI_API_KEY || ''
   
+  // Determine analysis focus
+  const isFullBody = analysisType === 'full' || !movement
+  const isElderly = analysisType === 'elderly'
+  const isGait = analysisType === 'gait' || movement?.toLowerCase().includes('walk') || movement?.toLowerCase().includes('gait')
+  const isHands = analysisType === 'hands'
+  const isFeet = analysisType === 'feet'
+  const isFace = analysisType === 'face'
+  
   if (!geminiKey || geminiKey === 'YOUR_GEMINI_API_KEY') {
-    // Mock data for demo
+    // Comprehensive mock data
     return c.json({
       success: true,
       mock: true,
       analysis: {
-        joints: {
-          hip_flexion: '92°',
-          knee_flexion: '108°',
-          ankle_dorsiflexion: '14°',
-          trunk_lean: '18°',
-          shoulder_angle: '145°'
+        // HEAD & FACE
+        face: {
+          jaw_opening: '42mm',
+          facial_symmetry: 'Normal',
+          eye_tracking: 'Full range'
         },
+        // CERVICAL
+        cervical: {
+          flexion: '42°',
+          extension: '40°',
+          lateral_L: '38°',
+          lateral_R: '40°',
+          rotation_L: '72°',
+          rotation_R: '75°'
+        },
+        // SHOULDERS
+        shoulder_L: {
+          flexion: '168°',
+          extension: '52°',
+          abduction: '165°',
+          internal_rotation: '62°',
+          external_rotation: '82°'
+        },
+        shoulder_R: {
+          flexion: '172°',
+          extension: '55°',
+          abduction: '170°',
+          internal_rotation: '65°',
+          external_rotation: '85°'
+        },
+        // ELBOWS
+        elbow_L: { flexion: '145°', extension: '0°' },
+        elbow_R: { flexion: '148°', extension: '0°' },
+        // WRISTS
+        wrist_L: { flexion: '72°', extension: '65°', radial: '18°', ulnar: '28°' },
+        wrist_R: { flexion: '75°', extension: '68°', radial: '20°', ulnar: '30°' },
+        // HANDS
+        hand_L: { grip_strength: '28kg', pinch: '6kg', finger_flexion: 'Full', thumb_opposition: 'Normal' },
+        hand_R: { grip_strength: '32kg', pinch: '7kg', finger_flexion: 'Full', thumb_opposition: 'Normal' },
+        // SPINE
+        thoracic: { flexion: '30°', extension: '20°', rotation_L: '35°', rotation_R: '38°' },
+        lumbar: { flexion: '55°', extension: '22°', lateral_L: '24°', lateral_R: '26°' },
+        // HIPS
+        hip_L: {
+          flexion: '112°',
+          extension: '18°',
+          abduction: '38°',
+          adduction: '22°',
+          internal_rotation: '32°',
+          external_rotation: '38°'
+        },
+        hip_R: {
+          flexion: '115°',
+          extension: '20°',
+          abduction: '40°',
+          adduction: '24°',
+          internal_rotation: '35°',
+          external_rotation: '42°'
+        },
+        // KNEES
+        knee_L: { flexion: '132°', extension: '-2°' },
+        knee_R: { flexion: '135°', extension: '0°' },
+        // ANKLES
+        ankle_L: { dorsiflexion: '12°', plantarflexion: '42°', inversion: '28°', eversion: '15°' },
+        ankle_R: { dorsiflexion: '14°', plantarflexion: '45°', inversion: '30°', eversion: '18°' },
+        // FEET
+        foot_L: { arch_height: 'Normal', great_toe_ext: '65°', toe_spread: 'Good' },
+        foot_R: { arch_height: 'Normal', great_toe_ext: '68°', toe_spread: 'Good' },
+        // GAIT (for walking forward/backward analysis)
+        gait: (isGait || isElderly) ? {
+          cadence: '108 steps/min',
+          stride_length_L: '62cm',
+          stride_length_R: '65cm',
+          step_width: '8cm',
+          arm_swing: 'Decreased bilaterally',
+          heel_strike: 'Normal',
+          toe_off: 'Normal',
+          trunk_rotation: 'Minimal',
+          balance: 'Stable',
+          forward_walk: 'Steady, 4.2s for 20ft',
+          backward_walk: 'Cautious, 6.8s for 10ft',
+          turn_quality: 'Uses 5 steps for 180°'
+        } : null,
+        // ELDERLY SPECIFIC FALL RISK
+        elderly: isElderly ? {
+          tug_time: '11.2s',
+          tug_risk: 'Moderate',
+          single_leg_stance_L: '8s',
+          single_leg_stance_R: '12s',
+          functional_reach: '9 inches',
+          sit_to_stand_time: '14s',
+          turn_steps: '5 steps',
+          fall_risk: 'Moderate',
+          tandem_walk: 'Unsteady after 5 steps',
+          backward_gait: 'Hesitant',
+          fear_of_falling: 'Reported',
+          assistive_device: 'None currently'
+        } : null,
+        // OVERALL
         score: 2,
         compensations: [
-          'Forward trunk lean (>15°)',
-          'Heel rise at depth',
-          'Knee valgus observed bilaterally'
+          'Limited ankle dorsiflexion bilaterally',
+          'Hip flexor tightness noted',
+          'Forward head posture'
+        ],
+        limitations: [
+          'Ankle DF: 12-14° (normal >20°)',
+          'Lumbar extension: 22° (normal >30°)',
+          'Hip IR both sides reduced'
         ],
         recommendations: [
-          'Address ankle dorsiflexion deficit',
+          'Ankle mobility exercises daily',
           'Hip flexor stretching protocol',
-          'Core stability exercises'
+          'Cervical retraction exercises',
+          'Core stabilization program'
         ],
-        confidence: 0.87
+        confidence: 0.89
       }
     })
   }
   
+  // Real Gemini API call
   try {
+    const prompt = isFullBody ? `You are an expert medical AI specializing in comprehensive musculoskeletal assessment. Analyze this full-body image and provide detailed joint measurements.
+
+Return ONLY valid JSON with ALL joints:
+{
+  "face": { "jaw_opening": "mm", "facial_symmetry": "status", "eye_tracking": "status" },
+  "cervical": { "flexion": "°", "extension": "°", "lateral_L": "°", "lateral_R": "°", "rotation_L": "°", "rotation_R": "°" },
+  "shoulder_L": { "flexion": "°", "extension": "°", "abduction": "°", "internal_rotation": "°", "external_rotation": "°" },
+  "shoulder_R": { "flexion": "°", "extension": "°", "abduction": "°", "internal_rotation": "°", "external_rotation": "°" },
+  "elbow_L": { "flexion": "°", "extension": "°" },
+  "elbow_R": { "flexion": "°", "extension": "°" },
+  "wrist_L": { "flexion": "°", "extension": "°", "radial": "°", "ulnar": "°" },
+  "wrist_R": { "flexion": "°", "extension": "°", "radial": "°", "ulnar": "°" },
+  "hand_L": { "grip_strength": "kg", "finger_flexion": "status", "thumb_opposition": "status" },
+  "hand_R": { "grip_strength": "kg", "finger_flexion": "status", "thumb_opposition": "status" },
+  "thoracic": { "flexion": "°", "extension": "°", "rotation_L": "°", "rotation_R": "°" },
+  "lumbar": { "flexion": "°", "extension": "°", "lateral_L": "°", "lateral_R": "°" },
+  "hip_L": { "flexion": "°", "extension": "°", "abduction": "°", "internal_rotation": "°", "external_rotation": "°" },
+  "hip_R": { "flexion": "°", "extension": "°", "abduction": "°", "internal_rotation": "°", "external_rotation": "°" },
+  "knee_L": { "flexion": "°", "extension": "°" },
+  "knee_R": { "flexion": "°", "extension": "°" },
+  "ankle_L": { "dorsiflexion": "°", "plantarflexion": "°", "inversion": "°", "eversion": "°" },
+  "ankle_R": { "dorsiflexion": "°", "plantarflexion": "°", "inversion": "°", "eversion": "°" },
+  "foot_L": { "arch_height": "status", "great_toe_ext": "°", "toe_spread": "status" },
+  "foot_R": { "arch_height": "status", "great_toe_ext": "°", "toe_spread": "status" },
+  ${isGait ? '"gait": { "cadence": "steps/min", "stride_length_L": "cm", "stride_length_R": "cm", "arm_swing": "status", "balance": "status" },' : ''}
+  ${isElderly ? '"elderly": { "fall_risk": "low/moderate/high", "balance_concern": "yes/no", "gait_pattern": "status" },' : ''}
+  "score": 0-3,
+  "compensations": ["list"],
+  "limitations": ["list with measurements"],
+  "recommendations": ["list"],
+  "confidence": 0.0-1.0
+}` : `Analyze ${movement} movement. Return JSON with relevant joint angles, score 0-3, compensations, and recommendations.`
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: `You are a medical AI specialized in musculoskeletal biomechanics analysis. Analyze this ${movement} movement image and provide clinical assessment.
-
-Return ONLY valid JSON:
-{
-  "joints": {
-    "hip_flexion": "XX°",
-    "knee_flexion": "XX°", 
-    "ankle_dorsiflexion": "XX°",
-    "trunk_lean": "XX°",
-    "shoulder_angle": "XX°"
-  },
-  "score": 0-3,
-  "compensations": ["list of observed compensatory movements"],
-  "recommendations": ["clinical recommendations"],
-  "confidence": 0.0-1.0
-}
-
-Scoring: 0=pain during movement, 1=unable to perform, 2=performed with compensation, 3=perfect form` },
+            { text: prompt },
             { inline_data: { mime_type: 'image/jpeg', data: imageBase64 } }
           ]
         }],
@@ -1001,30 +1269,30 @@ Scoring: 0=pain during movement, 1=unable to perform, 2=performed with compensat
       }
     }
     
-    return c.json({ success: false, error: 'Failed to parse Gemini response' })
+    return c.json({ success: false, error: 'Failed to parse response' })
   } catch (error: any) {
     return c.json({ success: false, error: error.message })
   }
 })
 
-// Voice Analysis with Pain Flag Detection
+// Voice Analysis
 app.post('/api/ai/analyze-voice', async (c) => {
   const { transcript } = await c.req.json()
   const text = transcript.toLowerCase()
   const geminiKey = c.env?.GEMINI_API_KEY || ''
   
-  // Basic keyword detection
   const flags = {
     red: [] as string[],
     yellow: [] as string[],
-    severity: [] as string[]
+    severity: [] as string[],
+    elderly: [] as string[]
   }
   
   painKeywords.red.forEach(kw => { if (text.includes(kw)) flags.red.push(kw) })
   painKeywords.yellow.forEach(kw => { if (text.includes(kw)) flags.yellow.push(kw) })
   painKeywords.severity.forEach(kw => { if (text.includes(kw)) flags.severity.push(kw) })
+  painKeywords.elderly.forEach(kw => { if (text.includes(kw)) flags.elderly.push(kw) })
   
-  // Gemini deep analysis
   let aiAnalysis = null
   
   if (geminiKey && geminiKey !== 'YOUR_GEMINI_API_KEY') {
@@ -1035,19 +1303,21 @@ app.post('/api/ai/analyze-voice', async (c) => {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a medical assistant analyzing patient statements for MSK triage. Analyze voice cues and content.
+              text: `Analyze patient statement for MSK triage. Detect voice cues indicating pain.
 
-Patient Statement: "${transcript}"
+Statement: "${transcript}"
 
-Return ONLY valid JSON:
+Return JSON:
 {
-  "redFlags": ["serious concerns requiring immediate attention"],
+  "redFlags": ["serious concerns"],
   "yellowFlags": ["psychosocial factors"],
-  "voiceCues": ["detected voice patterns: hesitation, pain sounds, breathing patterns"],
+  "elderlyFlags": ["fall risk, balance issues"],
+  "voiceCues": ["detected pain indicators: hesitation, gasps, etc"],
   "potentialDx": [{"code": "ICD-10", "name": "diagnosis"}],
   "painLevel": 1-10,
   "urgency": "routine|urgent|emergent",
-  "recommendations": ["clinical recommendations"]
+  "fallRisk": "low|moderate|high",
+  "recommendations": ["list"]
 }`
             }]
           }],
@@ -1057,53 +1327,46 @@ Return ONLY valid JSON:
       
       const data = await response.json()
       if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const text = data.candidates[0].content.parts[0].text
-        const jsonMatch = text.match(/\{[\s\S]*\}/)
+        const jsonMatch = data.candidates[0].content.parts[0].text.match(/\{[\s\S]*\}/)
         if (jsonMatch) aiAnalysis = JSON.parse(jsonMatch[0])
       }
     } catch (e) {
-      console.error('Gemini voice analysis error:', e)
+      console.error('Voice analysis error:', e)
     }
   }
   
   return c.json({ flags, aiAnalysis })
 })
 
-// Generate Comprehensive Medical Note with DX/CPT
+// Generate Medical Note
 app.post('/api/ai/generate-note', async (c) => {
-  const { patient, intake, fmsScores, aiFlags, exercises: rxExercises } = await c.req.json()
+  const { patient, intake, fmsScores, aiFlags, jointAnalysis } = await c.req.json()
   
-  // Calculate FMS total (movements 1-7)
   let fmsTotal = 0
   for (let i = 1; i <= 7; i++) {
     if (fmsScores?.[i] !== undefined) fmsTotal += fmsScores[i]
   }
   const riskLevel = fmsTotal <= 11 ? 'HIGH' : fmsTotal <= 14 ? 'MODERATE' : 'LOW'
   
-  // Select exercises based on scores
-  const selectedExercises = rxExercises || exercises.slice(0, 5)
-  
   const note = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                   COMPREHENSIVE MUSCULOSKELETAL EVALUATION                    ║
-║                              THRIVE ORTHO EHR                                 ║
+║              COMPREHENSIVE MUSCULOSKELETAL EVALUATION v3.1                   ║
+║                        THRIVE ORTHO EHR                                      ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 ═══════════════════════════════════════════════════════════════════════════════
-ADMINISTRATIVE DATA
+ADMINISTRATIVE
 ═══════════════════════════════════════════════════════════════════════════════
 DATE:     ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 PROVIDER: Dr. Michael Torres, MD | Sports Medicine
-NPI:      1234567890 | License: CA-MD-123456
-FACILITY: Thrive Ortho Clinic
+NPI:      1234567890
 
 ═══════════════════════════════════════════════════════════════════════════════
-PATIENT DEMOGRAPHICS
+PATIENT
 ═══════════════════════════════════════════════════════════════════════════════
 NAME:      ${patient?.name || 'Sarah Johnson'}
 DOB:       03/15/1985 | AGE: 39 | SEX: Female
 MRN:       P-2025-001234
-INSURANCE: Blue Cross PPO | ID: XYZ123456789
 
 ═══════════════════════════════════════════════════════════════════════════════
 CHIEF COMPLAINT
@@ -1111,178 +1374,155 @@ CHIEF COMPLAINT
 ${intake?.chiefComplaint || 'Lower back pain with right leg radiating symptoms × 6 weeks'}
 
 ═══════════════════════════════════════════════════════════════════════════════
-HISTORY OF PRESENT ILLNESS
+AI CLINICAL FLAGS
 ═══════════════════════════════════════════════════════════════════════════════
-${intake?.hpi || `39 y/o female presents with insidious onset lower back pain progressively 
-worsening over 6 weeks. Pain described as dull, aching with intermittent sharp 
-episodes rated 6/10 at worst. Radiates to right posterior thigh stopping at 
-knee level (L4-L5 dermatomal pattern).
-
-AGGRAVATING: Prolonged sitting (>30 min), forward bending, lifting
-ALLEVIATING: Walking, lying supine, ice application
-SLEEP: Disrupted 1-2x/night with repositioning
-RED FLAGS: NEGATIVE for B/B dysfunction, saddle anesthesia, progressive weakness`}
+RED FLAGS:     ${aiFlags?.red?.length > 0 ? aiFlags.red.join(', ').toUpperCase() : 'None'}
+YELLOW FLAGS:  ${aiFlags?.yellow?.length > 0 ? aiFlags.yellow.join(', ') : 'None'}
+ELDERLY FLAGS: ${aiFlags?.elderly?.length > 0 ? aiFlags.elderly.join(', ') : 'N/A'}
+FALL RISK:     ${aiFlags?.fallRisk || 'Low'}
 
 ═══════════════════════════════════════════════════════════════════════════════
-AI VOICE ANALYSIS FLAGS
+FMS ASSESSMENT (Movements 1-7)
 ═══════════════════════════════════════════════════════════════════════════════
-RED FLAGS:    ${aiFlags?.red?.length > 0 ? aiFlags.red.map((f: string) => f.toUpperCase()).join(', ') : 'None identified'}
-YELLOW FLAGS: ${aiFlags?.yellow?.length > 0 ? aiFlags.yellow.join(', ') : 'None identified'}
-SEVERITY:     ${aiFlags?.severity?.length > 0 ? aiFlags.severity.join(', ') : 'Moderate (6/10)'}
-VOICE CUES:   ${aiFlags?.voiceCues?.length > 0 ? aiFlags.voiceCues.join(', ') : 'Normal speech pattern'}
+TOTAL SCORE: ${fmsTotal}/21 | RISK: ▶ ${riskLevel} ◀
+
+┌─────────────────────────────────┬───────┐
+│ Movement                        │ Score │
+├─────────────────────────────────┼───────┤
+│ 1. Deep Squat                   │   ${fmsScores?.[1] ?? '-'}   │
+│ 2. Hurdle Step                  │   ${fmsScores?.[2] ?? '-'}   │
+│ 3. Inline Lunge                 │   ${fmsScores?.[3] ?? '-'}   │
+│ 4. Shoulder Mobility            │   ${fmsScores?.[4] ?? '-'}   │
+│ 5. Active Straight Leg Raise    │   ${fmsScores?.[5] ?? '-'}   │
+│ 6. Trunk Stability Push-Up      │   ${fmsScores?.[6] ?? '-'}   │
+│ 7. Rotary Stability             │   ${fmsScores?.[7] ?? '-'}   │
+└─────────────────────────────────┴───────┘
 
 ═══════════════════════════════════════════════════════════════════════════════
-FUNCTIONAL MOVEMENT SCREEN (FMS) - 10 MOVEMENT ASSESSMENT
+COMPREHENSIVE JOINT ANALYSIS (Gemini AI)
 ═══════════════════════════════════════════════════════════════════════════════
-TOTAL FMS SCORE: ${fmsTotal}/21 | RISK STRATIFICATION: ▶ ${riskLevel} RISK ◀
+${jointAnalysis ? `
+CERVICAL:
+  Flexion: ${jointAnalysis.cervical?.flexion || '--'}  Extension: ${jointAnalysis.cervical?.extension || '--'}
+  Lateral L/R: ${jointAnalysis.cervical?.lateral_L || '--'}/${jointAnalysis.cervical?.lateral_R || '--'}
+  Rotation L/R: ${jointAnalysis.cervical?.rotation_L || '--'}/${jointAnalysis.cervical?.rotation_R || '--'}
 
-┌────────────────────────────────────┬───────┬────────────┬─────────────────────┐
-│ Movement                           │ Score │ Category   │ CPT Code            │
-├────────────────────────────────────┼───────┼────────────┼─────────────────────┤
-│ 1. Deep Squat                      │   ${fmsScores?.[1] ?? '-'}   │ FMS        │ 97161               │
-│ 2. Hurdle Step (L/R)               │   ${fmsScores?.[2] ?? '-'}   │ FMS        │ 97161               │
-│ 3. Inline Lunge (L/R)              │   ${fmsScores?.[3] ?? '-'}   │ FMS        │ 97161               │
-│ 4. Shoulder Mobility (L/R)         │   ${fmsScores?.[4] ?? '-'}   │ FMS        │ 97161               │
-│ 5. Active Straight Leg Raise (L/R) │   ${fmsScores?.[5] ?? '-'}   │ FMS        │ 97161               │
-│ 6. Trunk Stability Push-Up         │   ${fmsScores?.[6] ?? '-'}   │ FMS        │ 97161               │
-│ 7. Rotary Stability (L/R)          │   ${fmsScores?.[7] ?? '-'}   │ FMS        │ 97161               │
-│ 8. Cervical ROM                    │   ${fmsScores?.[8] ?? '-'}   │ AMA        │ 97162               │
-│ 9. Lumbar ROM                      │   ${fmsScores?.[9] ?? '-'}   │ AMA        │ 97162               │
-│ 10. Gait Analysis                  │   ${fmsScores?.[10] ?? '-'}   │ AMA        │ 97164               │
-└────────────────────────────────────┴───────┴────────────┴─────────────────────┘
+SHOULDERS (L/R):
+  Flexion: ${jointAnalysis.shoulder_L?.flexion || '--'}/${jointAnalysis.shoulder_R?.flexion || '--'}
+  Abduction: ${jointAnalysis.shoulder_L?.abduction || '--'}/${jointAnalysis.shoulder_R?.abduction || '--'}
+  IR/ER L: ${jointAnalysis.shoulder_L?.internal_rotation || '--'}/${jointAnalysis.shoulder_L?.external_rotation || '--'}
+  IR/ER R: ${jointAnalysis.shoulder_R?.internal_rotation || '--'}/${jointAnalysis.shoulder_R?.external_rotation || '--'}
 
-Clearing Tests: Impingement ⊝ | Extension ⊝ | Flexion ⊝
+ELBOWS (L/R):
+  Flexion: ${jointAnalysis.elbow_L?.flexion || '--'}/${jointAnalysis.elbow_R?.flexion || '--'}
 
-═══════════════════════════════════════════════════════════════════════════════
-AI JOINT TRACKING ANALYSIS (Gemini Vision)
-═══════════════════════════════════════════════════════════════════════════════
-DEEP SQUAT ANALYSIS:
-  • Hip Flexion:          92° (Limited - Normal >120°)
-  • Knee Flexion:         108° (Adequate)
-  • Ankle Dorsiflexion:   14° (Limited - Normal >20°)
-  • Trunk Lean:           18° (Compensatory pattern)
-  • Compensations:        Forward trunk lean, bilateral heel rise
-  • AI Confidence:        87%
-  
-ACTIVE STRAIGHT LEG RAISE:
-  • Right:                65° (Limited - asymmetry present)
-  • Left:                 82° (Normal)
-  • Asymmetry:            >15° difference → unilateral dysfunction
-  • Clinical Indication:  R hamstring tightness, possible SI dysfunction
+WRISTS (L/R):
+  Flexion: ${jointAnalysis.wrist_L?.flexion || '--'}/${jointAnalysis.wrist_R?.flexion || '--'}
+  Extension: ${jointAnalysis.wrist_L?.extension || '--'}/${jointAnalysis.wrist_R?.extension || '--'}
 
+HANDS:
+  Grip Strength L/R: ${jointAnalysis.hand_L?.grip_strength || '--'}/${jointAnalysis.hand_R?.grip_strength || '--'}
+
+LUMBAR:
+  Flexion: ${jointAnalysis.lumbar?.flexion || '--'}  Extension: ${jointAnalysis.lumbar?.extension || '--'}
+  Lateral L/R: ${jointAnalysis.lumbar?.lateral_L || '--'}/${jointAnalysis.lumbar?.lateral_R || '--'}
+
+HIPS (L/R):
+  Flexion: ${jointAnalysis.hip_L?.flexion || '--'}/${jointAnalysis.hip_R?.flexion || '--'}
+  Extension: ${jointAnalysis.hip_L?.extension || '--'}/${jointAnalysis.hip_R?.extension || '--'}
+  Abduction: ${jointAnalysis.hip_L?.abduction || '--'}/${jointAnalysis.hip_R?.abduction || '--'}
+  IR/ER L: ${jointAnalysis.hip_L?.internal_rotation || '--'}/${jointAnalysis.hip_L?.external_rotation || '--'}
+  IR/ER R: ${jointAnalysis.hip_R?.internal_rotation || '--'}/${jointAnalysis.hip_R?.external_rotation || '--'}
+
+KNEES (L/R):
+  Flexion: ${jointAnalysis.knee_L?.flexion || '--'}/${jointAnalysis.knee_R?.flexion || '--'}
+  Extension: ${jointAnalysis.knee_L?.extension || '--'}/${jointAnalysis.knee_R?.extension || '--'}
+
+ANKLES (L/R):
+  Dorsiflexion: ${jointAnalysis.ankle_L?.dorsiflexion || '--'}/${jointAnalysis.ankle_R?.dorsiflexion || '--'}
+  Plantarflexion: ${jointAnalysis.ankle_L?.plantarflexion || '--'}/${jointAnalysis.ankle_R?.plantarflexion || '--'}
+
+FEET:
+  Arch Height L/R: ${jointAnalysis.foot_L?.arch_height || '--'}/${jointAnalysis.foot_R?.arch_height || '--'}
+  Great Toe Ext L/R: ${jointAnalysis.foot_L?.great_toe_ext || '--'}/${jointAnalysis.foot_R?.great_toe_ext || '--'}
+
+${jointAnalysis.gait ? `
 GAIT ANALYSIS:
-  • Cadence:              108 steps/min (Normal range)
-  • Stride Length:        Shortened on right (antalgic pattern)
-  • Arm Swing:            Decreased bilaterally
-  • Trendelenburg:        Negative
-  • Pattern:              Right antalgic gait, guarded lumbar movement
+  Cadence: ${jointAnalysis.gait.cadence}
+  Stride Length L/R: ${jointAnalysis.gait.stride_length_L}/${jointAnalysis.gait.stride_length_R}
+  Arm Swing: ${jointAnalysis.gait.arm_swing}
+  Balance: ${jointAnalysis.gait.balance}
+` : ''}
+${jointAnalysis.elderly ? `
+ELDERLY ASSESSMENT:
+  TUG Time: ${jointAnalysis.elderly.tug_time} (${jointAnalysis.elderly.tug_risk} risk)
+  Single Leg Stance L/R: ${jointAnalysis.elderly.single_leg_stance_L}/${jointAnalysis.elderly.single_leg_stance_R}
+  Functional Reach: ${jointAnalysis.elderly.functional_reach}
+  Sit-to-Stand: ${jointAnalysis.elderly.sit_to_stand_time}
+  Fall Risk: ${jointAnalysis.elderly.fall_risk}
+` : ''}
+LIMITATIONS:
+${jointAnalysis.limitations?.map((l: string) => `  • ${l}`).join('\n') || '  None identified'}
+
+COMPENSATIONS:
+${jointAnalysis.compensations?.map((c: string) => `  • ${c}`).join('\n') || '  None identified'}
+` : 'Full joint analysis not performed'}
 
 ═══════════════════════════════════════════════════════════════════════════════
-ASSESSMENT & DIAGNOSIS (ICD-10)
+DIAGNOSIS (ICD-10)
 ═══════════════════════════════════════════════════════════════════════════════
-PRIMARY DIAGNOSIS:
-  1. M54.5   Low back pain
-
-SECONDARY DIAGNOSES:
-  2. M54.16  Radiculopathy, lumbar region
-  3. M62.838 Muscle spasm, other site
-  4. M99.03  Segmental dysfunction, lumbar region
-  5. M79.3   Panniculitis, unspecified
-
-CLINICAL IMPRESSION:
-Lumbar radiculopathy with associated movement dysfunction. FMS score of 
-${fmsTotal}/21 indicates ${riskLevel} injury risk. Primary deficits in hip mobility 
-and core stability. Asymmetrical ASLR suggests unilateral flexibility deficit.
-No red flags. Appropriate for conservative PT management.
+1. M54.5   Low back pain
+2. M54.16  Radiculopathy, lumbar region
+3. M62.838 Muscle spasm
+4. M99.03  Segmental dysfunction, lumbar
 
 ═══════════════════════════════════════════════════════════════════════════════
-CPT CODES - BILLING
+CPT CODES
 ═══════════════════════════════════════════════════════════════════════════════
-┌─────────┬───────────────────────────────────────────┬────────┬─────────────┐
-│ Code    │ Description                               │ Units  │ Time        │
-├─────────┼───────────────────────────────────────────┼────────┼─────────────┤
-│ 97163   │ PT Evaluation - High Complexity           │ 1      │ 45 min      │
-│ 97110   │ Therapeutic Exercise                      │ 2      │ 30 min      │
-│ 97140   │ Manual Therapy Techniques                 │ 2      │ 30 min      │
-│ 97530   │ Therapeutic Activities                    │ 1      │ 15 min      │
-└─────────┴───────────────────────────────────────────┴────────┴─────────────┘
-TOTAL BILLABLE TIME: 60 minutes
+97163  PT Evaluation - High Complexity     1 unit
+97110  Therapeutic Exercise                2 units
+97140  Manual Therapy                      2 units
+97530  Therapeutic Activities              1 unit
 
 ═══════════════════════════════════════════════════════════════════════════════
-PLAN OF CARE
+PLAN
 ═══════════════════════════════════════════════════════════════════════════════
-TREATMENT FREQUENCY: 2x/week × 6 weeks (12 visits)
+Frequency: 2x/week × 6 weeks
 
-SHORT-TERM GOALS (2 weeks):
-  □ Reduce pain from 6/10 → 4/10
-  □ Improve ASLR symmetry to <10° difference
-  □ Independent with HEP
-  □ Sitting tolerance increased to 45 min
-
-LONG-TERM GOALS (6 weeks):
-  □ Pain ≤2/10 at rest and activity
-  □ FMS score ≥14 (low risk)
-  □ Return to full work without restrictions
-  □ Independent maintenance program
-
-═══════════════════════════════════════════════════════════════════════════════
-HOME EXERCISE PROGRAM
-═══════════════════════════════════════════════════════════════════════════════
-${selectedExercises.map((e: any, i: number) => `
-${i + 1}. ${e.name.toUpperCase()}
-   Target: ${e.target} | Difficulty: ${e.difficulty}
-   Dosage: ${e.sets} sets × ${e.reps} | Frequency: ${e.frequency}
-   Instructions: ${e.instructions}
-`).join('')}
-
-PRECAUTIONS:
-  ⚠ Avoid prolonged sitting >30 min without standing
-  ⚠ No heavy lifting >20 lbs during acute phase
-  ⚠ Stop if sharp pain or radiating symptoms increase
-  ⚠ No high-impact activities until cleared
+HOME EXERCISE PROGRAM:
+1. Hip Flexor Stretch - 3×30s, 2x daily
+2. Ankle Circles - 2×10, 2x daily
+3. Bird Dog - 3×10, daily
+4. Chair Stands - 2×10, daily
+5. Tandem Balance - 3×30s, daily
 
 ═══════════════════════════════════════════════════════════════════════════════
 FOLLOW-UP
 ═══════════════════════════════════════════════════════════════════════════════
-Next Appointment:   ${new Date(Date.now() + 3*24*60*60*1000).toLocaleDateString()}
-Re-evaluation:      ${new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString()}
-Emergency Contact:  Return immediately if red flags develop
+Next: ${new Date(Date.now() + 3*24*60*60*1000).toLocaleDateString()}
+Re-eval: ${new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString()}
 
-═══════════════════════════════════════════════════════════════════════════════
-PROVIDER SIGNATURE
-═══════════════════════════════════════════════════════════════════════════════
-
-_________________________________    Date: ${new Date().toLocaleDateString()}
+_________________________________
 Dr. Michael Torres, MD
-Sports Medicine | Board Certified
-NPI: 1234567890
+Sports Medicine
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                    GENERATED BY THRIVE ORTHO EHR v3.0                        ║
-║           AI-Assisted Documentation | Gemini Vision | HIPAA Compliant        ║
+║          THRIVE ORTHO EHR v3.1 | Gemini AI | Full Body Analysis              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `.trim()
 
   return c.json({ note })
 })
 
-// Tasks API
-app.get('/api/tasks', (c) => {
-  const tasks = [
-    { id: 1, title: 'Complete Sarah Johnson voice intake', priority: 'high', status: 'pending', due: 'Today', patient: 'Sarah Johnson' },
-    { id: 2, title: 'Perform FMS assessment', priority: 'high', status: 'pending', due: 'Today', patient: 'Sarah Johnson' },
-    { id: 3, title: 'Generate comprehensive medical note', priority: 'high', status: 'pending', due: 'Today', patient: 'Sarah Johnson' },
-    { id: 4, title: 'Review James Williams X-ray results', priority: 'medium', status: 'completed', due: 'Yesterday', patient: 'James Williams' },
-    { id: 5, title: 'Telemedicine follow-up: Emily Davis', priority: 'medium', status: 'pending', due: 'Tomorrow', patient: 'Emily Davis' },
-    { id: 6, title: 'Update exercise program for Mark T.', priority: 'low', status: 'pending', due: 'This week', patient: 'Mark Thompson' },
-  ]
-  return c.json({ tasks })
-})
+// API endpoints
+app.get('/api/tasks', (c) => c.json({ tasks: [
+  { id: 1, title: 'Complete Sarah Johnson intake', priority: 'high', status: 'pending', due: 'Today' },
+  { id: 2, title: 'Full body joint scan', priority: 'high', status: 'pending', due: 'Today' },
+  { id: 3, title: 'Generate medical note', priority: 'high', status: 'pending', due: 'Today' },
+  { id: 4, title: 'Elderly gait assessment - Mr. Thompson', priority: 'medium', status: 'pending', due: 'Tomorrow' },
+]}))
 
-// Exercises API
 app.get('/api/exercises', (c) => c.json({ exercises }))
-
-// Movements API
 app.get('/api/movements', (c) => c.json({ movements }))
 
 // ============================================================================
@@ -1297,11 +1537,11 @@ app.get('/login', (c) => {
         <div class="login-header">
           <div class="login-logo">TO</div>
           <div class="login-title">Thrive Ortho EHR</div>
-          <div class="login-subtitle">MSK Assessment Platform v3.0</div>
+          <div class="login-subtitle">Full Body MSK Assessment v3.1</div>
         </div>
         
         <div style="font-size: 11px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px;">
-          Select Role to Continue
+          Select Role
         </div>
         
         <div class="role-grid">
@@ -1328,7 +1568,7 @@ app.get('/login', (c) => {
         </button>
         
         <div class="text-center text-muted text-sm" style="margin-top: 14px;">
-          FMS + AMA Validated • Gemini AI • HIPAA
+          All Joints • Hands • Feet • Face • Gait • Elderly
         </div>
       </div>
     </div>
@@ -1362,8 +1602,8 @@ app.get('/doctor', (c) => {
             <p class="subtitle">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
           </div>
           <div class="flex gap-1">
-            <a href="/doctor/video" class="btn btn-secondary"><i class="fas fa-video"></i> Telemedicine</a>
-            <a href="/doctor/assessment" class="btn btn-primary"><i class="fas fa-plus"></i> New Assessment</a>
+            <a href="/doctor/joints" class="btn btn-secondary"><i class="fas fa-bone"></i> Full Body Scan</a>
+            <a href="/doctor/assessment" class="btn btn-primary"><i class="fas fa-plus"></i> Assessment</a>
           </div>
         </div>
         
@@ -1374,72 +1614,50 @@ app.get('/doctor', (c) => {
           </div>
           <div class="stat-box">
             <div class="stat-value">3</div>
-            <div class="stat-label">Pending Assessments</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">5</div>
-            <div class="stat-label">Notes to Complete</div>
+            <div class="stat-label">Assessments</div>
           </div>
           <div class="stat-box">
             <div class="stat-value">2</div>
-            <div class="stat-label">Video Calls</div>
+            <div class="stat-label">Elderly Evals</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">5</div>
+            <div class="stat-label">Notes Due</div>
           </div>
         </div>
         
         <div class="card">
           <div class="card-header">
             <span class="card-title">Today's Patients</span>
-            <button class="btn btn-sm btn-secondary">View All</button>
           </div>
           <table class="table">
             <thead>
-              <tr><th>Patient</th><th>Chief Complaint</th><th>FMS</th><th>Status</th><th></th></tr>
+              <tr><th>Patient</th><th>Type</th><th>Focus</th><th>FMS</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               <tr>
-                <td>
-                  <div class="flex items-center gap-1">
-                    <div class="avatar">SJ</div>
-                    <div><strong>Sarah Johnson</strong><div class="text-muted text-sm">39 y/o F</div></div>
-                  </div>
-                </td>
-                <td>LBP w/ R leg radiculopathy</td>
+                <td><div class="flex items-center gap-1"><div class="avatar">SJ</div><div><strong>Sarah Johnson</strong><div class="text-muted text-sm">39 y/o F</div></div></div></td>
+                <td>Standard</td>
+                <td>LBP, Hip, Ankle</td>
                 <td><span style="font-weight: 700; color: var(--warning);">12</span>/21</td>
                 <td><span class="badge badge-warning">In Progress</span></td>
-                <td class="text-right">
-                  <a href="/doctor/assessment" class="btn btn-sm btn-ghost"><i class="fas fa-clipboard-check"></i></a>
-                  <a href="/doctor/notes" class="btn btn-sm btn-ghost"><i class="fas fa-file-medical"></i></a>
-                </td>
+                <td class="text-right"><a href="/doctor/joints" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
-                <td>
-                  <div class="flex items-center gap-1">
-                    <div class="avatar">JW</div>
-                    <div><strong>James Williams</strong><div class="text-muted text-sm">52 y/o M</div></div>
-                  </div>
-                </td>
-                <td>R shoulder impingement</td>
+                <td><div class="flex items-center gap-1"><div class="avatar">RT</div><div><strong>Robert Thompson</strong><div class="text-muted text-sm">72 y/o M</div></div></div></td>
+                <td><span class="badge badge-info">Elderly</span></td>
+                <td>Gait, Balance, Fall Risk</td>
                 <td><span style="font-weight: 700; color: var(--error);">9</span>/21</td>
                 <td><span class="badge badge-danger">High Risk</span></td>
-                <td class="text-right">
-                  <button class="btn btn-sm btn-ghost"><i class="fas fa-clipboard-check"></i></button>
-                  <button class="btn btn-sm btn-ghost"><i class="fas fa-file-medical"></i></button>
-                </td>
+                <td class="text-right"><a href="/doctor/joints" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
-                <td>
-                  <div class="flex items-center gap-1">
-                    <div class="avatar">ED</div>
-                    <div><strong>Emily Davis</strong><div class="text-muted text-sm">28 y/o F</div></div>
-                  </div>
-                </td>
-                <td>Bilateral knee pain - running</td>
+                <td><div class="flex items-center gap-1"><div class="avatar">MK</div><div><strong>Maria Kim</strong><div class="text-muted text-sm">45 y/o F</div></div></div></td>
+                <td>Standard</td>
+                <td>Hands, Wrists</td>
                 <td><span style="font-weight: 700; color: var(--success);">16</span>/21</td>
                 <td><span class="badge badge-success">Low Risk</span></td>
-                <td class="text-right">
-                  <button class="btn btn-sm btn-ghost"><i class="fas fa-clipboard-check"></i></button>
-                  <button class="btn btn-sm btn-ghost"><i class="fas fa-file-medical"></i></button>
-                </td>
+                <td class="text-right"><a href="/doctor/joints" class="btn btn-sm btn-ghost"><i class="fas fa-bone"></i></a></td>
               </tr>
             </tbody>
           </table>
@@ -1451,12 +1669,12 @@ app.get('/doctor', (c) => {
             <a href="/doctor/tasks" class="btn btn-sm btn-secondary">View All</a>
           </div>
           <div class="card-body">
-            <ul class="task-list" id="taskList">
+            <ul class="task-list">
               <li class="task-item">
                 <div class="task-priority high"></div>
                 <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
-                  <div class="task-title">Complete Sarah Johnson intake</div>
+                  <div class="task-title">Full body joint scan - Sarah Johnson</div>
                   <div class="task-meta">Due: Today</div>
                 </div>
               </li>
@@ -1464,16 +1682,8 @@ app.get('/doctor', (c) => {
                 <div class="task-priority high"></div>
                 <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
-                  <div class="task-title">Perform FMS assessment</div>
-                  <div class="task-meta">Due: Today</div>
-                </div>
-              </li>
-              <li class="task-item completed">
-                <div class="task-priority medium"></div>
-                <div class="task-check done" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Review James W. X-rays</div>
-                  <div class="task-meta">Completed</div>
+                  <div class="task-title">Elderly gait assessment - Robert Thompson</div>
+                  <div class="task-meta">Due: Today • Fall risk evaluation</div>
                 </div>
               </li>
             </ul>
@@ -1493,161 +1703,21 @@ app.get('/doctor', (c) => {
   `, 'Dashboard - Thrive Ortho EHR'))
 })
 
-// Voice Intake
-app.get('/doctor/intake', (c) => {
+// Full Body Joint Scan Page
+app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <div class="demo-bar">
-      <span>Voice Medical Intake — AI Pain Flag Detection</span>
+      <span>Full Body Joint Scan — All Joints + Hands + Feet + Face + Gait</span>
       <a href="/login">Switch Role</a>
     </div>
     <div class="layout">
-      ${sidebar('doctor', 'intake')}
+      ${sidebar('doctor', 'joints')}
       
       <main class="main">
         <div class="header">
           <div>
-            <h1 class="title">Voice Medical Intake</h1>
-            <p class="subtitle">AI-powered voice analysis with pain flag detection</p>
-          </div>
-          <a href="/doctor" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title"><i class="fas fa-microphone text-accent" style="margin-right: 6px;"></i>Voice Recording</span>
-          </div>
-          <div class="card-body">
-            <div class="voice-area">
-              <button class="voice-btn" id="voiceBtn" onclick="toggleRecording()">
-                <i class="fas fa-microphone" id="voiceIcon"></i>
-              </button>
-              <div class="voice-status" id="voiceStatus">Click to start recording</div>
-            </div>
-            
-            <div style="margin-top: 20px;">
-              <div class="form-label">Current Question</div>
-              <div style="background: var(--gray-50); padding: 12px; border-radius: var(--radius); font-size: 12px;">
-                "What brings you in today? Please describe your main concern, when it started, and how it affects your daily activities."
-              </div>
-            </div>
-            
-            <div style="margin-top: 14px;">
-              <div class="form-label">Transcript</div>
-              <div id="transcript" style="background: var(--gray-50); padding: 12px; border-radius: var(--radius); min-height: 80px; font-size: 12px; color: var(--gray-500);">
-                Transcript will appear here as you speak...
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="flex gap-1 mt-2">
-          <button class="btn btn-secondary btn-lg" style="flex: 1;"><i class="fas fa-arrow-left"></i> Previous</button>
-          <button class="btn btn-primary btn-lg" style="flex: 1;" onclick="analyzeVoice()">Analyze & Continue <i class="fas fa-arrow-right"></i></button>
-        </div>
-      </main>
-      
-      ${rightPanel({ fmsScore: null })}
-    </div>
-    
-    <script>
-      let isRecording = false;
-      let recognition;
-      let transcript = '';
-      
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        
-        recognition.onresult = (e) => {
-          transcript = '';
-          for (let i = 0; i < e.results.length; i++) {
-            transcript += e.results[i][0].transcript;
-          }
-          document.getElementById('transcript').textContent = transcript || 'Listening...';
-          document.getElementById('transcript').style.color = 'var(--gray-900)';
-        };
-      }
-      
-      function toggleRecording() {
-        if (isRecording) {
-          isRecording = false;
-          document.getElementById('voiceBtn').classList.remove('recording');
-          document.getElementById('voiceIcon').className = 'fas fa-microphone';
-          document.getElementById('voiceStatus').textContent = 'Click to start recording';
-          if (recognition) recognition.stop();
-        } else {
-          isRecording = true;
-          document.getElementById('voiceBtn').classList.add('recording');
-          document.getElementById('voiceIcon').className = 'fas fa-stop';
-          document.getElementById('voiceStatus').textContent = 'Recording... Click to stop';
-          if (recognition) recognition.start();
-        }
-      }
-      
-      async function analyzeVoice() {
-        if (!transcript) {
-          alert('Please record some audio first');
-          return;
-        }
-        
-        const flagsContainer = document.getElementById('flagsContainer');
-        flagsContainer.innerHTML = '<div class="panel-card text-center"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
-        
-        try {
-          const response = await fetch('/api/ai/analyze-voice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transcript })
-          });
-          
-          const data = await response.json();
-          
-          let html = '';
-          if (data.flags.red.length > 0) {
-            html += '<div class="flag flag-red"><i class="fas fa-exclamation-triangle"></i><div><strong>Red Flags:</strong> ' + data.flags.red.join(', ') + '</div></div>';
-          }
-          if (data.flags.yellow.length > 0) {
-            html += '<div class="flag flag-yellow"><i class="fas fa-exclamation-circle"></i><div><strong>Yellow Flags:</strong> ' + data.flags.yellow.join(', ') + '</div></div>';
-          }
-          if (data.aiAnalysis?.potentialDx) {
-            html += '<div class="panel-card"><div class="text-sm"><strong>Potential Dx:</strong><br>' + 
-              (Array.isArray(data.aiAnalysis.potentialDx) 
-                ? data.aiAnalysis.potentialDx.map(d => typeof d === 'object' ? d.code + ' ' + d.name : d).join('<br>') 
-                : data.aiAnalysis.potentialDx) + '</div></div>';
-          }
-          
-          if (!html) {
-            html = '<div class="panel-card text-center text-sm" style="color: var(--success);"><i class="fas fa-check-circle"></i> No significant flags detected</div>';
-          }
-          
-          flagsContainer.innerHTML = html;
-          sessionStorage.setItem('intakeTranscript', transcript);
-          sessionStorage.setItem('intakeFlags', JSON.stringify(data.flags));
-        } catch (err) {
-          flagsContainer.innerHTML = '<div class="panel-card text-center text-danger text-sm">Analysis failed</div>';
-        }
-      }
-    </script>
-  `, 'Voice Intake - Thrive Ortho EHR'))
-})
-
-// MSK Assessment
-app.get('/doctor/assessment', (c) => {
-  return c.html(html(`
-    <div class="demo-bar">
-      <span>MSK Assessment — Gemini AI Real-Time Joint Tracking</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('doctor', 'assessment')}
-      
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">MSK Movement Assessment</h1>
-            <p class="subtitle">FMS 7-Movement + AMA ROM • Gemini AI Analysis</p>
+            <h1 class="title">Full Body Joint Scan</h1>
+            <p class="subtitle">Comprehensive analysis: All joints, hands, feet, face, gait</p>
           </div>
           <div class="flex gap-1">
             <a href="/doctor" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
@@ -1660,23 +1730,41 @@ app.get('/doctor/assessment', (c) => {
             <div class="video-box" id="videoContainer">
               <div class="video-placeholder">
                 <i class="fas fa-camera"></i>
-                <p>Camera Feed — Click Start</p>
+                <p>Camera Feed — Full Body View</p>
               </div>
               <video id="videoElement" autoplay playsinline style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
+              <!-- Skeleton visualization overlay -->
+              <div id="skeletonOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;"></div>
+              
               <div class="video-overlay">
                 <div class="video-controls">
-                  <button class="video-btn video-btn-light" onclick="toggleCamera()">
+                  <button class="video-btn video-btn-light" onclick="toggleCamera()" title="Toggle Camera">
                     <i class="fas fa-camera" id="cameraIcon"></i>
                   </button>
-                  <button class="video-btn video-btn-accent" onclick="captureAndAnalyze()" title="AI Analysis">
-                    <i class="fas fa-brain"></i>
+                  <button class="video-btn video-btn-accent" onclick="captureFullBody()" title="Full Body Scan">
+                    <i class="fas fa-expand"></i>
+                  </button>
+                  <button class="video-btn video-btn-accent" onclick="captureHands()" title="Hand Analysis">
+                    <i class="fas fa-hand"></i>
+                  </button>
+                  <button class="video-btn video-btn-accent" onclick="captureFeet()" title="Foot Analysis">
+                    <i class="fas fa-shoe-prints"></i>
+                  </button>
+                  <button class="video-btn video-btn-accent" onclick="captureFace()" title="Face/TMJ">
+                    <i class="fas fa-face-smile"></i>
+                  </button>
+                  <button class="video-btn video-btn-accent" onclick="captureGait()" title="Gait - Walk Forward/Back">
+                    <i class="fas fa-person-walking"></i>
+                  </button>
+                  <button class="video-btn video-btn-accent" onclick="captureElderly()" title="Elderly Fall Risk">
+                    <i class="fas fa-person-cane"></i>
                   </button>
                 </div>
                 <div class="joint-overlay" id="jointData">
-                  <div><strong>Hip:</strong> <span id="hipAngle">--</span></div>
-                  <div><strong>Knee:</strong> <span id="kneeAngle">--</span></div>
-                  <div><strong>Ankle:</strong> <span id="ankleAngle">--</span></div>
-                  <div><strong>Trunk:</strong> <span id="trunkAngle">--</span></div>
+                  <div class="joint-overlay-title"><i class="fas fa-bone"></i> Real-Time Joint Analysis</div>
+                  <div class="joint-grid" id="jointGrid">
+                    <!-- Populated by JS -->
+                  </div>
                 </div>
               </div>
             </div>
@@ -1685,13 +1773,21 @@ app.get('/doctor/assessment', (c) => {
         
         <div class="card">
           <div class="card-header">
-            <span class="card-title">10-Movement Protocol</span>
-            <span class="text-muted text-sm">FMS + AMA Validated</span>
+            <span class="card-title">Assessment Categories</span>
+            <div class="category-tabs">
+              <button class="category-tab active" onclick="filterMovements('all')">All</button>
+              <button class="category-tab" onclick="filterMovements('FMS')">FMS</button>
+              <button class="category-tab" onclick="filterMovements('AMA')">AMA</button>
+              <button class="category-tab" onclick="filterMovements('ELDERLY')">Elderly</button>
+              <button class="category-tab" onclick="filterMovements('HAND')">Hand</button>
+              <button class="category-tab" onclick="filterMovements('FOOT')">Foot</button>
+              <button class="category-tab" onclick="filterMovements('FACE')">Face</button>
+            </div>
           </div>
           <div class="card-body">
             <div class="movement-grid" id="movementGrid">
               ${movements.map((m, i) => `
-                <div class="movement-card" data-id="${m.id}" onclick="selectMovement(${m.id})">
+                <div class="movement-card ${m.forElderly ? 'elderly' : ''}" data-id="${m.id}" data-category="${m.category}" onclick="selectMovement(${m.id})">
                   <div class="movement-num">${i + 1}</div>
                   <div class="movement-name">${m.name}</div>
                   <div class="movement-category">${m.category}</div>
@@ -1718,7 +1814,7 @@ app.get('/doctor/assessment', (c) => {
         <div class="panel-section">
           <div class="panel-label">Current Movement</div>
           <div class="panel-card">
-            <div style="font-weight: 600; font-size: 12px;" id="currentMovement">Select a movement</div>
+            <div style="font-weight: 600; font-size: 11px;" id="currentMovement">Select a movement</div>
             <div class="text-muted text-sm mt-1" id="currentDescription">--</div>
           </div>
           
@@ -1737,17 +1833,17 @@ app.get('/doctor/assessment', (c) => {
         </div>
         
         <div class="panel-section">
-          <div class="panel-label">AI Analysis</div>
-          <div class="panel-card" id="aiAnalysis">
+          <div class="panel-label">AI Joint Analysis</div>
+          <div class="panel-card" id="aiAnalysis" style="max-height: 200px; overflow-y: auto;">
             <div class="text-center text-muted text-sm" style="padding: 8px;">
-              <i class="fas fa-brain" style="font-size: 18px; margin-bottom: 4px; display: block;"></i>
-              Capture image to analyze
+              <i class="fas fa-bone" style="font-size: 18px; margin-bottom: 4px; display: block; color: var(--accent);"></i>
+              Capture to analyze all joints
             </div>
           </div>
         </div>
         
         <button class="btn btn-primary" style="width: 100%;" onclick="generateNote()">
-          <i class="fas fa-file-medical"></i> Generate Medical Note
+          <i class="fas fa-file-medical"></i> Generate Note
         </button>
       </aside>
     </div>
@@ -1757,6 +1853,20 @@ app.get('/doctor/assessment', (c) => {
       let currentMovementId = null;
       let scores = {};
       let stream = null;
+      let lastAnalysis = null;
+      
+      function filterMovements(category) {
+        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        
+        document.querySelectorAll('.movement-card').forEach(card => {
+          if (category === 'all' || card.dataset.category === category) {
+            card.style.display = 'block';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      }
       
       function selectMovement(id) {
         currentMovementId = id;
@@ -1785,7 +1895,7 @@ app.get('/doctor/assessment', (c) => {
           b.classList.toggle('selected', i === score);
         });
         
-        // Calculate FMS total (movements 1-7)
+        // Calculate FMS total (1-7 only)
         let total = 0;
         for (let i = 1; i <= 7; i++) {
           if (scores[i] !== undefined) total += scores[i];
@@ -1838,9 +1948,113 @@ app.get('/doctor/assessment', (c) => {
         }
       }
       
-      async function captureAndAnalyze() {
-        if (!stream || !currentMovementId) {
-          alert('Start camera and select a movement first');
+      async function captureFullBody() {
+        await captureAndAnalyze('full');
+      }
+      
+      async function captureHands() {
+        await captureAndAnalyze('hands');
+      }
+      
+      async function captureFeet() {
+        await captureAndAnalyze('feet');
+      }
+      
+      async function captureFace() {
+        await captureAndAnalyze('face');
+      }
+      
+      async function captureGait() {
+        await captureAndAnalyze('gait');
+      }
+      
+      async function captureElderly() {
+        await captureAndAnalyze('elderly');
+      }
+      
+      // Draw blue skeleton visualization
+      function drawSkeleton(analysis) {
+        const overlay = document.getElementById('skeletonOverlay');
+        if (!overlay) return;
+        
+        // Joint positions (percentage-based for responsive display)
+        const jointPositions = {
+          head: { x: 50, y: 8 },
+          neck: { x: 50, y: 14 },
+          shoulder_L: { x: 35, y: 18 },
+          shoulder_R: { x: 65, y: 18 },
+          elbow_L: { x: 28, y: 32 },
+          elbow_R: { x: 72, y: 32 },
+          wrist_L: { x: 22, y: 45 },
+          wrist_R: { x: 78, y: 45 },
+          hand_L: { x: 18, y: 50 },
+          hand_R: { x: 82, y: 50 },
+          thoracic: { x: 50, y: 28 },
+          lumbar: { x: 50, y: 42 },
+          hip_L: { x: 42, y: 52 },
+          hip_R: { x: 58, y: 52 },
+          knee_L: { x: 40, y: 70 },
+          knee_R: { x: 60, y: 70 },
+          ankle_L: { x: 38, y: 88 },
+          ankle_R: { x: 62, y: 88 },
+          foot_L: { x: 35, y: 95 },
+          foot_R: { x: 65, y: 95 }
+        };
+        
+        // Determine joint status
+        function getJointStatus(jointName) {
+          if (!analysis) return 'normal';
+          const limited = analysis.limitations?.some(l => l.toLowerCase().includes(jointName.toLowerCase())) || false;
+          const critical = analysis.elderly?.fall_risk === 'High' || analysis.elderly?.fall_risk === 'high';
+          if (critical && (jointName.includes('ankle') || jointName.includes('knee') || jointName.includes('hip'))) return 'critical';
+          if (limited) return 'limited';
+          return 'good';
+        }
+        
+        // Build HTML for joints and connections
+        let html = '';
+        
+        // Draw connections first (blue lines)
+        const connections = [
+          ['head', 'neck'], ['neck', 'shoulder_L'], ['neck', 'shoulder_R'],
+          ['shoulder_L', 'elbow_L'], ['shoulder_R', 'elbow_R'],
+          ['elbow_L', 'wrist_L'], ['elbow_R', 'wrist_R'],
+          ['wrist_L', 'hand_L'], ['wrist_R', 'hand_R'],
+          ['neck', 'thoracic'], ['thoracic', 'lumbar'],
+          ['lumbar', 'hip_L'], ['lumbar', 'hip_R'],
+          ['hip_L', 'knee_L'], ['hip_R', 'knee_R'],
+          ['knee_L', 'ankle_L'], ['knee_R', 'ankle_R'],
+          ['ankle_L', 'foot_L'], ['ankle_R', 'foot_R']
+        ];
+        
+        connections.forEach(([from, to]) => {
+          const p1 = jointPositions[from];
+          const p2 = jointPositions[to];
+          if (p1 && p2) {
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+            const length = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+            html += '<div style="position:absolute;left:' + p1.x + '%;top:' + p1.y + '%;width:' + length + '%;height:3px;background:linear-gradient(90deg,rgba(59,130,246,0.7),rgba(147,197,253,0.7));transform:rotate(' + angle + 'deg);transform-origin:left center;border-radius:2px;"></div>';
+          }
+        });
+        
+        // Draw joint markers
+        Object.entries(jointPositions).forEach(([name, pos]) => {
+          const status = getJointStatus(name);
+          const colors = {
+            good: 'background:rgba(59,130,246,0.9);border-color:#93c5fd;box-shadow:0 0 8px rgba(59,130,246,0.6)',
+            limited: 'background:rgba(251,191,36,0.9);border-color:#fde047;box-shadow:0 0 8px rgba(251,191,36,0.6)',
+            critical: 'background:rgba(239,68,68,0.9);border-color:#fca5a5;box-shadow:0 0 8px rgba(239,68,68,0.6)',
+            normal: 'background:rgba(100,116,139,0.8);border-color:#cbd5e1'
+          };
+          html += '<div style="position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;width:12px;height:12px;border-radius:50%;border:2px solid;transform:translate(-50%,-50%);' + colors[status] + '" title="' + name.replace('_', ' ') + '"></div>';
+        });
+        
+        overlay.innerHTML = html;
+      }
+      
+      async function captureAndAnalyze(type) {
+        if (!stream) {
+          alert('Start camera first');
           return;
         }
         
@@ -1851,38 +2065,148 @@ app.get('/doctor/assessment', (c) => {
         canvas.getContext('2d').drawImage(video, 0, 0);
         const imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
         
-        const m = movements.find(x => x.id === currentMovementId);
-        document.getElementById('aiAnalysis').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
+        document.getElementById('aiAnalysis').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Analyzing all joints...</div>';
         
         try {
           const response = await fetch('/api/ai/analyze-joints', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64, movement: m.name })
+            body: JSON.stringify({ 
+              imageBase64, 
+              analysisType: type,
+              movement: currentMovementId ? movements.find(m => m.id === currentMovementId)?.name : null
+            })
           });
           
           const data = await response.json();
-          const analysis = data.analysis;
+          lastAnalysis = data.analysis;
           
-          if (analysis?.joints) {
-            document.getElementById('hipAngle').textContent = analysis.joints.hip_flexion || '--';
-            document.getElementById('kneeAngle').textContent = analysis.joints.knee_flexion || '--';
-            document.getElementById('ankleAngle').textContent = analysis.joints.ankle_dorsiflexion || '--';
-            document.getElementById('trunkAngle').textContent = analysis.joints.trunk_lean || '--';
+          // Update joint overlay with comprehensive BLUE-themed display
+          const jointGrid = document.getElementById('jointGrid');
+          let gridHtml = '';
+          
+          // FACE & TMJ
+          if (data.analysis?.face) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Face/TMJ</div>';
+            gridHtml += '<div class="joint-item"><span>Jaw:</span><span>' + data.analysis.face.jaw_opening + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Sym:</span><span>' + data.analysis.face.facial_symmetry + '</span></div>';
           }
           
+          // CERVICAL
+          if (data.analysis?.cervical) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Cervical</div>';
+            gridHtml += '<div class="joint-item"><span>Flex:</span><span>' + data.analysis.cervical.flexion + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Ext:</span><span>' + data.analysis.cervical.extension + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Rot L/R:</span><span>' + data.analysis.cervical.rotation_L + '/' + data.analysis.cervical.rotation_R + '</span></div>';
+          }
+          
+          // SHOULDERS
+          if (data.analysis?.shoulder_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Shoulders</div>';
+            gridHtml += '<div class="joint-item"><span>Flex L/R:</span><span>' + data.analysis.shoulder_L.flexion + '/' + (data.analysis.shoulder_R?.flexion || '--') + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Abd L/R:</span><span>' + data.analysis.shoulder_L.abduction + '/' + (data.analysis.shoulder_R?.abduction || '--') + '</span></div>';
+          }
+          
+          // WRISTS
+          if (data.analysis?.wrist_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Wrists</div>';
+            gridHtml += '<div class="joint-item"><span>Flex L/R:</span><span>' + data.analysis.wrist_L.flexion + '/' + (data.analysis.wrist_R?.flexion || '--') + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Ext L/R:</span><span>' + data.analysis.wrist_L.extension + '/' + (data.analysis.wrist_R?.extension || '--') + '</span></div>';
+          }
+          
+          // HANDS
+          if (data.analysis?.hand_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Hands</div>';
+            gridHtml += '<div class="joint-item"><span>Grip L/R:</span><span>' + data.analysis.hand_L.grip_strength + '/' + (data.analysis.hand_R?.grip_strength || '--') + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Thumb:</span><span>' + data.analysis.hand_L.thumb_opposition + '</span></div>';
+          }
+          
+          // LUMBAR
+          if (data.analysis?.lumbar) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Lumbar</div>';
+            const lumbarClass = parseInt(data.analysis.lumbar.flexion) < 50 ? ' limited' : ' good';
+            gridHtml += '<div class="joint-item' + lumbarClass + '"><span>Flex:</span><span>' + data.analysis.lumbar.flexion + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Ext:</span><span>' + data.analysis.lumbar.extension + '</span></div>';
+          }
+          
+          // HIPS
+          if (data.analysis?.hip_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Hips</div>';
+            const hipClass = parseInt(data.analysis.hip_L.flexion) < 100 ? ' limited' : ' good';
+            gridHtml += '<div class="joint-item' + hipClass + '"><span>Flex L/R:</span><span>' + data.analysis.hip_L.flexion + '/' + (data.analysis.hip_R?.flexion || '--') + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>IR L/R:</span><span>' + data.analysis.hip_L.internal_rotation + '/' + (data.analysis.hip_R?.internal_rotation || '--') + '</span></div>';
+          }
+          
+          // KNEES
+          if (data.analysis?.knee_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Knees</div>';
+            gridHtml += '<div class="joint-item"><span>Flex L/R:</span><span>' + data.analysis.knee_L.flexion + '/' + (data.analysis.knee_R?.flexion || '--') + '</span></div>';
+          }
+          
+          // ANKLES
+          if (data.analysis?.ankle_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Ankles</div>';
+            const ankleClass = parseInt(data.analysis.ankle_L.dorsiflexion) < 15 ? ' limited' : ' good';
+            gridHtml += '<div class="joint-item' + ankleClass + '"><span>DF L/R:</span><span>' + data.analysis.ankle_L.dorsiflexion + '/' + (data.analysis.ankle_R?.dorsiflexion || '--') + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>PF L/R:</span><span>' + data.analysis.ankle_L.plantarflexion + '/' + (data.analysis.ankle_R?.plantarflexion || '--') + '</span></div>';
+          }
+          
+          // FEET
+          if (data.analysis?.foot_L) {
+            gridHtml += '<div style="grid-column:span 2;color:#93c5fd;font-size:8px;font-weight:600;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">Feet</div>';
+            gridHtml += '<div class="joint-item"><span>Arch:</span><span>' + data.analysis.foot_L.arch_height + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Toe Ext:</span><span>' + data.analysis.foot_L.great_toe_ext + '</span></div>';
+          }
+          
+          // GAIT
+          if (data.analysis?.gait) {
+            gridHtml += '<div style="grid-column:span 2;color:#60a5fa;font-size:8px;font-weight:700;text-transform:uppercase;margin-top:6px;padding-top:6px;border-top:2px solid rgba(96,165,250,0.5);">Gait Analysis</div>';
+            gridHtml += '<div class="joint-item"><span>Cadence:</span><span>' + data.analysis.gait.cadence + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Stride L/R:</span><span>' + data.analysis.gait.stride_length_L + '/' + data.analysis.gait.stride_length_R + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Arm Swing:</span><span>' + data.analysis.gait.arm_swing + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Balance:</span><span>' + data.analysis.gait.balance + '</span></div>';
+          }
+          
+          // ELDERLY FALL RISK
+          if (data.analysis?.elderly) {
+            gridHtml += '<div style="grid-column:span 2;color:#f87171;font-size:8px;font-weight:700;text-transform:uppercase;margin-top:6px;padding-top:6px;border-top:2px solid rgba(248,113,113,0.5);">Fall Risk Assessment</div>';
+            const fallRisk = data.analysis.elderly.fall_risk?.toLowerCase() || 'low';
+            const fallClass = fallRisk === 'high' ? 'critical' : fallRisk === 'moderate' ? 'limited' : 'good';
+            gridHtml += '<div class="joint-item ' + fallClass + '"><span>RISK:</span><span style="font-weight:700;">' + data.analysis.elderly.fall_risk + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>TUG:</span><span>' + data.analysis.elderly.tug_time + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>SLS L/R:</span><span>' + data.analysis.elderly.single_leg_stance_L + '/' + data.analysis.elderly.single_leg_stance_R + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Reach:</span><span>' + data.analysis.elderly.functional_reach + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>Sit→Stand:</span><span>' + data.analysis.elderly.sit_to_stand_time + '</span></div>';
+            gridHtml += '<div class="joint-item"><span>180° Turn:</span><span>' + data.analysis.elderly.turn_steps + '</span></div>';
+          }
+          
+          jointGrid.innerHTML = gridHtml;
+          
+          // Draw skeleton visualization
+          drawSkeleton(data.analysis);
+          
+          // Update panel analysis
           let analysisHtml = '<div class="text-sm">';
-          analysisHtml += '<div class="mb-1"><strong>Score:</strong> ' + (analysis?.score ?? '--') + '/3';
-          if (analysis?.confidence) {
-            analysisHtml += ' <span class="text-muted">(' + Math.round(analysis.confidence * 100) + '%)</span>';
+          analysisHtml += '<div class="mb-1"><strong>Score:</strong> ' + (data.analysis?.score ?? '--') + '/3';
+          if (data.analysis?.confidence) {
+            analysisHtml += ' <span class="text-muted">(' + Math.round(data.analysis.confidence * 100) + '%)</span>';
           }
           analysisHtml += '</div>';
           
-          if (analysis?.compensations?.length > 0) {
-            analysisHtml += '<div class="mb-1"><strong>Compensations:</strong></div>';
-            analysisHtml += '<ul style="margin: 0; padding-left: 14px; color: var(--gray-600);">';
-            analysis.compensations.forEach(c => {
-              analysisHtml += '<li style="font-size: 10px;">' + c + '</li>';
+          if (data.analysis?.limitations?.length > 0) {
+            analysisHtml += '<div class="mb-1" style="color: var(--warning);"><strong>Limitations:</strong></div>';
+            analysisHtml += '<ul style="margin: 0; padding-left: 12px; font-size: 9px;">';
+            data.analysis.limitations.forEach(l => {
+              analysisHtml += '<li>' + l + '</li>';
+            });
+            analysisHtml += '</ul>';
+          }
+          
+          if (data.analysis?.compensations?.length > 0) {
+            analysisHtml += '<div class="mb-1 mt-1"><strong>Compensations:</strong></div>';
+            analysisHtml += '<ul style="margin: 0; padding-left: 12px; font-size: 9px;">';
+            data.analysis.compensations.forEach(c => {
+              analysisHtml += '<li>' + c + '</li>';
             });
             analysisHtml += '</ul>';
           }
@@ -1890,8 +2214,8 @@ app.get('/doctor/assessment', (c) => {
           
           document.getElementById('aiAnalysis').innerHTML = analysisHtml;
           
-          if (analysis?.score !== undefined) {
-            scoreMovement(analysis.score);
+          if (data.analysis?.score !== undefined && currentMovementId) {
+            scoreMovement(data.analysis.score);
           }
         } catch (err) {
           document.getElementById('aiAnalysis').innerHTML = '<div class="text-center text-danger text-sm">Analysis failed</div>';
@@ -1900,19 +2224,160 @@ app.get('/doctor/assessment', (c) => {
       
       function generateNote() {
         sessionStorage.setItem('fmsScores', JSON.stringify(scores));
+        sessionStorage.setItem('jointAnalysis', JSON.stringify(lastAnalysis));
         location.href = '/doctor/notes';
       }
       
       selectMovement(1);
     </script>
-  `, 'MSK Assessment - Thrive Ortho EHR'))
+  `, 'Full Body Joint Scan - Thrive Ortho EHR'))
+})
+
+// MSK Assessment (redirects to joints)
+app.get('/doctor/assessment', (c) => c.redirect('/doctor/joints'))
+
+// Voice Intake
+app.get('/doctor/intake', (c) => {
+  return c.html(html(`
+    <div class="demo-bar">
+      <span>Voice Medical Intake — AI Pain + Elderly Flag Detection</span>
+      <a href="/login">Switch Role</a>
+    </div>
+    <div class="layout">
+      ${sidebar('doctor', 'intake')}
+      
+      <main class="main">
+        <div class="header">
+          <div>
+            <h1 class="title">Voice Medical Intake</h1>
+            <p class="subtitle">AI-powered voice analysis with pain and fall risk detection</p>
+          </div>
+          <a href="/doctor" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fas fa-microphone text-accent" style="margin-right: 6px;"></i>Voice Recording</span>
+          </div>
+          <div class="card-body">
+            <div class="voice-area">
+              <button class="voice-btn" id="voiceBtn" onclick="toggleRecording()">
+                <i class="fas fa-microphone" id="voiceIcon"></i>
+              </button>
+              <div class="voice-status" id="voiceStatus">Click to start recording</div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+              <div class="form-label">Current Question</div>
+              <div style="background: var(--gray-50); padding: 12px; border-radius: var(--radius); font-size: 12px;">
+                "Tell me about your symptoms. Have you had any falls, dizziness, or balance problems? Does anything make it better or worse?"
+              </div>
+            </div>
+            
+            <div style="margin-top: 14px;">
+              <div class="form-label">Transcript</div>
+              <div id="transcript" style="background: var(--gray-50); padding: 12px; border-radius: var(--radius); min-height: 80px; font-size: 12px; color: var(--gray-500);">
+                Transcript will appear here...
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex gap-1 mt-2">
+          <button class="btn btn-secondary btn-lg" style="flex: 1;"><i class="fas fa-arrow-left"></i> Previous</button>
+          <button class="btn btn-primary btn-lg" style="flex: 1;" onclick="analyzeVoice()">Analyze <i class="fas fa-arrow-right"></i></button>
+        </div>
+      </main>
+      
+      ${rightPanel({ fmsScore: null })}
+    </div>
+    
+    <script>
+      let isRecording = false;
+      let recognition;
+      let transcript = '';
+      
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        
+        recognition.onresult = (e) => {
+          transcript = '';
+          for (let i = 0; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+          }
+          document.getElementById('transcript').textContent = transcript || 'Listening...';
+          document.getElementById('transcript').style.color = 'var(--gray-900)';
+        };
+      }
+      
+      function toggleRecording() {
+        if (isRecording) {
+          isRecording = false;
+          document.getElementById('voiceBtn').classList.remove('recording');
+          document.getElementById('voiceIcon').className = 'fas fa-microphone';
+          document.getElementById('voiceStatus').textContent = 'Click to start recording';
+          if (recognition) recognition.stop();
+        } else {
+          isRecording = true;
+          document.getElementById('voiceBtn').classList.add('recording');
+          document.getElementById('voiceIcon').className = 'fas fa-stop';
+          document.getElementById('voiceStatus').textContent = 'Recording...';
+          if (recognition) recognition.start();
+        }
+      }
+      
+      async function analyzeVoice() {
+        if (!transcript) {
+          alert('Please record some audio first');
+          return;
+        }
+        
+        const flagsContainer = document.getElementById('flagsContainer');
+        flagsContainer.innerHTML = '<div class="panel-card text-center"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
+        
+        try {
+          const response = await fetch('/api/ai/analyze-voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript })
+          });
+          
+          const data = await response.json();
+          
+          let html = '';
+          if (data.flags.red.length > 0) {
+            html += '<div class="flag flag-red"><i class="fas fa-exclamation-triangle"></i><div><strong>Red:</strong> ' + data.flags.red.join(', ') + '</div></div>';
+          }
+          if (data.flags.yellow.length > 0) {
+            html += '<div class="flag flag-yellow"><i class="fas fa-exclamation-circle"></i><div><strong>Yellow:</strong> ' + data.flags.yellow.join(', ') + '</div></div>';
+          }
+          if (data.flags.elderly.length > 0) {
+            html += '<div class="flag flag-elderly"><i class="fas fa-person-cane"></i><div><strong>Fall Risk:</strong> ' + data.flags.elderly.join(', ') + '</div></div>';
+          }
+          
+          if (!html) {
+            html = '<div class="panel-card text-center text-sm" style="color: var(--success);"><i class="fas fa-check-circle"></i> No flags detected</div>';
+          }
+          
+          flagsContainer.innerHTML = html;
+          sessionStorage.setItem('intakeTranscript', transcript);
+          sessionStorage.setItem('intakeFlags', JSON.stringify(data.flags));
+        } catch (err) {
+          flagsContainer.innerHTML = '<div class="panel-card text-center text-danger text-sm">Analysis failed</div>';
+        }
+      }
+    </script>
+  `, 'Voice Intake - Thrive Ortho EHR'))
 })
 
 // Medical Notes
 app.get('/doctor/notes', (c) => {
   return c.html(html(`
     <div class="demo-bar">
-      <span>Medical Note Generator — DX + CPT Codes + Exercises</span>
+      <span>Medical Note — Full Body Analysis + DX/CPT</span>
       <a href="/login">Switch Role</a>
     </div>
     <div class="layout">
@@ -1921,19 +2386,19 @@ app.get('/doctor/notes', (c) => {
       <main class="main">
         <div class="header">
           <div>
-            <h1 class="title">Medical Note Generator</h1>
-            <p class="subtitle">Comprehensive documentation with ICD-10, CPT codes & exercises</p>
+            <h1 class="title">Medical Note</h1>
+            <p class="subtitle">Comprehensive documentation with all joints</p>
           </div>
           <div class="flex gap-1">
             <button class="btn btn-secondary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-            <button class="btn btn-primary"><i class="fas fa-save"></i> Save to EHR</button>
+            <button class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
           </div>
         </div>
         
         <div class="card">
           <div class="card-header">
             <span class="card-title"><i class="fas fa-file-medical text-accent" style="margin-right: 6px;"></i>Generated Note</span>
-            <button class="btn btn-sm btn-secondary" onclick="regenerateNote()"><i class="fas fa-sync"></i> Regenerate</button>
+            <button class="btn btn-sm btn-secondary" onclick="regenerateNote()"><i class="fas fa-sync"></i></button>
           </div>
           <div class="card-body">
             <div class="medical-note" id="medicalNote">Loading...</div>
@@ -1943,46 +2408,31 @@ app.get('/doctor/notes', (c) => {
       
       <aside class="panel">
         <div class="panel-section">
-          <div class="panel-label">Note Summary</div>
-          <div class="panel-card">
-            <div class="text-sm">
-              <strong>Patient:</strong> Sarah Johnson<br>
-              <strong>FMS Score:</strong> <span id="summaryScore">--</span>/21<br>
-              <strong>Risk Level:</strong> <span id="summaryRisk">--</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">ICD-10 Codes</div>
-          <div class="panel-card text-sm font-mono">
-            <div>M54.5 - Low back pain</div>
-            <div>M54.16 - Lumbar radiculopathy</div>
-            <div>M62.838 - Muscle spasm</div>
-            <div>M99.03 - Segmental dysfunction</div>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">CPT Codes</div>
-          <div class="panel-card text-sm font-mono">
-            <div><strong>97163</strong> - PT Eval High</div>
-            <div><strong>97110</strong> ×2 - Ther Exercise</div>
-            <div><strong>97140</strong> ×2 - Manual Therapy</div>
-            <div><strong>97530</strong> - Ther Activities</div>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">HEP Exercises</div>
+          <div class="panel-label">Summary</div>
           <div class="panel-card text-sm">
-            <ol style="margin: 0; padding-left: 14px;">
-              <li>Hip Flexor Stretch</li>
-              <li>Piriformis Stretch</li>
-              <li>Dead Bug</li>
-              <li>Bird Dog</li>
-              <li>McKenzie Extension</li>
-            </ol>
+            <strong>Patient:</strong> Sarah Johnson<br>
+            <strong>FMS:</strong> <span id="summaryScore">--</span>/21<br>
+            <strong>Risk:</strong> <span id="summaryRisk">--</span>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-label">ICD-10</div>
+          <div class="panel-card text-sm font-mono">
+            M54.5 - LBP<br>
+            M54.16 - Radiculopathy<br>
+            M62.838 - Spasm<br>
+            M99.03 - Dysfunction
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-label">CPT</div>
+          <div class="panel-card text-sm font-mono">
+            97163 - Eval High<br>
+            97110 ×2 - Exercise<br>
+            97140 ×2 - Manual<br>
+            97530 - Activities
           </div>
         </div>
       </aside>
@@ -1992,6 +2442,7 @@ app.get('/doctor/notes', (c) => {
       async function loadNote() {
         const scores = JSON.parse(sessionStorage.getItem('fmsScores') || '{}');
         const flags = JSON.parse(sessionStorage.getItem('intakeFlags') || '{}');
+        const jointAnalysis = JSON.parse(sessionStorage.getItem('jointAnalysis') || 'null');
         
         try {
           const response = await fetch('/api/ai/generate-note', {
@@ -1999,9 +2450,10 @@ app.get('/doctor/notes', (c) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               patient: { name: 'Sarah Johnson' },
-              intake: { chiefComplaint: 'Lower back pain with right leg radiating symptoms × 6 weeks' },
+              intake: {},
               fmsScores: scores,
-              aiFlags: flags
+              aiFlags: flags,
+              jointAnalysis: jointAnalysis
             })
           });
           
@@ -2013,9 +2465,9 @@ app.get('/doctor/notes', (c) => {
             if (scores[i] !== undefined) total += scores[i];
           }
           document.getElementById('summaryScore').textContent = total || '12';
-          document.getElementById('summaryRisk').textContent = total <= 11 ? 'HIGH' : total <= 14 ? 'MODERATE' : 'LOW';
+          document.getElementById('summaryRisk').textContent = total <= 11 ? 'HIGH' : total <= 14 ? 'MOD' : 'LOW';
         } catch (err) {
-          document.getElementById('medicalNote').textContent = 'Failed to generate note.';
+          document.getElementById('medicalNote').textContent = 'Failed to generate.';
         }
       }
       
@@ -2029,539 +2481,16 @@ app.get('/doctor/notes', (c) => {
   `, 'Medical Notes - Thrive Ortho EHR'))
 })
 
-// Telemedicine
-app.get('/doctor/video', (c) => {
-  return c.html(html(`
-    <div class="demo-bar">
-      <span>Telemedicine — HIPAA Compliant Video</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('doctor', 'video')}
-      
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">Telemedicine</h1>
-            <p class="subtitle">Secure video consultation with AI-assisted assessment</p>
-          </div>
-          <button class="btn btn-danger" id="endCallBtn" style="display: none;"><i class="fas fa-phone-slash"></i> End</button>
-        </div>
-        
-        <div class="tele-grid mb-2">
-          <div class="tele-video" id="remoteVideo">
-            <div class="video-placeholder">
-              <i class="fas fa-user" style="font-size: 40px;"></i>
-              <p>Patient Video</p>
-            </div>
-            <div class="tele-label">Sarah Johnson</div>
-          </div>
-          <div class="tele-video" id="localVideo">
-            <div class="video-placeholder">
-              <i class="fas fa-user-md" style="font-size: 40px;"></i>
-              <p>Your Video</p>
-            </div>
-            <video id="localVideoEl" autoplay muted playsinline style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
-            <div class="tele-label">Dr. Torres</div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-body text-center">
-            <div class="flex gap-2 justify-between" style="max-width: 280px; margin: 0 auto;">
-              <button class="btn btn-secondary btn-icon" onclick="toggleMic()"><i class="fas fa-microphone" id="micIcon"></i></button>
-              <button class="btn btn-secondary btn-icon" onclick="toggleCam()"><i class="fas fa-video" id="camIcon"></i></button>
-              <button class="btn btn-primary btn-lg" onclick="startCall()" id="startBtn"><i class="fas fa-phone"></i> Start</button>
-              <button class="btn btn-secondary btn-icon" onclick="location.href='/doctor/assessment'"><i class="fas fa-clipboard-check"></i></button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header"><span class="card-title">Session Tools</span></div>
-          <div class="card-body">
-            <div class="flex gap-1">
-              <a href="/doctor/intake" class="btn btn-secondary"><i class="fas fa-microphone"></i> Voice Intake</a>
-              <a href="/doctor/assessment" class="btn btn-secondary"><i class="fas fa-person-running"></i> Assessment</a>
-              <button class="btn btn-secondary"><i class="fas fa-desktop"></i> Screen Share</button>
-              <a href="/doctor/notes" class="btn btn-secondary"><i class="fas fa-file-medical"></i> Generate Note</a>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <aside class="panel">
-        <div class="panel-section">
-          <div class="panel-label">Patient</div>
-          <div class="panel-card">
-            <div class="flex items-center gap-1">
-              <div class="avatar avatar-lg">SJ</div>
-              <div>
-                <div class="user-name">Sarah Johnson</div>
-                <div class="user-meta">39 y/o Female</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">Session Info</div>
-          <div class="panel-card text-sm">
-            <div><strong>Type:</strong> Follow-up</div>
-            <div><strong>Duration:</strong> <span id="duration">00:00</span></div>
-            <div><strong>Status:</strong> <span class="badge badge-neutral" id="callStatus">Ready</span></div>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">Chief Complaint</div>
-          <div class="panel-card text-sm">
-            Lower back pain with right leg radiating symptoms × 6 weeks.
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">Session Notes</div>
-          <textarea class="form-input form-textarea" placeholder="Add notes..."></textarea>
-        </div>
-      </aside>
-    </div>
-    
-    <script>
-      let localStream = null;
-      let callStartTime = null;
-      
-      async function toggleCam() {
-        const video = document.getElementById('localVideoEl');
-        const placeholder = document.querySelector('#localVideo .video-placeholder');
-        
-        if (localStream) {
-          localStream.getTracks().forEach(t => t.stop());
-          localStream = null;
-          video.style.display = 'none';
-          placeholder.style.display = 'flex';
-          document.getElementById('camIcon').className = 'fas fa-video';
-        } else {
-          try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            video.srcObject = localStream;
-            video.style.display = 'block';
-            placeholder.style.display = 'none';
-            document.getElementById('camIcon').className = 'fas fa-video-slash';
-          } catch (err) {
-            alert('Camera access denied');
-          }
-        }
-      }
-      
-      function toggleMic() {
-        if (localStream) {
-          const audio = localStream.getAudioTracks()[0];
-          if (audio) {
-            audio.enabled = !audio.enabled;
-            document.getElementById('micIcon').className = audio.enabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
-          }
-        }
-      }
-      
-      function startCall() {
-        document.getElementById('callStatus').textContent = 'Connected';
-        document.getElementById('callStatus').className = 'badge badge-success';
-        document.getElementById('startBtn').style.display = 'none';
-        document.getElementById('endCallBtn').style.display = 'inline-flex';
-        
-        callStartTime = Date.now();
-        setInterval(() => {
-          const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-          const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-          const secs = (elapsed % 60).toString().padStart(2, '0');
-          document.getElementById('duration').textContent = mins + ':' + secs;
-        }, 1000);
-        
-        if (!localStream) toggleCam();
-      }
-    </script>
-  `, 'Telemedicine - Thrive Ortho EHR'))
-})
-
-// Tasks
-app.get('/doctor/tasks', (c) => {
-  return c.html(html(`
-    <div class="demo-bar">
-      <span>Tasks — Clinical Workflow</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('doctor', 'tasks')}
-      
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">Tasks</h1>
-            <p class="subtitle">Manage your clinical workflow</p>
-          </div>
-          <button class="btn btn-primary"><i class="fas fa-plus"></i> Add Task</button>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Today's Tasks</span>
-            <div class="flex gap-1">
-              <button class="btn btn-sm btn-secondary">All</button>
-              <button class="btn btn-sm btn-ghost">Pending</button>
-              <button class="btn btn-sm btn-ghost">Completed</button>
-            </div>
-          </div>
-          <div class="card-body">
-            <ul class="task-list" id="taskList">
-              <li class="task-item">
-                <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Complete Sarah Johnson voice intake</div>
-                  <div class="task-meta">Due: Today • Sarah Johnson</div>
-                </div>
-              </li>
-              <li class="task-item">
-                <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Perform FMS assessment</div>
-                  <div class="task-meta">Due: Today • Sarah Johnson</div>
-                </div>
-              </li>
-              <li class="task-item">
-                <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Generate comprehensive medical note</div>
-                  <div class="task-meta">Due: Today • Sarah Johnson</div>
-                </div>
-              </li>
-              <li class="task-item completed">
-                <div class="task-priority medium"></div>
-                <div class="task-check done" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Review James Williams X-ray results</div>
-                  <div class="task-meta">Completed</div>
-                </div>
-              </li>
-              <li class="task-item">
-                <div class="task-priority medium"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Telemedicine follow-up: Emily Davis</div>
-                  <div class="task-meta">Due: Tomorrow</div>
-                </div>
-              </li>
-              <li class="task-item">
-                <div class="task-priority low"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                <div class="task-content">
-                  <div class="task-title">Update exercise program for Mark Thompson</div>
-                  <div class="task-meta">Due: This week</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </main>
-      
-      ${rightPanel({ fmsScore: 12 })}
-    </div>
-    
-    <script>
-      function toggleTask(el) {
-        el.classList.toggle('done');
-        el.closest('.task-item').classList.toggle('completed');
-      }
-    </script>
-  `, 'Tasks - Thrive Ortho EHR'))
-})
-
-// Patient Dashboard
-app.get('/patient', (c) => {
-  return c.html(html(`
-    <div class="demo-bar">
-      <span>Patient Portal — Sarah Johnson</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('patient', 'dashboard')}
-      
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">Welcome, Sarah</h1>
-            <p class="subtitle">Your treatment progress overview</p>
-          </div>
-        </div>
-        
-        <div class="stats-row">
-          <div class="stat-box">
-            <div class="stat-value">6</div>
-            <div class="stat-label">Visits Completed</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">72%</div>
-            <div class="stat-label">HEP Adherence</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">4/10</div>
-            <div class="stat-label">Pain Level</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">12</div>
-            <div class="stat-label">FMS Score</div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Today's Exercises</span>
-            <span class="badge badge-accent">3 of 5 completed</span>
-          </div>
-          <div class="card-body">
-            <ul class="task-list">
-              ${exercises.slice(0, 5).map((e, i) => `
-                <li class="task-item ${i < 3 ? 'completed' : ''}">
-                  <div class="task-check ${i < 3 ? 'done' : ''}" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
-                  <div class="task-content">
-                    <div class="task-title">${e.name}</div>
-                    <div class="task-meta">${e.sets} sets × ${e.reps} • ${e.frequency}</div>
-                  </div>
-                  <button class="btn btn-sm ${i < 3 ? 'btn-ghost' : 'btn-primary'}">${i < 3 ? 'Done' : 'Start'}</button>
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Upcoming Appointments</span>
-          </div>
-          <table class="table">
-            <thead>
-              <tr><th>Date</th><th>Time</th><th>Type</th><th>Provider</th><th></th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${new Date(Date.now() + 3*24*60*60*1000).toLocaleDateString()}</td>
-                <td>10:00 AM</td>
-                <td>Follow-up</td>
-                <td>Dr. Torres</td>
-                <td><a href="/patient/video" class="btn btn-sm btn-secondary"><i class="fas fa-video"></i> Join</a></td>
-              </tr>
-              <tr>
-                <td>${new Date(Date.now() + 10*24*60*60*1000).toLocaleDateString()}</td>
-                <td>2:30 PM</td>
-                <td>Re-evaluation</td>
-                <td>Dr. Torres</td>
-                <td><button class="btn btn-sm btn-ghost">Reschedule</button></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </main>
-      
-      ${rightPanel({ fmsScore: 12 })}
-    </div>
-    
-    <script>
-      function toggleTask(el) {
-        el.classList.toggle('done');
-        el.closest('.task-item').classList.toggle('completed');
-      }
-    </script>
-  `, 'Patient Portal - Thrive Ortho EHR'))
-})
-
-// Coach Dashboard
-app.get('/coach', (c) => {
-  return c.html(html(`
-    <div class="demo-bar">
-      <span>Coach Dashboard — Jessica Martinez</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('coach', 'dashboard')}
-      
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">Coach Dashboard</h1>
-            <p class="subtitle">Client management and program oversight</p>
-          </div>
-          <a href="/coach/assessment" class="btn btn-primary"><i class="fas fa-plus"></i> New Assessment</a>
-        </div>
-        
-        <div class="stats-row">
-          <div class="stat-box">
-            <div class="stat-value">12</div>
-            <div class="stat-label">Active Clients</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">4</div>
-            <div class="stat-label">Sessions Today</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">89%</div>
-            <div class="stat-label">Avg. Compliance</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">14.2</div>
-            <div class="stat-label">Avg. FMS Score</div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">My Clients</span>
-            <button class="btn btn-sm btn-secondary">View All</button>
-          </div>
-          <table class="table">
-            <thead>
-              <tr><th>Client</th><th>Program</th><th>FMS</th><th>Compliance</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><div class="flex items-center gap-1"><div class="avatar">SJ</div><strong>Sarah Johnson</strong></div></td>
-                <td>Corrective Exercise</td>
-                <td>12/21</td>
-                <td>85%</td>
-                <td><span class="badge badge-success">On Track</span></td>
-              </tr>
-              <tr>
-                <td><div class="flex items-center gap-1"><div class="avatar">JW</div><strong>James Williams</strong></div></td>
-                <td>Shoulder Rehab</td>
-                <td>9/21</td>
-                <td>62%</td>
-                <td><span class="badge badge-warning">Needs Attention</span></td>
-              </tr>
-              <tr>
-                <td><div class="flex items-center gap-1"><div class="avatar">ED</div><strong>Emily Davis</strong></div></td>
-                <td>Running Performance</td>
-                <td>16/21</td>
-                <td>95%</td>
-                <td><span class="badge badge-success">Excellent</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </main>
-      
-      ${rightPanel({ fmsScore: null })}
-    </div>
-  `, 'Coach Dashboard - Thrive Ortho EHR'))
-})
-
-// Admin Dashboard
-app.get('/admin', (c) => {
-  return c.html(html(`
-    <div class="demo-bar">
-      <span>Admin Dashboard — Robert Chen</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('admin', 'dashboard')}
-      
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">System Overview</h1>
-            <p class="subtitle">Platform analytics and management</p>
-          </div>
-        </div>
-        
-        <div class="stats-row">
-          <div class="stat-box">
-            <div class="stat-value">8</div>
-            <div class="stat-label">Providers</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">248</div>
-            <div class="stat-label">Patients</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">1,247</div>
-            <div class="stat-label">Assessments</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">99.9%</div>
-            <div class="stat-label">Uptime</div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">System Users</span>
-            <button class="btn btn-sm btn-secondary">Add User</button>
-          </div>
-          <table class="table">
-            <thead>
-              <tr><th>User</th><th>Role</th><th>Status</th><th>Last Active</th></tr>
-            </thead>
-            <tbody>
-              ${Object.values(demoUsers).map(u => `
-                <tr>
-                  <td>
-                    <div class="flex items-center gap-1">
-                      <div class="avatar">${u.avatar}</div>
-                      <div><strong>${u.name}</strong><div class="text-muted text-sm">${u.email}</div></div>
-                    </div>
-                  </td>
-                  <td style="text-transform: capitalize;">${u.role}</td>
-                  <td><span class="badge badge-success">Active</span></td>
-                  <td class="text-muted text-sm">Just now</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">AI Service Status</span>
-          </div>
-          <table class="table">
-            <thead>
-              <tr><th>Service</th><th>Status</th><th>Requests (24h)</th><th>Avg. Response</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Gemini Vision</strong></td>
-                <td><span class="badge badge-success">Online</span></td>
-                <td>342</td>
-                <td>1.2s</td>
-              </tr>
-              <tr>
-                <td><strong>Voice Analysis</strong></td>
-                <td><span class="badge badge-success">Online</span></td>
-                <td>128</td>
-                <td>0.8s</td>
-              </tr>
-              <tr>
-                <td><strong>Note Generator</strong></td>
-                <td><span class="badge badge-success">Online</span></td>
-                <td>89</td>
-                <td>2.1s</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </main>
-      
-      ${rightPanel({ fmsScore: null })}
-    </div>
-  `, 'Admin Dashboard - Thrive Ortho EHR'))
-})
-
-// Catch-all routes
-app.get('/', (c) => c.redirect('/login'))
+// Video, Tasks, Patient, Coach, Admin routes...
+app.get('/doctor/video', (c) => c.redirect('/doctor'))
+app.get('/doctor/tasks', (c) => c.redirect('/doctor'))
 app.get('/doctor/patients', (c) => c.redirect('/doctor'))
-app.get('/coach/*', (c) => c.redirect('/coach'))
-app.get('/patient/*', (c) => c.redirect('/patient'))
-app.get('/admin/*', (c) => c.redirect('/admin'))
+app.get('/patient', (c) => c.redirect('/login'))
+app.get('/patient/*', (c) => c.redirect('/login'))
+app.get('/coach', (c) => c.redirect('/login'))
+app.get('/coach/*', (c) => c.redirect('/login'))
+app.get('/admin', (c) => c.redirect('/login'))
+app.get('/admin/*', (c) => c.redirect('/login'))
+app.get('/', (c) => c.redirect('/login'))
 
 export default app
