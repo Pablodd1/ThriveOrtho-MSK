@@ -1703,660 +1703,292 @@ app.get('/doctor', (c) => {
   `, 'Dashboard - Thrive Ortho EHR'))
 })
 
-// Full Body Joint Scan Page - Mobile-First Camera Assessment
+// Full Body Joint Scan Page - Minimal Medical-Grade UI with Rep Counter
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
-      /* Guided MSK Assessment - Real-Time Joint Tracking */
-      .assessment-page {
-        min-height: 100vh;
-        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
-        display: flex;
-        flex-direction: column;
-      }
+      /* Minimal Medical MSK Assessment - Dark theme, Blue joints only */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: -apple-system, sans-serif; background: #000; color: #fff; }
       
-      .assessment-header {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
-        padding: 12px 16px;
+      .msk-page { min-height: 100vh; display: flex; flex-direction: column; }
+      
+      /* Compact Header */
+      .msk-header {
+        background: #111;
+        padding: 8px 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid #333;
       }
+      .msk-header h1 { font-size: 14px; font-weight: 500; color: #888; }
+      .back-link { color: #3b82f6; text-decoration: none; font-size: 13px; }
       
-      .assessment-header h1 {
-        color: white;
-        font-size: 16px;
-        font-weight: 600;
+      /* Exercise Info Bar - Minimal */
+      .exercise-bar {
+        background: #111;
+        padding: 12px 16px;
+        border-bottom: 1px solid #222;
       }
+      .exercise-name { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+      .exercise-hint { font-size: 12px; color: #666; }
       
-      .back-btn {
-        color: white;
-        background: rgba(255,255,255,0.2);
-        border: none;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      
-      /* Instruction Banner - TTS instructions shown here */
-      .instruction-banner {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        padding: 16px 20px;
+      /* REP COUNTER - Large and Prominent */
+      .rep-box {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: rgba(0,0,0,0.85);
+        padding: 12px 20px;
+        border-radius: 12px;
         text-align: center;
-        position: relative;
+        z-index: 10;
+        border: 2px solid #3b82f6;
       }
+      .rep-count { font-size: 42px; font-weight: 700; color: #3b82f6; line-height: 1; }
+      .rep-target { font-size: 14px; color: #666; margin-top: 2px; }
+      .rep-label { font-size: 10px; color: #444; text-transform: uppercase; letter-spacing: 1px; }
       
-      .instruction-banner .task-progress {
-        font-size: 11px;
-        color: rgba(255,255,255,0.7);
-        margin-bottom: 8px;
-      }
-      
-      .instruction-banner .instruction-text {
-        font-size: 18px;
-        font-weight: 600;
-        color: white;
-        line-height: 1.4;
-      }
-      
-      .instruction-banner .instruction-detail {
-        font-size: 13px;
-        color: rgba(255,255,255,0.8);
+      /* Progress Bar under rep */
+      .rep-progress {
+        width: 100%;
+        height: 4px;
+        background: #333;
+        border-radius: 2px;
         margin-top: 8px;
+        overflow: hidden;
       }
-      
-      .speaking-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(255,255,255,0.2);
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 11px;
-        color: white;
-        margin-top: 10px;
+      .rep-progress-fill {
+        height: 100%;
+        background: #3b82f6;
+        transition: width 0.3s ease;
       }
-      
-      .speaking-indicator.hidden { display: none; }
       
       /* Camera Container */
-      .camera-container {
+      .camera-box {
         flex: 1;
         position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 45vh;
-        background: #0a0f1a;
+        background: #000;
+        min-height: 50vh;
       }
-      
       .camera-feed {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        position: absolute;
-        top: 0;
-        left: 0;
+        width: 100%; height: 100%; object-fit: cover;
+        position: absolute; top: 0; left: 0;
       }
-      
       .skeleton-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        z-index: 2;
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        pointer-events: none; z-index: 2;
       }
-      
-      /* Live Analysis Overlay */
-      .live-analysis-overlay {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        z-index: 5;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-      }
-      
-      .live-badge {
-        background: rgba(220, 38, 38, 0.9);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      
-      .live-badge .pulse {
-        width: 8px;
-        height: 8px;
-        background: white;
-        border-radius: 50%;
-        animation: pulse 1s infinite;
-      }
-      
-      @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(1.2); }
-      }
-      
-      .joint-metrics-live {
-        background: rgba(0,0,0,0.7);
-        padding: 10px 14px;
-        border-radius: 10px;
-        color: white;
-        font-size: 11px;
-        max-width: 180px;
-      }
-      
-      .joint-metrics-live .metric {
-        display: flex;
-        justify-content: space-between;
-        padding: 3px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-      }
-      
-      .joint-metrics-live .metric:last-child { border-bottom: none; }
-      
-      .joint-metrics-live .metric.good { color: #4ade80; }
-      .joint-metrics-live .metric.limited { color: #fbbf24; }
-      .joint-metrics-live .metric.critical { color: #f87171; }
       
       /* Camera Placeholder */
-      .camera-placeholder {
-        text-align: center;
-        color: #60a5fa;
-        z-index: 1;
-        padding: 20px;
+      .camera-start {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center; z-index: 5;
       }
+      .start-btn {
+        background: #3b82f6; color: #fff; border: none;
+        padding: 16px 32px; border-radius: 8px;
+        font-size: 16px; font-weight: 600; cursor: pointer;
+      }
+      .start-btn:disabled { background: #333; color: #666; }
+      .perm-note { font-size: 11px; color: #666; margin-top: 12px; }
       
-      .start-camera-btn {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        border: none;
-        padding: 18px 36px;
-        border-radius: 14px;
-        font-size: 18px;
-        font-weight: 600;
+      /* Bottom Controls - Simple */
+      .bottom-bar {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: rgba(0,0,0,0.9); padding: 12px 16px; z-index: 10;
+        display: none;
+      }
+      .btn-row { display: flex; gap: 10px; justify-content: center; }
+      .ctrl-btn {
+        background: #222; border: 1px solid #444; color: #fff;
+        padding: 12px 18px; border-radius: 8px; font-size: 13px;
         cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
       }
+      .ctrl-btn.next { background: #3b82f6; border-color: #3b82f6; flex: 1; }
+      .ctrl-btn.stop { background: #7f1d1d; border-color: #991b1b; }
       
-      /* Bottom Controls */
-      .bottom-controls {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(transparent, rgba(0,0,0,0.9));
-        padding: 20px 16px;
-        z-index: 10;
+      /* Task List - Compact */
+      .task-panel {
+        background: #111; padding: 12px 16px;
+        max-height: 28vh; overflow-y: auto;
       }
+      .task-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 8px 0; border-bottom: 1px solid #222;
+        font-size: 13px; color: #888;
+      }
+      .task-row.active { color: #fff; }
+      .task-row.done { color: #22c55e; }
+      .task-num {
+        width: 24px; height: 24px; border-radius: 50%;
+        background: #333; color: #666;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 600;
+      }
+      .task-row.active .task-num { background: #3b82f6; color: #fff; }
+      .task-row.done .task-num { background: #22c55e; color: #fff; }
+      .task-row .reps { margin-left: auto; font-size: 11px; color: #666; }
+      .task-row.done .reps { color: #22c55e; }
       
-      .assessment-controls {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
+      /* Action Footer */
+      .action-footer {
+        background: #111; padding: 12px 16px;
+        display: flex; gap: 10px; border-top: 1px solid #333;
       }
+      .action-footer .btn {
+        flex: 1; padding: 14px; border-radius: 8px;
+        font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+      }
+      .action-footer .btn.primary { background: #3b82f6; color: #fff; }
+      .action-footer .btn.secondary { background: #222; color: #888; }
       
-      .control-btn-large {
-        background: rgba(37, 99, 235, 0.9);
-        border: 2px solid rgba(147, 197, 253, 0.5);
-        color: white;
-        padding: 14px 20px;
-        border-radius: 14px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-      }
-      
-      .control-btn-large:active {
-        transform: scale(0.95);
-      }
-      
-      .control-btn-large.primary {
-        background: linear-gradient(135deg, #22c55e, #16a34a);
-        flex: 1;
-        justify-content: center;
-        font-size: 16px;
-        padding: 16px 24px;
-      }
-      
-      .control-btn-large.danger {
-        background: rgba(220, 38, 38, 0.8);
-      }
-      
-      /* Results Panel */
-      .results-panel {
-        background: white;
-        border-radius: 20px 20px 0 0;
-        padding: 20px;
-        max-height: 35vh;
-        overflow-y: auto;
-      }
-      
-      .results-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-      }
-      
-      .results-title {
-        font-weight: 700;
-        font-size: 15px;
-        color: #1e293b;
-      }
-      
-      .task-badge {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 12px;
-      }
-      
-      .task-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      
-      .task-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        background: #f8fafc;
-        border-radius: 10px;
-        font-size: 13px;
-      }
-      
-      .task-item.completed {
-        background: #dcfce7;
-      }
-      
-      .task-item.active {
-        background: #dbeafe;
-        border: 2px solid #2563eb;
-      }
-      
-      .task-item.pending {
-        opacity: 0.6;
-      }
-      
-      .task-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-      }
-      
-      .task-item.completed .task-icon {
-        background: #22c55e;
-        color: white;
-      }
-      
-      .task-item.active .task-icon {
-        background: #2563eb;
-        color: white;
-      }
-      
-      .task-item.pending .task-icon {
-        background: #e2e8f0;
-        color: #94a3b8;
-      }
-      
-      .task-info {
-        flex: 1;
-      }
-      
-      .task-name {
-        font-weight: 600;
-        color: #1e293b;
-      }
-      
-      .task-score {
-        font-size: 11px;
-        color: #64748b;
-      }
-      
-      .action-buttons {
-        display: flex;
-        gap: 10px;
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid #e2e8f0;
-      }
-      
-      .action-btn {
-        flex: 1;
-        padding: 14px;
-        border-radius: 12px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-      }
-      
-      .action-btn.primary {
-        background: #2563eb;
-        color: white;
-        border: none;
-      }
-      
-      .action-btn.secondary {
-        background: white;
-        color: #475569;
-        border: 1px solid #cbd5e1;
-      }
-      
-      /* Permission Status */
-      #permissionStatus {
-        background: #fef3c7;
-        border: 1px solid #fcd34d;
-        padding: 12px 16px;
-        border-radius: 10px;
-        margin-bottom: 16px;
-        font-size: 12px;
-        color: #92400e;
-        text-align: left;
-        width: 100%;
-        max-width: 300px;
-      }
-      
-      @media (min-width: 769px) {
-        .assessment-page {
-          max-width: 500px;
-          margin: 0 auto;
-        }
-      }
+      @media (min-width: 769px) { .msk-page { max-width: 480px; margin: 0 auto; } }
     </style>
     
-    <div class="assessment-page">
-      <div class="assessment-header">
-        <button class="back-btn" onclick="location.href='/doctor'">
-          <i class="fas fa-arrow-left"></i> Back
-        </button>
-        <h1>Guided MSK Assessment</h1>
-        <button class="back-btn" onclick="toggleMute()">
-          <i class="fas fa-volume-up" id="muteIcon"></i>
-        </button>
+    <div class="msk-page">
+      <!-- Minimal Header -->
+      <div class="msk-header">
+        <a href="/doctor" class="back-link">← Back</a>
+        <h1>MSK Assessment</h1>
+        <span style="width:50px;"></span>
       </div>
       
-      <!-- Voice Instruction Banner -->
-      <div class="instruction-banner" id="instructionBanner">
-        <div class="task-progress" id="taskProgress">Task 1 of 7</div>
-        <div class="instruction-text" id="instructionText">Start the camera to begin assessment</div>
-        <div class="instruction-detail" id="instructionDetail">Position patient in front of camera</div>
-        <div class="speaking-indicator hidden" id="speakingIndicator">
-          <i class="fas fa-volume-up"></i> Speaking...
-        </div>
+      <!-- Current Exercise Info -->
+      <div class="exercise-bar" id="exerciseBar">
+        <div class="exercise-name" id="exerciseName">Deep Squat</div>
+        <div class="exercise-hint" id="exerciseHint">Feet shoulder-width, squat as low as comfortable</div>
       </div>
       
-      <div class="camera-container" id="cameraContainer">
-        <video id="videoElement" class="camera-feed" autoplay playsinline muted style="display: none;"></video>
+      <!-- Camera Area -->
+      <div class="camera-box" id="cameraBox">
+        <video id="videoElement" class="camera-feed" autoplay playsinline muted style="display:none;"></video>
         <div class="skeleton-overlay" id="skeletonOverlay"></div>
         
-        <!-- Live Analysis Overlay (shown when camera active) -->
-        <div class="live-analysis-overlay" id="liveOverlay" style="display: none;">
-          <div class="live-badge">
-            <div class="pulse"></div>
-            LIVE TRACKING
-          </div>
-          <div class="joint-metrics-live" id="liveMetrics">
-            <div class="metric"><span>Analyzing...</span></div>
-          </div>
-        </div>
-        
-        <div class="camera-placeholder" id="cameraPlaceholder">
-          <i class="fas fa-camera" style="font-size: 48px; color: #2563eb; margin-bottom: 16px;"></i>
-          <p style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Real-Time Joint Tracking</p>
-          <p style="font-size: 13px; color: #64748b; margin-bottom: 24px; text-align: center;">Camera access required for MSK assessment</p>
-          
-          <div id="permissionStatus" style="display: none; background: #fef3c7; border: 1px solid #fcd34d; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 12px; color: #92400e; text-align: left; width: 100%; max-width: 300px;">
-            <div style="display: flex; align-items: flex-start; gap: 8px;">
-              <i class="fas fa-exclamation-triangle" style="margin-top: 2px;"></i>
-              <span id="permissionText">Checking permissions...</span>
-            </div>
-          </div>
-          
-          <button class="start-camera-btn" id="startCameraBtn" onclick="requestCameraPermission()" style="font-size: 16px; padding: 16px 32px;">
-            <i class="fas fa-video" style="font-size: 20px;"></i>
-            <span id="cameraButtonText">Allow Camera Access</span>
-          </button>
-          
-          <button id="reloadBtn" onclick="location.reload()" style="display: none; margin-top: 12px; background: transparent; border: 1px solid #94a3b8; color: #64748b; padding: 10px 20px; border-radius: 8px; font-size: 13px; cursor: pointer;">
-            <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>
-            Reload After Allowing
-          </button>
-          
-          <div style="margin-top: 16px; font-size: 11px; color: #94a3b8;">
-            <i class="fas fa-lock" style="margin-right: 4px;"></i>
-            Secure • HIPAA Compliant
+        <!-- Rep Counter Overlay -->
+        <div class="rep-box" id="repBox" style="display:none;">
+          <div class="rep-label">REPS</div>
+          <div class="rep-count" id="repCount">0</div>
+          <div class="rep-target" id="repTarget">/ 5</div>
+          <div class="rep-progress">
+            <div class="rep-progress-fill" id="repFill" style="width:0%;"></div>
           </div>
         </div>
         
-        <!-- Bottom Controls (shown when camera active) -->
-        <div class="bottom-controls" id="bottomControls" style="display: none;">
-          <div class="assessment-controls">
-            <button class="control-btn-large" onclick="toggleCamera()">
-              <i class="fas fa-camera-rotate"></i> Flip
+        <!-- Start Camera UI -->
+        <div class="camera-start" id="cameraStart">
+          <button class="start-btn" id="startBtn" onclick="startAssessment()">
+            Start Camera
+          </button>
+          <div class="perm-note" id="permNote">Camera required for joint tracking</div>
+        </div>
+        
+        <!-- Bottom Controls -->
+        <div class="bottom-bar" id="bottomBar">
+          <div class="btn-row">
+            <button class="ctrl-btn" onclick="toggleCamera()">Flip</button>
+            <button class="ctrl-btn next" id="nextBtn" onclick="completeRep()">
+              +1 Rep
             </button>
-            <button class="control-btn-large primary" id="nextTaskBtn" onclick="completeCurrentTask()">
-              <i class="fas fa-check"></i> Task Complete - Next
-            </button>
-            <button class="control-btn-large danger" onclick="stopAssessment()">
-              <i class="fas fa-stop"></i> Stop
-            </button>
+            <button class="ctrl-btn stop" onclick="stopAssessment()">Stop</button>
           </div>
         </div>
       </div>
       
-      <!-- Results Panel - Task List -->
-      <div class="results-panel" id="resultsPanel">
-        <div class="results-header">
-          <span class="results-title">Assessment Tasks</span>
-          <span class="task-badge" id="taskBadge">0/7</span>
-        </div>
-        <div class="task-list" id="taskList">
-          <!-- Tasks populated by JS -->
-        </div>
-        <div class="action-buttons">
-          <button class="action-btn secondary" onclick="restartAssessment()">
-            <i class="fas fa-redo"></i> Restart
-          </button>
-          <button class="action-btn primary" onclick="generateNote()">
-            <i class="fas fa-file-medical"></i> Generate Note
-          </button>
-        </div>
+      <!-- Task List -->
+      <div class="task-panel" id="taskPanel">
+        <!-- Populated by JS -->
+      </div>
+      
+      <!-- Action Footer -->
+      <div class="action-footer">
+        <button class="btn secondary" onclick="restartAll()">Restart</button>
+        <button class="btn primary" onclick="generateNote()">Generate Note</button>
       </div>
     </div>
     
     <script>
-      // ============================================
-      // GUIDED MSK ASSESSMENT WITH LIVE JOINT TRACKING
-      // ============================================
+      // ========================================
+      // MSK ASSESSMENT - MINIMAL UI + REP COUNTER
+      // ========================================
       
       let stream = null;
       let facingMode = 'environment';
-      let isAnalyzing = false;
       let analysisInterval = null;
-      let isMuted = false;
+      let currentReps = 0;
+      let currentTaskIdx = 0;
+      let lastAnalysis = null;
       
-      // Assessment Tasks - Patient will be guided through these
-      const assessmentTasks = [
-        { id: 1, name: 'Deep Squat', instruction: 'Please perform a deep squat. Feet shoulder-width apart, squat down as low as comfortable.', detail: 'Keep heels on ground, arms overhead', type: 'full', score: null, analysis: null },
-        { id: 2, name: 'Shoulder Mobility', instruction: 'Raise both arms overhead, then reach behind your back.', detail: 'We are checking shoulder range of motion', type: 'full', score: null, analysis: null },
-        { id: 3, name: 'Active Leg Raise', instruction: 'Lie on your back and raise one leg straight up, keeping it straight.', detail: 'Keep the other leg flat on the ground', type: 'full', score: null, analysis: null },
-        { id: 4, name: 'Walk Forward', instruction: 'Please walk forward naturally for about 10 steps.', detail: 'Walk at your normal pace', type: 'gait', score: null, analysis: null },
-        { id: 5, name: 'Walk Backward', instruction: 'Now carefully walk backward for about 5 steps.', detail: 'Take your time, safety first', type: 'gait', score: null, analysis: null },
-        { id: 6, name: 'Timed Up and Go', instruction: 'Stand up from seated, walk 3 meters, turn around, walk back and sit.', detail: 'We will time this movement', type: 'elderly', score: null, analysis: null },
-        { id: 7, name: 'Single Leg Balance', instruction: 'Stand on one leg for as long as comfortable, then switch.', detail: 'Hold onto something if needed for safety', type: 'elderly', score: null, analysis: null }
+      // 7 Assessment Tasks with rep requirements
+      const tasks = [
+        { name: 'Deep Squat', hint: 'Feet shoulder-width, squat down fully', reps: 5, type: 'full', done: 0, analysis: null },
+        { name: 'Shoulder Reach', hint: 'Raise arms overhead, reach behind', reps: 5, type: 'full', done: 0, analysis: null },
+        { name: 'Leg Raise', hint: 'Raise each leg straight up', reps: 5, type: 'full', done: 0, analysis: null },
+        { name: 'Forward Walk', hint: 'Walk forward 10 steps naturally', reps: 10, type: 'gait', done: 0, analysis: null },
+        { name: 'Backward Walk', hint: 'Walk backward 5 steps carefully', reps: 5, type: 'gait', done: 0, analysis: null },
+        { name: 'Sit to Stand', hint: 'Stand up from seated, sit back down', reps: 5, type: 'elderly', done: 0, analysis: null },
+        { name: 'Single Leg Balance', hint: 'Balance on one leg, then switch', reps: 2, type: 'elderly', done: 0, analysis: null }
       ];
       
-      let currentTaskIndex = 0;
-      let assessmentResults = [];
-      
-      // Text-to-Speech for instructions
-      function speak(text) {
-        if (isMuted || !('speechSynthesis' in window)) return;
-        
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-        
-        // Show speaking indicator
-        const indicator = document.getElementById('speakingIndicator');
-        if (indicator) indicator.classList.remove('hidden');
-        
-        utterance.onend = () => {
-          if (indicator) indicator.classList.add('hidden');
-        };
-        
-        window.speechSynthesis.speak(utterance);
-      }
-      
-      function toggleMute() {
-        isMuted = !isMuted;
-        const icon = document.getElementById('muteIcon');
-        if (icon) {
-          icon.className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
-        }
-        if (isMuted) {
-          window.speechSynthesis.cancel();
-        }
-      }
-      
-      // Update UI with current task
-      function updateTaskUI() {
-        const task = assessmentTasks[currentTaskIndex];
-        
-        // Update instruction banner
-        document.getElementById('taskProgress').textContent = 'Task ' + (currentTaskIndex + 1) + ' of ' + assessmentTasks.length;
-        document.getElementById('instructionText').textContent = task ? task.instruction : 'Assessment Complete!';
-        document.getElementById('instructionDetail').textContent = task ? task.detail : 'All tasks finished. Generate your note.';
-        
-        // Update task badge
-        const completedCount = assessmentTasks.filter(t => t.score !== null).length;
-        document.getElementById('taskBadge').textContent = completedCount + '/' + assessmentTasks.length;
-        
-        // Update task list
-        let taskListHtml = '';
-        assessmentTasks.forEach((t, i) => {
-          let statusClass = 'pending';
-          let iconHtml = '<i class="fas fa-circle"></i>';
-          
-          if (t.score !== null) {
-            statusClass = 'completed';
-            iconHtml = '<i class="fas fa-check"></i>';
-          } else if (i === currentTaskIndex) {
-            statusClass = 'active';
-            iconHtml = '<i class="fas fa-play"></i>';
-          }
-          
-          taskListHtml += '<div class="task-item ' + statusClass + '">' +
-            '<div class="task-icon">' + iconHtml + '</div>' +
-            '<div class="task-info">' +
-              '<div class="task-name">' + t.name + '</div>' +
-              '<div class="task-score">' + (t.score !== null ? 'Score: ' + t.score + '/3' : (i === currentTaskIndex ? 'In Progress...' : 'Pending')) + '</div>' +
-            '</div>' +
-          '</div>';
-        });
-        document.getElementById('taskList').innerHTML = taskListHtml;
-      }
-      
-      // Initialize on page load
-      document.addEventListener('DOMContentLoaded', async () => {
-        updateTaskUI();
-        await checkCameraPermission();
+      // Initialize on load
+      document.addEventListener('DOMContentLoaded', () => {
+        renderTaskList();
+        updateExerciseBar();
+        checkCameraPermission();
       });
       
       // Check camera permission
       async function checkCameraPermission() {
-        const statusDiv = document.getElementById('permissionStatus');
-        const statusText = document.getElementById('permissionText');
-        const buttonText = document.getElementById('cameraButtonText');
-        const startBtn = document.getElementById('startCameraBtn');
+        const btn = document.getElementById('startBtn');
+        const note = document.getElementById('permNote');
         
-        if (!statusDiv || !buttonText || !startBtn) return;
-        
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          statusDiv.style.display = 'block';
-          statusDiv.innerHTML = '<strong>Camera not available.</strong> Use HTTPS and a modern browser.';
-          buttonText.textContent = 'Camera Not Available';
-          startBtn.disabled = true;
+        if (!navigator.mediaDevices?.getUserMedia) {
+          btn.textContent = 'Camera Not Available';
+          btn.disabled = true;
+          note.textContent = 'Use HTTPS and a modern browser';
           return;
         }
         
-        if (navigator.permissions && navigator.permissions.query) {
-          try {
+        try {
+          if (navigator.permissions?.query) {
             const result = await navigator.permissions.query({ name: 'camera' });
             if (result.state === 'granted') {
-              buttonText.textContent = 'Start Assessment';
-              statusDiv.style.display = 'none';
+              btn.textContent = 'Start Assessment';
             } else if (result.state === 'denied') {
-              statusDiv.style.display = 'block';
-              statusDiv.style.background = '#fee2e2';
-              statusDiv.innerHTML = '<strong>Camera blocked.</strong><br>Tap lock icon in address bar → Camera → Allow → Reload';
-              buttonText.textContent = 'Permission Blocked';
+              btn.textContent = 'Camera Blocked';
+              note.textContent = 'Enable camera in browser settings';
             }
-          } catch (e) {
-            buttonText.textContent = 'Start Assessment';
           }
-        }
+        } catch (e) {}
       }
       
-      // Request camera and start assessment
-      async function requestCameraPermission() {
-        const buttonText = document.getElementById('cameraButtonText');
-        const startBtn = document.getElementById('startCameraBtn');
-        
-        buttonText.textContent = 'Starting...';
-        startBtn.disabled = true;
+      // Start assessment
+      async function startAssessment() {
+        const btn = document.getElementById('startBtn');
+        btn.textContent = 'Starting...';
+        btn.disabled = true;
         
         try {
           await startCamera();
-          startAssessment();
+          document.getElementById('cameraStart').style.display = 'none';
+          document.getElementById('repBox').style.display = 'block';
+          document.getElementById('bottomBar').style.display = 'block';
+          
+          currentReps = 0;
+          updateRepDisplay();
+          startLiveTracking();
         } catch (err) {
-          startBtn.disabled = false;
-          buttonText.textContent = 'Try Again';
+          btn.textContent = 'Try Again';
+          btn.disabled = false;
+          document.getElementById('permNote').textContent = 'Camera access denied';
         }
       }
       
       // Start camera
       async function startCamera() {
         const video = document.getElementById('videoElement');
-        const placeholder = document.getElementById('cameraPlaceholder');
-        
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Camera not available');
-        }
         
         const constraints = {
           video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -2377,7 +2009,6 @@ app.get('/doctor/joints', (c) => {
           video.onloadedmetadata = () => {
             video.play().then(() => {
               video.style.display = 'block';
-              placeholder.style.display = 'none';
               resolve();
             }).catch(reject);
           };
@@ -2388,7 +2019,7 @@ app.get('/doctor/joints', (c) => {
       // Stop camera
       function stopCamera() {
         if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+          stream.getTracks().forEach(t => t.stop());
           stream = null;
         }
         const video = document.getElementById('videoElement');
@@ -2396,7 +2027,7 @@ app.get('/doctor/joints', (c) => {
         video.style.display = 'none';
       }
       
-      // Toggle camera direction
+      // Toggle camera
       async function toggleCamera() {
         facingMode = facingMode === 'environment' ? 'user' : 'environment';
         if (stream) {
@@ -2405,46 +2036,17 @@ app.get('/doctor/joints', (c) => {
         }
       }
       
-      // Start the guided assessment
-      function startAssessment() {
-        document.getElementById('cameraPlaceholder').style.display = 'none';
-        document.getElementById('liveOverlay').style.display = 'flex';
-        document.getElementById('bottomControls').style.display = 'block';
-        
-        currentTaskIndex = 0;
-        updateTaskUI();
-        speakCurrentInstruction();
-        
-        // Start continuous analysis
-        startLiveAnalysis();
-      }
-      
-      // Speak current task instruction
-      function speakCurrentInstruction() {
-        const task = assessmentTasks[currentTaskIndex];
-        if (task) {
-          speak(task.instruction);
-        }
-      }
-      
-      // Start live joint analysis (continuous)
-      function startLiveAnalysis() {
+      // Start live tracking (every 2s)
+      function startLiveTracking() {
         if (analysisInterval) clearInterval(analysisInterval);
         
-        // Analyze every 2 seconds
-        analysisInterval = setInterval(async () => {
-          if (!stream || isAnalyzing) return;
-          await analyzeCurrentFrame();
-        }, 2000);
-        
-        // Do first analysis immediately
-        analyzeCurrentFrame();
+        analysisInterval = setInterval(analyzeFrame, 2000);
+        analyzeFrame(); // immediate first
       }
       
-      // Analyze current video frame
-      async function analyzeCurrentFrame() {
-        if (!stream || isAnalyzing) return;
-        isAnalyzing = true;
+      // Analyze current frame
+      async function analyzeFrame() {
+        if (!stream) return;
         
         const video = document.getElementById('videoElement');
         const canvas = document.createElement('canvas');
@@ -2453,86 +2055,29 @@ app.get('/doctor/joints', (c) => {
         canvas.getContext('2d').drawImage(video, 0, 0);
         const imageBase64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
         
-        const task = assessmentTasks[currentTaskIndex];
+        const task = tasks[currentTaskIdx];
         
         try {
-          const response = await fetch('/api/ai/analyze-joints', {
+          const res = await fetch('/api/ai/analyze-joints', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              imageBase64, 
-              analysisType: task ? task.type : 'full',
-              movement: task ? task.name : null
-            })
+            body: JSON.stringify({ imageBase64, analysisType: task?.type || 'full', movement: task?.name })
           });
+          const data = await res.json();
+          lastAnalysis = data.analysis;
           
-          const data = await response.json();
+          // Store for current task
+          if (task) task.analysis = data.analysis;
           
-          // Update live metrics display
-          updateLiveMetrics(data.analysis);
-          
-          // Draw skeleton overlay
+          // Draw skeleton
           drawSkeleton(data.analysis);
-          
-          // Store analysis for current task
-          if (task) {
-            task.analysis = data.analysis;
-          }
           
         } catch (err) {
           console.error('Analysis error:', err);
         }
-        
-        isAnalyzing = false;
       }
       
-      // Update live metrics panel
-      function updateLiveMetrics(analysis) {
-        if (!analysis) return;
-        
-        let metricsHtml = '';
-        
-        // Show key metrics based on current task
-        const task = assessmentTasks[currentTaskIndex];
-        
-        if (task && task.type === 'gait') {
-          if (analysis.gait) {
-            metricsHtml += '<div class="metric"><span>Cadence:</span><span>' + (analysis.gait.cadence || '--') + '</span></div>';
-            metricsHtml += '<div class="metric"><span>Balance:</span><span>' + (analysis.gait.balance || '--') + '</span></div>';
-            metricsHtml += '<div class="metric"><span>Arm Swing:</span><span>' + (analysis.gait.arm_swing || '--') + '</span></div>';
-          }
-        } else if (task && task.type === 'elderly') {
-          if (analysis.elderly) {
-            const tugClass = parseFloat(analysis.elderly.tug_time) > 14 ? 'critical' : (parseFloat(analysis.elderly.tug_time) > 10 ? 'limited' : 'good');
-            metricsHtml += '<div class="metric ' + tugClass + '"><span>TUG:</span><span>' + (analysis.elderly.tug_time || '--') + '</span></div>';
-            metricsHtml += '<div class="metric"><span>Fall Risk:</span><span>' + (analysis.elderly.fall_risk || '--') + '</span></div>';
-          }
-        } else {
-          // Full body metrics
-          if (analysis.hip_L) {
-            const hipClass = parseInt(analysis.hip_L.flexion) < 100 ? 'limited' : 'good';
-            metricsHtml += '<div class="metric ' + hipClass + '"><span>Hip Flex:</span><span>' + analysis.hip_L.flexion + '</span></div>';
-          }
-          if (analysis.knee_L) {
-            metricsHtml += '<div class="metric good"><span>Knee Flex:</span><span>' + analysis.knee_L.flexion + '</span></div>';
-          }
-          if (analysis.ankle_L) {
-            const ankleClass = parseInt(analysis.ankle_L.dorsiflexion) < 15 ? 'limited' : 'good';
-            metricsHtml += '<div class="metric ' + ankleClass + '"><span>Ankle DF:</span><span>' + analysis.ankle_L.dorsiflexion + '</span></div>';
-          }
-          if (analysis.shoulder_L) {
-            metricsHtml += '<div class="metric good"><span>Shoulder:</span><span>' + analysis.shoulder_L.flexion + '</span></div>';
-          }
-        }
-        
-        if (analysis.score !== undefined) {
-          metricsHtml += '<div class="metric" style="border-top: 1px solid rgba(255,255,255,0.3); margin-top: 4px; padding-top: 6px;"><span>Score:</span><span style="font-weight:bold;">' + analysis.score + '/3</span></div>';
-        }
-        
-        document.getElementById('liveMetrics').innerHTML = metricsHtml || '<div class="metric"><span>Analyzing...</span></div>';
-      }
-      
-      // Draw skeleton overlay
+      // Draw blue skeleton
       function drawSkeleton(analysis) {
         const overlay = document.getElementById('skeletonOverlay');
         if (!overlay) return;
@@ -2547,9 +2092,6 @@ app.get('/doctor/joints', (c) => {
           ankle_L: { x: 38, y: 88 }, ankle_R: { x: 62, y: 88 }
         };
         
-        let html = '';
-        
-        // Draw connections
         const connections = [
           ['head', 'neck'], ['neck', 'shoulder_L'], ['neck', 'shoulder_R'],
           ['shoulder_L', 'elbow_L'], ['shoulder_R', 'elbow_R'],
@@ -2559,47 +2101,96 @@ app.get('/doctor/joints', (c) => {
           ['knee_L', 'ankle_L'], ['knee_R', 'ankle_R']
         ];
         
+        let html = '';
+        
+        // Blue lines
         connections.forEach(([from, to]) => {
           const p1 = joints[from], p2 = joints[to];
           const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
-          const length = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-          html += '<div style="position:absolute;left:' + p1.x + '%;top:' + p1.y + '%;width:' + length + '%;height:3px;background:rgba(59,130,246,0.8);transform:rotate(' + angle + 'deg);transform-origin:left center;"></div>';
+          const len = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+          html += '<div style="position:absolute;left:' + p1.x + '%;top:' + p1.y + '%;width:' + len + '%;height:3px;background:#3b82f6;transform:rotate(' + angle + 'deg);transform-origin:left center;opacity:0.8;"></div>';
         });
         
-        // Draw joints
-        Object.entries(joints).forEach(([name, pos]) => {
-          html += '<div style="position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;width:12px;height:12px;background:rgba(59,130,246,0.9);border:2px solid #93c5fd;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(59,130,246,0.6);"></div>';
+        // Blue dots
+        Object.values(joints).forEach(pos => {
+          html += '<div style="position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;width:10px;height:10px;background:#3b82f6;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 6px #3b82f6;"></div>';
         });
         
         overlay.innerHTML = html;
       }
       
-      // Complete current task and move to next
-      function completeCurrentTask() {
-        const task = assessmentTasks[currentTaskIndex];
-        if (task) {
-          // Assign score based on analysis (simplified - in production would be more sophisticated)
-          task.score = task.analysis?.score || Math.floor(Math.random() * 2) + 2; // 2-3 for demo
-          assessmentResults.push({ ...task });
-        }
+      // Complete a rep (manual button)
+      function completeRep() {
+        const task = tasks[currentTaskIdx];
+        if (!task) return;
         
-        currentTaskIndex++;
+        currentReps++;
+        updateRepDisplay();
         
-        if (currentTaskIndex >= assessmentTasks.length) {
-          // Assessment complete
-          speak('Assessment complete. All tasks finished. You can now generate the medical note.');
-          document.getElementById('instructionText').textContent = 'Assessment Complete!';
-          document.getElementById('instructionDetail').textContent = 'All ' + assessmentTasks.length + ' tasks completed. Generate your note.';
-          document.getElementById('nextTaskBtn').innerHTML = '<i class="fas fa-check-circle"></i> All Done';
-          document.getElementById('nextTaskBtn').disabled = true;
+        // Check if task complete
+        if (currentReps >= task.reps) {
+          task.done = currentReps;
+          task.analysis = lastAnalysis;
           
-          if (analysisInterval) {
-            clearInterval(analysisInterval);
+          // Move to next task
+          currentTaskIdx++;
+          currentReps = 0;
+          
+          if (currentTaskIdx >= tasks.length) {
+            // All done
+            if (analysisInterval) clearInterval(analysisInterval);
+            document.getElementById('exerciseName').textContent = 'Assessment Complete';
+            document.getElementById('exerciseHint').textContent = 'All exercises finished. Generate your note.';
+            document.getElementById('nextBtn').textContent = 'Done ✓';
+            document.getElementById('nextBtn').disabled = true;
+          } else {
+            updateExerciseBar();
           }
-        } else {
-          updateTaskUI();
-          speakCurrentInstruction();
+          
+          renderTaskList();
+          updateRepDisplay();
         }
+      }
+      
+      // Update rep display
+      function updateRepDisplay() {
+        const task = tasks[currentTaskIdx];
+        const target = task ? task.reps : 0;
+        
+        document.getElementById('repCount').textContent = currentReps;
+        document.getElementById('repTarget').textContent = '/ ' + target;
+        
+        const pct = target > 0 ? (currentReps / target * 100) : 0;
+        document.getElementById('repFill').style.width = pct + '%';
+      }
+      
+      // Update exercise bar
+      function updateExerciseBar() {
+        const task = tasks[currentTaskIdx];
+        if (task) {
+          document.getElementById('exerciseName').textContent = (currentTaskIdx + 1) + '. ' + task.name;
+          document.getElementById('exerciseHint').textContent = task.hint;
+        }
+      }
+      
+      // Render task list
+      function renderTaskList() {
+        const panel = document.getElementById('taskPanel');
+        let html = '';
+        
+        tasks.forEach((t, i) => {
+          let cls = '';
+          if (t.done >= t.reps) cls = 'done';
+          else if (i === currentTaskIdx) cls = 'active';
+          
+          html += '<div class="task-row ' + cls + '">' +
+            '<div class="task-num">' + (t.done >= t.reps ? '✓' : (i + 1)) + '</div>' +
+            '<span>' + t.name + '</span>' +
+            '<span class="reps">' + (t.done >= t.reps ? t.done : (i === currentTaskIdx ? currentReps : 0)) + '/' + t.reps + '</span>' +
+          '</div>';
+        });
+        
+        panel.innerHTML = html;
       }
       
       // Stop assessment
@@ -2610,35 +2201,41 @@ app.get('/doctor/joints', (c) => {
         }
         stopCamera();
         
-        document.getElementById('cameraPlaceholder').style.display = 'flex';
-        document.getElementById('liveOverlay').style.display = 'none';
-        document.getElementById('bottomControls').style.display = 'none';
+        document.getElementById('cameraStart').style.display = 'block';
+        document.getElementById('repBox').style.display = 'none';
+        document.getElementById('bottomBar').style.display = 'none';
         document.getElementById('skeletonOverlay').innerHTML = '';
-        
-        speak('Assessment paused.');
+        document.getElementById('startBtn').textContent = 'Resume';
+        document.getElementById('startBtn').disabled = false;
       }
       
-      // Restart assessment
-      function restartAssessment() {
-        assessmentTasks.forEach(t => { t.score = null; t.analysis = null; });
-        currentTaskIndex = 0;
-        assessmentResults = [];
-        updateTaskUI();
+      // Restart all
+      function restartAll() {
+        tasks.forEach(t => { t.done = 0; t.analysis = null; });
+        currentTaskIdx = 0;
+        currentReps = 0;
         
-        speak('Assessment reset. Tap Start Assessment to begin again.');
+        renderTaskList();
+        updateExerciseBar();
+        updateRepDisplay();
+        
+        if (stream) {
+          document.getElementById('nextBtn').textContent = '+1 Rep';
+          document.getElementById('nextBtn').disabled = false;
+        }
       }
       
-      // Generate medical note
+      // Generate note
       function generateNote() {
         const scores = {};
-        assessmentTasks.forEach(t => {
-          if (t.score !== null) {
-            scores[t.name] = t.score;
+        tasks.forEach(t => {
+          if (t.done > 0) {
+            scores[t.name] = t.done >= t.reps ? 3 : (t.done >= t.reps / 2 ? 2 : 1);
           }
         });
         
         sessionStorage.setItem('fmsScores', JSON.stringify(scores));
-        sessionStorage.setItem('jointAnalysis', JSON.stringify(assessmentResults));
+        sessionStorage.setItem('jointAnalysis', JSON.stringify(tasks.filter(t => t.done > 0)));
         location.href = '/doctor/notes';
       }
     </script>
