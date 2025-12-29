@@ -1703,251 +1703,531 @@ app.get('/doctor', (c) => {
   `, 'Dashboard - Thrive Ortho EHR'))
 })
 
-// Full Body Joint Scan Page
+// Full Body Joint Scan Page - Mobile-First Camera Assessment
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
-    <div class="demo-bar">
-      <span>Full Body Joint Scan — All Joints + Hands + Feet + Face + Gait</span>
-      <a href="/login">Switch Role</a>
-    </div>
-    <div class="layout">
-      ${sidebar('doctor', 'joints')}
+    <style>
+      /* Mobile-First Camera Assessment Styles */
+      .assessment-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+        display: flex;
+        flex-direction: column;
+      }
       
-      <main class="main">
-        <div class="header">
-          <div>
-            <h1 class="title">Full Body Joint Scan</h1>
-            <p class="subtitle">Comprehensive analysis: All joints, hands, feet, face, gait</p>
-          </div>
-          <div class="flex gap-1">
-            <a href="/doctor" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
-            <button class="btn btn-primary" onclick="generateNote()"><i class="fas fa-file-medical"></i> Generate Note</button>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-body-sm">
-            <div class="video-box" id="videoContainer">
-              <div class="video-placeholder">
-                <i class="fas fa-camera"></i>
-                <p>Camera Feed — Full Body View</p>
-              </div>
-              <video id="videoElement" autoplay playsinline style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
-              <!-- Skeleton visualization overlay -->
-              <div id="skeletonOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;"></div>
-              
-              <div class="video-overlay">
-                <div class="video-controls">
-                  <button class="video-btn video-btn-light" onclick="toggleCamera()" title="Toggle Camera">
-                    <i class="fas fa-camera" id="cameraIcon"></i>
-                  </button>
-                  <button class="video-btn video-btn-accent" onclick="captureFullBody()" title="Full Body Scan">
-                    <i class="fas fa-expand"></i>
-                  </button>
-                  <button class="video-btn video-btn-accent" onclick="captureHands()" title="Hand Analysis">
-                    <i class="fas fa-hand"></i>
-                  </button>
-                  <button class="video-btn video-btn-accent" onclick="captureFeet()" title="Foot Analysis">
-                    <i class="fas fa-shoe-prints"></i>
-                  </button>
-                  <button class="video-btn video-btn-accent" onclick="captureFace()" title="Face/TMJ">
-                    <i class="fas fa-face-smile"></i>
-                  </button>
-                  <button class="video-btn video-btn-accent" onclick="captureGait()" title="Gait - Walk Forward/Back">
-                    <i class="fas fa-person-walking"></i>
-                  </button>
-                  <button class="video-btn video-btn-accent" onclick="captureElderly()" title="Elderly Fall Risk">
-                    <i class="fas fa-person-cane"></i>
-                  </button>
-                </div>
-                <div class="joint-overlay" id="jointData">
-                  <div class="joint-overlay-title"><i class="fas fa-bone"></i> Real-Time Joint Analysis</div>
-                  <div class="joint-grid" id="jointGrid">
-                    <!-- Populated by JS -->
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Assessment Categories</span>
-            <div class="category-tabs">
-              <button class="category-tab active" onclick="filterMovements('all')">All</button>
-              <button class="category-tab" onclick="filterMovements('FMS')">FMS</button>
-              <button class="category-tab" onclick="filterMovements('AMA')">AMA</button>
-              <button class="category-tab" onclick="filterMovements('ELDERLY')">Elderly</button>
-              <button class="category-tab" onclick="filterMovements('HAND')">Hand</button>
-              <button class="category-tab" onclick="filterMovements('FOOT')">Foot</button>
-              <button class="category-tab" onclick="filterMovements('FACE')">Face</button>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="movement-grid" id="movementGrid">
-              ${movements.map((m, i) => `
-                <div class="movement-card ${m.forElderly ? 'elderly' : ''}" data-id="${m.id}" data-category="${m.category}" onclick="selectMovement(${m.id})">
-                  <div class="movement-num">${i + 1}</div>
-                  <div class="movement-name">${m.name}</div>
-                  <div class="movement-category">${m.category}</div>
-                  <div class="movement-score" id="score-${m.id}">--</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      </main>
+      .assessment-header {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
       
-      <aside class="panel">
-        <div class="panel-section">
-          <div class="panel-label">FMS Score</div>
-          <div class="score-display">
-            <div class="score-value" id="totalScore">0</div>
-            <div class="score-label">of 21 points</div>
-          </div>
-          <div class="mt-1 text-center">
-            <span class="badge badge-neutral" id="riskBadge">Not Scored</span>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">Current Movement</div>
-          <div class="panel-card">
-            <div style="font-weight: 600; font-size: 11px;" id="currentMovement">Select a movement</div>
-            <div class="text-muted text-sm mt-1" id="currentDescription">--</div>
-          </div>
-          
-          <div class="mt-2">
-            <div class="form-label">Score (0-3)</div>
-            <div class="score-btns">
-              <button class="score-btn" onclick="scoreMovement(0)">0</button>
-              <button class="score-btn" onclick="scoreMovement(1)">1</button>
-              <button class="score-btn" onclick="scoreMovement(2)">2</button>
-              <button class="score-btn" onclick="scoreMovement(3)">3</button>
-            </div>
-            <div class="text-muted text-center text-sm mt-1">
-              0=Pain | 1=Unable | 2=Comp | 3=Perfect
-            </div>
-          </div>
-        </div>
-        
-        <div class="panel-section">
-          <div class="panel-label">AI Joint Analysis</div>
-          <div class="panel-card" id="aiAnalysis" style="max-height: 200px; overflow-y: auto;">
-            <div class="text-center text-muted text-sm" style="padding: 8px;">
-              <i class="fas fa-bone" style="font-size: 18px; margin-bottom: 4px; display: block; color: var(--accent);"></i>
-              Capture to analyze all joints
-            </div>
-          </div>
-        </div>
-        
-        <button class="btn btn-primary" style="width: 100%;" onclick="generateNote()">
-          <i class="fas fa-file-medical"></i> Generate Note
+      .assessment-header h1 {
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      
+      .assessment-header .back-btn {
+        color: white;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      
+      .camera-container {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 50vh;
+      }
+      
+      .camera-feed {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      
+      .camera-placeholder {
+        text-align: center;
+        color: #60a5fa;
+        z-index: 1;
+      }
+      
+      .camera-placeholder i {
+        font-size: 64px;
+        margin-bottom: 16px;
+        display: block;
+      }
+      
+      .camera-placeholder p {
+        font-size: 14px;
+        color: #93c5fd;
+        margin-bottom: 20px;
+      }
+      
+      .start-camera-btn {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+      }
+      
+      .start-camera-btn:active {
+        transform: scale(0.98);
+      }
+      
+      /* Skeleton Overlay */
+      .skeleton-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 2;
+      }
+      
+      /* Analysis Controls */
+      .analysis-controls {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        padding: 20px 16px;
+        z-index: 10;
+      }
+      
+      .control-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      
+      .control-btn {
+        background: rgba(37, 99, 235, 0.8);
+        border: 2px solid rgba(147, 197, 253, 0.5);
+        color: white;
+        padding: 12px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+      }
+      
+      .control-btn i {
+        font-size: 20px;
+      }
+      
+      .control-btn:active {
+        background: #2563eb;
+        transform: scale(0.95);
+      }
+      
+      .control-btn.camera-toggle {
+        background: rgba(255,255,255,0.2);
+      }
+      
+      .control-btn.camera-toggle.active {
+        background: #dc2626;
+      }
+      
+      .capture-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+      }
+      
+      .capture-btn:disabled {
+        background: #475569;
+        box-shadow: none;
+      }
+      
+      /* Results Panel */
+      .results-panel {
+        background: rgba(255,255,255,0.95);
+        border-radius: 20px 20px 0 0;
+        padding: 20px;
+        max-height: 40vh;
+        overflow-y: auto;
+      }
+      
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      
+      .results-title {
+        font-weight: 700;
+        font-size: 16px;
+        color: #1e293b;
+      }
+      
+      .score-badge {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      
+      .joint-results {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      
+      .joint-result-item {
+        background: #f1f5f9;
+        padding: 10px 12px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+      }
+      
+      .joint-result-item.limited {
+        background: #fef3c7;
+        border-left: 3px solid #f59e0b;
+      }
+      
+      .joint-result-item.good {
+        background: #dcfce7;
+        border-left: 3px solid #22c55e;
+      }
+      
+      .joint-result-item span:first-child {
+        color: #64748b;
+      }
+      
+      .joint-result-item span:last-child {
+        font-weight: 600;
+        color: #1e293b;
+      }
+      
+      .section-label {
+        grid-column: span 2;
+        font-size: 10px;
+        font-weight: 700;
+        color: #2563eb;
+        text-transform: uppercase;
+        padding: 8px 0 4px;
+        border-bottom: 1px solid #e2e8f0;
+        margin-top: 8px;
+      }
+      
+      .section-label:first-child {
+        margin-top: 0;
+      }
+      
+      /* Action Buttons */
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+      }
+      
+      .action-btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      
+      .action-btn.primary {
+        background: #2563eb;
+        color: white;
+        border: none;
+      }
+      
+      .action-btn.secondary {
+        background: white;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+      }
+      
+      /* Status indicator */
+      .status-indicator {
+        position: absolute;
+        top: 70px;
+        left: 16px;
+        right: 16px;
+        background: rgba(37, 99, 235, 0.9);
+        color: white;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 12px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        z-index: 20;
+      }
+      
+      .status-indicator.visible {
+        display: flex;
+      }
+      
+      .status-indicator.error {
+        background: rgba(220, 38, 38, 0.9);
+      }
+      
+      .status-indicator.success {
+        background: rgba(22, 163, 74, 0.9);
+      }
+      
+      /* Hide desktop elements on mobile */
+      @media (max-width: 768px) {
+        .desktop-only { display: none !important; }
+      }
+      
+      @media (min-width: 769px) {
+        .mobile-only { display: none !important; }
+        .assessment-page {
+          max-width: 500px;
+          margin: 0 auto;
+          min-height: 100vh;
+        }
+      }
+    </style>
+    
+    <div class="assessment-page">
+      <div class="assessment-header">
+        <button class="back-btn" onclick="location.href='/doctor'">
+          <i class="fas fa-arrow-left"></i> Back
         </button>
-      </aside>
+        <h1>MSK Assessment</h1>
+        <button class="back-btn" onclick="generateNote()">
+          <i class="fas fa-file-medical"></i>
+        </button>
+      </div>
+      
+      <div class="camera-container" id="cameraContainer">
+        <video id="videoElement" class="camera-feed" autoplay playsinline muted style="display: none;"></video>
+        <div class="skeleton-overlay" id="skeletonOverlay"></div>
+        
+        <div class="camera-placeholder" id="cameraPlaceholder">
+          <i class="fas fa-camera"></i>
+          <p>Real-Time Joint Tracking</p>
+          <button class="start-camera-btn" onclick="startCamera()">
+            <i class="fas fa-video"></i>
+            Start Camera
+          </button>
+        </div>
+        
+        <div class="status-indicator" id="statusIndicator">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span id="statusText">Analyzing...</span>
+        </div>
+        
+        <div class="analysis-controls" id="analysisControls" style="display: none;">
+          <div class="control-buttons">
+            <button class="control-btn camera-toggle" id="cameraToggle" onclick="toggleCamera()">
+              <i class="fas fa-camera-rotate"></i>
+              <span>Flip</span>
+            </button>
+            <button class="control-btn" onclick="captureFullBody()">
+              <i class="fas fa-person"></i>
+              <span>Full Body</span>
+            </button>
+            <button class="control-btn" onclick="captureGait()">
+              <i class="fas fa-person-walking"></i>
+              <span>Gait</span>
+            </button>
+            <button class="control-btn" onclick="captureElderly()">
+              <i class="fas fa-person-cane"></i>
+              <span>Fall Risk</span>
+            </button>
+          </div>
+          <div class="control-buttons">
+            <button class="control-btn" onclick="captureHands()">
+              <i class="fas fa-hand"></i>
+              <span>Hands</span>
+            </button>
+            <button class="control-btn" onclick="captureFeet()">
+              <i class="fas fa-shoe-prints"></i>
+              <span>Feet</span>
+            </button>
+            <button class="control-btn" onclick="captureFace()">
+              <i class="fas fa-face-smile"></i>
+              <span>Face</span>
+            </button>
+            <button class="control-btn" onclick="stopCamera()">
+              <i class="fas fa-stop"></i>
+              <span>Stop</span>
+            </button>
+          </div>
+          <button class="capture-btn" id="captureBtn" onclick="captureFullBody()">
+            <i class="fas fa-crosshairs"></i>
+            Analyze Joints Now
+          </button>
+        </div>
+      </div>
+      
+      <div class="results-panel" id="resultsPanel">
+        <div class="results-header">
+          <span class="results-title">Joint Analysis</span>
+          <span class="score-badge" id="scoreBadge">--/3</span>
+        </div>
+        <div class="joint-results" id="jointResults">
+          <div class="section-label">Tap "Start Camera" to begin assessment</div>
+          <div class="joint-result-item" style="grid-column: span 2; justify-content: center; color: #64748b;">
+            Position patient in frame, then tap "Analyze Joints Now"
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="action-btn secondary" onclick="location.href='/doctor/intake'">
+            <i class="fas fa-microphone"></i> Voice Intake
+          </button>
+          <button class="action-btn primary" onclick="generateNote()">
+            <i class="fas fa-file-medical"></i> Generate Note
+          </button>
+        </div>
+      </div>
     </div>
     
     <script>
-      const movements = ${JSON.stringify(movements)};
-      let currentMovementId = null;
-      let scores = {};
       let stream = null;
       let lastAnalysis = null;
+      let facingMode = 'environment'; // Start with back camera for assessing others
+      let scores = {};
       
-      function filterMovements(category) {
-        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        
-        document.querySelectorAll('.movement-card').forEach(card => {
-          if (category === 'all' || card.dataset.category === category) {
-            card.style.display = 'block';
-          } else {
-            card.style.display = 'none';
-          }
-        });
-      }
-      
-      function selectMovement(id) {
-        currentMovementId = id;
-        const m = movements.find(x => x.id === id);
-        
-        document.querySelectorAll('.movement-card').forEach(c => c.classList.remove('active'));
-        document.querySelector('[data-id="' + id + '"]').classList.add('active');
-        
-        document.getElementById('currentMovement').textContent = m.name;
-        document.getElementById('currentDescription').textContent = m.description;
-        
-        document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('selected'));
-        if (scores[id] !== undefined) {
-          document.querySelectorAll('.score-btn')[scores[id]].classList.add('selected');
+      // Show status message
+      function showStatus(message, type = 'info') {
+        const indicator = document.getElementById('statusIndicator');
+        const text = document.getElementById('statusText');
+        indicator.className = 'status-indicator visible' + (type !== 'info' ? ' ' + type : '');
+        text.textContent = message;
+        if (type === 'success' || type === 'error') {
+          setTimeout(() => indicator.classList.remove('visible'), 3000);
         }
       }
       
-      function scoreMovement(score) {
-        if (!currentMovementId) return;
-        
-        scores[currentMovementId] = score;
-        document.getElementById('score-' + currentMovementId).textContent = score;
-        document.querySelector('[data-id="' + currentMovementId + '"]').classList.add('scored');
-        
-        document.querySelectorAll('.score-btn').forEach((b, i) => {
-          b.classList.toggle('selected', i === score);
-        });
-        
-        // Calculate FMS total (1-7 only)
-        let total = 0;
-        for (let i = 1; i <= 7; i++) {
-          if (scores[i] !== undefined) total += scores[i];
-        }
-        document.getElementById('totalScore').textContent = total;
-        
-        const badge = document.getElementById('riskBadge');
-        if (total <= 11) {
-          badge.className = 'badge badge-danger';
-          badge.textContent = 'HIGH RISK';
-        } else if (total <= 14) {
-          badge.className = 'badge badge-warning';
-          badge.textContent = 'MODERATE';
-        } else {
-          badge.className = 'badge badge-success';
-          badge.textContent = 'LOW RISK';
-        }
-        
-        // Auto-advance
-        const idx = movements.findIndex(m => m.id === currentMovementId);
-        if (idx < movements.length - 1) {
-          setTimeout(() => selectMovement(movements[idx + 1].id), 300);
-        }
+      function hideStatus() {
+        document.getElementById('statusIndicator').classList.remove('visible');
       }
       
-      async function toggleCamera() {
+      // Start camera - mobile optimized
+      async function startCamera() {
         const video = document.getElementById('videoElement');
-        const placeholder = document.querySelector('.video-placeholder');
+        const placeholder = document.getElementById('cameraPlaceholder');
+        const controls = document.getElementById('analysisControls');
         
-        if (stream) {
-          stream.getTracks().forEach(t => t.stop());
-          stream = null;
-          video.style.display = 'none';
-          placeholder.style.display = 'flex';
-          document.getElementById('cameraIcon').className = 'fas fa-camera';
-          document.getElementById('jointData').classList.remove('visible');
-        } else {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { width: 1280, height: 720, facingMode: 'user' } 
-            });
-            video.srcObject = stream;
+        try {
+          showStatus('Requesting camera access...', 'info');
+          
+          // Request camera with mobile-friendly settings
+          const constraints = {
+            video: {
+              facingMode: facingMode,
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          };
+          
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          video.srcObject = stream;
+          
+          // Wait for video to be ready
+          video.onloadedmetadata = () => {
+            video.play();
             video.style.display = 'block';
             placeholder.style.display = 'none';
-            document.getElementById('cameraIcon').className = 'fas fa-camera-slash';
-            document.getElementById('jointData').classList.add('visible');
-          } catch (err) {
-            alert('Camera access denied: ' + err.message);
-          }
+            controls.style.display = 'block';
+            hideStatus();
+            showStatus('Camera ready! Position patient in frame.', 'success');
+          };
+          
+        } catch (err) {
+          console.error('Camera error:', err);
+          showStatus('Camera access denied. Please allow camera permissions.', 'error');
+          
+          // Show helpful message
+          document.getElementById('jointResults').innerHTML = 
+            '<div class="section-label" style="color: #dc2626;">Camera Permission Required</div>' +
+            '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
+            '<span>To perform MSK assessment:</span>' +
+            '<span style="font-weight: normal;">1. Tap the camera button again</span>' +
+            '<span style="font-weight: normal;">2. Allow camera access when prompted</span>' +
+            '<span style="font-weight: normal;">3. If denied, check browser settings</span>' +
+            '</div>';
         }
       }
       
+      // Stop camera
+      function stopCamera() {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        const video = document.getElementById('videoElement');
+        const placeholder = document.getElementById('cameraPlaceholder');
+        const controls = document.getElementById('analysisControls');
+        
+        video.style.display = 'none';
+        placeholder.style.display = 'flex';
+        controls.style.display = 'none';
+        document.getElementById('skeletonOverlay').innerHTML = '';
+      }
+      
+      // Toggle camera (flip between front and back)
+      async function toggleCamera() {
+        facingMode = facingMode === 'environment' ? 'user' : 'environment';
+        if (stream) {
+          stopCamera();
+          await startCamera();
+        }
+        document.getElementById('cameraToggle').classList.toggle('active', facingMode === 'user');
+      }
+      
+      // Capture functions for different analysis types
       async function captureFullBody() {
         await captureAndAnalyze('full');
       }
@@ -2054,18 +2334,18 @@ app.get('/doctor/joints', (c) => {
       
       async function captureAndAnalyze(type) {
         if (!stream) {
-          alert('Start camera first');
+          showStatus('Please start camera first', 'error');
           return;
         }
         
+        showStatus('Analyzing joints with AI...', 'info');
+        
         const video = document.getElementById('videoElement');
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
         canvas.getContext('2d').drawImage(video, 0, 0);
         const imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-        
-        document.getElementById('aiAnalysis').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Analyzing all joints...</div>';
         
         try {
           const response = await fetch('/api/ai/analyze-joints', {
@@ -2180,45 +2460,98 @@ app.get('/doctor/joints', (c) => {
             gridHtml += '<div class="joint-item"><span>180° Turn:</span><span>' + data.analysis.elderly.turn_steps + '</span></div>';
           }
           
-          jointGrid.innerHTML = gridHtml;
-          
           // Draw skeleton visualization
           drawSkeleton(data.analysis);
           
-          // Update panel analysis
-          let analysisHtml = '<div class="text-sm">';
-          analysisHtml += '<div class="mb-1"><strong>Score:</strong> ' + (data.analysis?.score ?? '--') + '/3';
-          if (data.analysis?.confidence) {
-            analysisHtml += ' <span class="text-muted">(' + Math.round(data.analysis.confidence * 100) + '%)</span>';
-          }
-          analysisHtml += '</div>';
+          // Update score badge
+          document.getElementById('scoreBadge').textContent = (data.analysis?.score ?? '--') + '/3';
           
+          // Update results panel with mobile-friendly format
+          const resultsPanel = document.getElementById('jointResults');
+          let resultsHtml = '';
+          
+          // Show limitations first if any
           if (data.analysis?.limitations?.length > 0) {
-            analysisHtml += '<div class="mb-1" style="color: var(--warning);"><strong>Limitations:</strong></div>';
-            analysisHtml += '<ul style="margin: 0; padding-left: 12px; font-size: 9px;">';
+            resultsHtml += '<div class="section-label" style="color: #f59e0b;">⚠️ Limitations Found</div>';
             data.analysis.limitations.forEach(l => {
-              analysisHtml += '<li>' + l + '</li>';
+              resultsHtml += '<div class="joint-result-item limited" style="grid-column: span 2;"><span>' + l + '</span></div>';
             });
-            analysisHtml += '</ul>';
           }
           
+          // Main joint data
+          if (data.analysis?.hip_L) {
+            resultsHtml += '<div class="section-label">Hips</div>';
+            const hipClass = parseInt(data.analysis.hip_L.flexion) < 100 ? 'limited' : 'good';
+            resultsHtml += '<div class="joint-result-item ' + hipClass + '"><span>Flex L</span><span>' + data.analysis.hip_L.flexion + '</span></div>';
+            resultsHtml += '<div class="joint-result-item ' + hipClass + '"><span>Flex R</span><span>' + (data.analysis.hip_R?.flexion || '--') + '</span></div>';
+          }
+          
+          if (data.analysis?.knee_L) {
+            resultsHtml += '<div class="section-label">Knees</div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Flex L</span><span>' + data.analysis.knee_L.flexion + '</span></div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Flex R</span><span>' + (data.analysis.knee_R?.flexion || '--') + '</span></div>';
+          }
+          
+          if (data.analysis?.ankle_L) {
+            resultsHtml += '<div class="section-label">Ankles</div>';
+            const ankleClass = parseInt(data.analysis.ankle_L.dorsiflexion) < 15 ? 'limited' : 'good';
+            resultsHtml += '<div class="joint-result-item ' + ankleClass + '"><span>DF L</span><span>' + data.analysis.ankle_L.dorsiflexion + '</span></div>';
+            resultsHtml += '<div class="joint-result-item ' + ankleClass + '"><span>DF R</span><span>' + (data.analysis.ankle_R?.dorsiflexion || '--') + '</span></div>';
+          }
+          
+          if (data.analysis?.shoulder_L) {
+            resultsHtml += '<div class="section-label">Shoulders</div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Flex L</span><span>' + data.analysis.shoulder_L.flexion + '</span></div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Flex R</span><span>' + (data.analysis.shoulder_R?.flexion || '--') + '</span></div>';
+          }
+          
+          if (data.analysis?.hand_L) {
+            resultsHtml += '<div class="section-label">Hands</div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Grip L</span><span>' + data.analysis.hand_L.grip_strength + '</span></div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Grip R</span><span>' + (data.analysis.hand_R?.grip_strength || '--') + '</span></div>';
+          }
+          
+          if (data.analysis?.gait) {
+            resultsHtml += '<div class="section-label">🚶 Gait Analysis</div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Cadence</span><span>' + data.analysis.gait.cadence + '</span></div>';
+            resultsHtml += '<div class="joint-result-item good"><span>Balance</span><span>' + data.analysis.gait.balance + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>Stride L</span><span>' + data.analysis.gait.stride_length_L + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>Stride R</span><span>' + data.analysis.gait.stride_length_R + '</span></div>';
+          }
+          
+          if (data.analysis?.elderly) {
+            const fallRisk = data.analysis.elderly.fall_risk?.toLowerCase() || 'low';
+            const riskClass = fallRisk === 'high' ? 'limited' : fallRisk === 'moderate' ? 'limited' : 'good';
+            resultsHtml += '<div class="section-label" style="color: #dc2626;">🧓 Fall Risk Assessment</div>';
+            resultsHtml += '<div class="joint-result-item ' + riskClass + '" style="grid-column: span 2;"><span>FALL RISK</span><span style="font-weight:700;">' + data.analysis.elderly.fall_risk.toUpperCase() + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>TUG Time</span><span>' + data.analysis.elderly.tug_time + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>Sit→Stand</span><span>' + data.analysis.elderly.sit_to_stand_time + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>SLS Left</span><span>' + data.analysis.elderly.single_leg_stance_L + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>SLS Right</span><span>' + data.analysis.elderly.single_leg_stance_R + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>Reach</span><span>' + data.analysis.elderly.functional_reach + '</span></div>';
+            resultsHtml += '<div class="joint-result-item"><span>Turn</span><span>' + data.analysis.elderly.turn_steps + '</span></div>';
+          }
+          
+          // Compensations
           if (data.analysis?.compensations?.length > 0) {
-            analysisHtml += '<div class="mb-1 mt-1"><strong>Compensations:</strong></div>';
-            analysisHtml += '<ul style="margin: 0; padding-left: 12px; font-size: 9px;">';
+            resultsHtml += '<div class="section-label" style="color: #2563eb;">Compensations Observed</div>';
             data.analysis.compensations.forEach(c => {
-              analysisHtml += '<li>' + c + '</li>';
+              resultsHtml += '<div class="joint-result-item" style="grid-column: span 2;"><span>' + c + '</span></div>';
             });
-            analysisHtml += '</ul>';
           }
-          analysisHtml += '</div>';
           
-          document.getElementById('aiAnalysis').innerHTML = analysisHtml;
+          resultsPanel.innerHTML = resultsHtml || '<div class="joint-result-item" style="grid-column: span 2; justify-content: center;">No data - tap an analysis button</div>';
           
-          if (data.analysis?.score !== undefined && currentMovementId) {
-            scoreMovement(data.analysis.score);
-          }
+          // Store for note generation
+          scores[type] = data.analysis?.score || 2;
+          
+          hideStatus();
+          showStatus('Analysis complete!', 'success');
+          
         } catch (err) {
-          document.getElementById('aiAnalysis').innerHTML = '<div class="text-center text-danger text-sm">Analysis failed</div>';
+          console.error('Analysis error:', err);
+          hideStatus();
+          showStatus('Analysis failed. Please try again.', 'error');
         }
       }
       
@@ -2227,8 +2560,6 @@ app.get('/doctor/joints', (c) => {
         sessionStorage.setItem('jointAnalysis', JSON.stringify(lastAnalysis));
         location.href = '/doctor/notes';
       }
-      
-      selectMovement(1);
     </script>
   `, 'Full Body Joint Scan - Thrive Ortho EHR'))
 })
