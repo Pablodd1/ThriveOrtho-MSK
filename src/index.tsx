@@ -2092,70 +2092,185 @@ app.get('/doctor/joints', (c) => {
       
       // ==========================================
       // CAMERA ENUMERATION & SELECTION
+      // Supports: Built-in, External USB, Virtual cameras
       // ==========================================
+      
+      let cameraPermissionGranted = false;
+      let debugMode = true; // Enable console logging
+      
+      function log(msg, data) {
+        if (debugMode) {
+          console.log('[MSK Camera]', msg, data || '');
+        }
+      }
+      
+      // Update status indicator
+      function updateStatus(msg, isError = false) {
+        const noteEl = document.getElementById('permNote');
+        if (noteEl) {
+          noteEl.textContent = msg;
+          noteEl.style.color = isError ? '#f87171' : '#888';
+        }
+        log(msg);
+      }
       
       async function enumerateCameras() {
         const select = document.getElementById('cameraSelect');
         const errorDiv = document.getElementById('errorMsg');
+        const startBtn = document.getElementById('startBtn');
+        
+        log('Starting camera enumeration...');
+        updateStatus('Detecting cameras...');
         
         try {
-          // First request permission to access cameras
-          await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-            .then(s => { s.getTracks().forEach(t => t.stop()); });
+          // Step 1: Check if mediaDevices API exists
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('MediaDevices API not available. Use HTTPS and modern browser.');
+          }
           
-          // Now enumerate devices
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          availableCameras = devices.filter(d => d.kind === 'videoinput');
+          // Step 2: Try to enumerate first (may work without permission in some browsers)
+          let devices = await navigator.mediaDevices.enumerateDevices();
+          let videoInputs = devices.filter(d => d.kind === 'videoinput');
+          log('Initial enumeration found:', videoInputs.length + ' cameras');
           
+          // Step 3: If no labels or no cameras, we need permission
+          const needsPermission = videoInputs.length === 0 || videoInputs.every(d => !d.label);
+          
+          if (needsPermission) {
+            log('Requesting camera permission...');
+            updateStatus('Requesting camera access...');
+            
+            // Request with flexible constraints - try facingMode first, then any camera
+            let tempStream = null;
+            
+            // Try back camera first (better for medical assessment)
+            try {
+              tempStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: { ideal: 'environment' } },
+                audio: false 
+              });
+              log('Got stream with environment-facing camera');
+            } catch (e1) {
+              log('environment camera failed, trying any camera', e1.message);
+              // Try any camera
+              try {
+                tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                log('Got stream with default camera');
+              } catch (e2) {
+                log('All camera access failed', e2);
+                throw e2;
+              }
+            }
+            
+            // Stop the temp stream
+            if (tempStream) {
+              tempStream.getTracks().forEach(t => {
+                log('Stopping temp track:', t.label);
+                t.stop();
+              });
+            }
+            
+            cameraPermissionGranted = true;
+            
+            // Re-enumerate with permission - now we get labels
+            devices = await navigator.mediaDevices.enumerateDevices();
+            videoInputs = devices.filter(d => d.kind === 'videoinput');
+            log('After permission, found:', videoInputs.length + ' cameras');
+          }
+          
+          availableCameras = videoInputs;
+          
+          // Step 4: Check if we found any cameras
           if (availableCameras.length === 0) {
+            log('No cameras found after enumeration');
             select.innerHTML = '<option value="">No cameras found</option>';
-            errorDiv.innerHTML = '<div class="error-msg"><div class="title">No Cameras Detected</div>Please connect a camera and reload the page.</div>';
-            document.getElementById('startBtn').disabled = true;
+            errorDiv.innerHTML = '<div class="error-msg"><div class="title">No Cameras Detected</div>Connect a camera (built-in, USB, or virtual) and reload the page.<br><br>If using external camera, ensure it\'s properly connected.</div>';
+            startBtn.disabled = true;
+            updateStatus('No cameras detected', true);
             return;
           }
           
-          // Populate dropdown
+          // Step 5: Populate dropdown with camera names
+          log('Populating camera list:', availableCameras.map(c => c.label));
+          
           select.innerHTML = availableCameras.map((cam, i) => {
-            const label = cam.label || 'Camera ' + (i + 1);
+            // Generate meaningful label
+            let label = cam.label || '';
+            if (!label) {
+              label = 'Camera ' + (i + 1);
+            }
+            // Shorten long labels
+            if (label.length > 40) {
+              label = label.substring(0, 37) + '...';
+            }
             return '<option value="' + cam.deviceId + '">' + label + '</option>';
           }).join('');
           
-          // Select first camera by default
-          selectedDeviceId = availableCameras[0].deviceId;
+          // Select first camera by default (or back camera if available)
+          const backCamIdx = availableCameras.findIndex(c => 
+            c.label && (c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'))
+          );
+          const defaultIdx = backCamIdx >= 0 ? backCamIdx : 0;
+          selectedDeviceId = availableCameras[defaultIdx].deviceId;
+          select.value = selectedDeviceId;
           
-          // Listen for camera selection change
+          // Listen for selection change
           select.addEventListener('change', (e) => {
             selectedDeviceId = e.target.value;
+            log('Camera selected:', selectedDeviceId);
           });
           
-          document.getElementById('startBtn').disabled = false;
+          // Enable start button
+          startBtn.disabled = false;
+          startBtn.textContent = 'Start Camera';
           errorDiv.innerHTML = '';
           
-        } catch (err) {
-          console.error('Camera enumeration error:', err);
+          const cameraCount = availableCameras.length;
+          updateStatus(cameraCount + ' camera' + (cameraCount > 1 ? 's' : '') + ' ready • Select and start to begin');
           
-          let errorHtml = '<div class="error-msg"><div class="title">Camera Access Error</div>';
+          log('Camera setup complete');
+          
+        } catch (err) {
+          log('Camera enumeration error:', err);
+          
+          let errorHtml = '<div class="error-msg"><div class="title">📷 Camera Access Required</div>';
           
           if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            errorHtml += 'Camera permission denied.<br><br><strong>To fix:</strong><br>';
-            errorHtml += '• Click the lock/camera icon in your address bar<br>';
-            errorHtml += '• Allow camera access<br>';
-            errorHtml += '• Reload this page';
-          } else if (err.name === 'NotFoundError') {
-            errorHtml += 'No camera found. Please connect a camera and reload.';
-          } else if (err.name === 'NotReadableError') {
-            errorHtml += 'Camera is in use by another application. Close other apps using the camera.';
+            errorHtml += 'Camera permission was denied.<br><br>';
+            errorHtml += '<strong>How to fix:</strong><br>';
+            errorHtml += '1. Click the 🔒 lock icon in your browser address bar<br>';
+            errorHtml += '2. Find "Camera" and change to "Allow"<br>';
+            errorHtml += '3. Reload this page<br><br>';
+            errorHtml += '<strong>On iPhone Safari:</strong> Settings → Safari → Camera → Allow<br>';
+            errorHtml += '<strong>On Android:</strong> Tap lock icon → Permissions → Camera → Allow';
+          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            errorHtml += 'No camera was found on this device.<br><br>';
+            errorHtml += '• Ensure your camera is connected and powered on<br>';
+            errorHtml += '• For external USB cameras, try unplugging and reconnecting<br>';
+            errorHtml += '• Check that other apps can access your camera';
+          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            errorHtml += 'Camera is in use by another application.<br><br>';
+            errorHtml += '• Close Zoom, Skype, Teams, or other video apps<br>';
+            errorHtml += '• Close other browser tabs using the camera<br>';
+            errorHtml += '• Try restarting your browser';
           } else if (err.name === 'OverconstrainedError') {
-            errorHtml += 'Camera constraints not supported.';
+            errorHtml += 'Camera does not support required settings.<br>Trying alternative configuration...';
+          } else if (err.name === 'SecurityError') {
+            errorHtml += 'Security error. This page must be loaded over HTTPS.<br>';
+            errorHtml += 'Current: ' + window.location.protocol;
           } else {
-            errorHtml += err.message || 'Unknown error accessing camera.';
+            errorHtml += (err.message || 'Unknown error') + '<br><br>';
+            errorHtml += 'Error type: ' + (err.name || 'Unknown') + '<br>';
+            errorHtml += 'Try refreshing the page or using a different browser.';
           }
           
           errorHtml += '</div>';
           errorDiv.innerHTML = errorHtml;
           
-          select.innerHTML = '<option value="">Camera access required</option>';
-          document.getElementById('startBtn').disabled = true;
+          select.innerHTML = '<option value="">⚠️ Camera access needed</option>';
+          startBtn.disabled = true;
+          startBtn.textContent = 'Camera Unavailable';
+          updateStatus('Camera access required - see instructions above', true);
         }
       }
       
@@ -2216,83 +2331,216 @@ app.get('/doctor/joints', (c) => {
       // ==========================================
       
       async function initPoseLandmarker() {
-        document.getElementById('loadingML').style.display = 'block';
+        const loadingEl = document.getElementById('loadingML');
+        loadingEl.style.display = 'block';
         document.getElementById('cameraStart').style.display = 'none';
         
         const modelUrl = MODEL_URLS[selectedModel];
-        console.log('Loading model:', selectedModel, modelUrl);
+        log('Loading MediaPipe model:', selectedModel);
+        log('Model URL:', modelUrl);
+        updateStatus('Loading AI model (' + selectedModel + ')...');
+        
+        // Update loading text
+        loadingEl.innerHTML = '<div class="spinner"></div><div class="text">Loading ' + selectedModel.toUpperCase() + ' AI model...<br><small>This may take 5-10 seconds</small></div>';
         
         try {
+          log('Initializing FilesetResolver...');
           const vision = await FilesetResolver.forVisionTasks(
             'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
           );
+          log('FilesetResolver ready');
           
-          poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          loadingEl.innerHTML = '<div class="spinner"></div><div class="text">Initializing pose tracker...<br><small>Downloading model weights</small></div>';
+          
+          // Configure pose landmarker with higher confidence for medical accuracy
+          const config = {
             baseOptions: {
               modelAssetPath: modelUrl,
-              delegate: 'GPU'
+              delegate: 'GPU' // Try GPU first
             },
             runningMode: 'VIDEO',
             numPoses: 1,
-            minPoseDetectionConfidence: 0.5,
-            minPosePresenceConfidence: 0.5,
-            minTrackingConfidence: 0.5
-          });
+            minPoseDetectionConfidence: 0.6, // Slightly higher for medical use
+            minPosePresenceConfidence: 0.6,
+            minTrackingConfidence: 0.6
+          };
           
-          console.log('MediaPipe Pose Landmarker loaded:', selectedModel);
-          document.getElementById('loadingML').style.display = 'none';
+          try {
+            poseLandmarker = await PoseLandmarker.createFromOptions(vision, config);
+            log('MediaPipe loaded with GPU delegate');
+          } catch (gpuErr) {
+            // Fallback to CPU if GPU fails
+            log('GPU delegate failed, trying CPU:', gpuErr.message);
+            loadingEl.innerHTML = '<div class="spinner"></div><div class="text">GPU unavailable, using CPU...<br><small>May be slower on this device</small></div>';
+            
+            config.baseOptions.delegate = 'CPU';
+            poseLandmarker = await PoseLandmarker.createFromOptions(vision, config);
+            log('MediaPipe loaded with CPU delegate');
+          }
+          
+          log('MediaPipe Pose Landmarker ready:', selectedModel);
+          loadingEl.style.display = 'none';
+          updateStatus('AI tracking active • 33-point body detection');
           return true;
+          
         } catch (err) {
-          console.error('Failed to load MediaPipe:', err);
-          document.getElementById('loadingML').innerHTML = '<div class="text" style="color:#f87171;">AI Model failed to load<br><small>Try "Lite" model</small></div>';
-          document.getElementById('cameraStart').style.display = 'block';
+          log('MediaPipe load failed:', err);
+          
+          // Try a lighter model as fallback
+          if (selectedModel !== 'lite') {
+            log('Attempting fallback to lite model...');
+            loadingEl.innerHTML = '<div class="spinner"></div><div class="text">Trying lighter model...<br><small>Heavy model failed</small></div>';
+            
+            try {
+              const vision = await FilesetResolver.forVisionTasks(
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
+              );
+              
+              poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                  modelAssetPath: MODEL_URLS.lite,
+                  delegate: 'CPU'
+                },
+                runningMode: 'VIDEO',
+                numPoses: 1,
+                minPoseDetectionConfidence: 0.5,
+                minPosePresenceConfidence: 0.5,
+                minTrackingConfidence: 0.5
+              });
+              
+              log('Fallback to lite model successful');
+              selectedModel = 'lite';
+              document.querySelectorAll('.model-opt').forEach(el => {
+                el.classList.toggle('active', el.dataset.model === 'lite');
+              });
+              
+              loadingEl.style.display = 'none';
+              updateStatus('AI tracking active (lite mode)');
+              return true;
+              
+            } catch (fallbackErr) {
+              log('Fallback also failed:', fallbackErr);
+            }
+          }
+          
+          loadingEl.innerHTML = '<div class="text" style="color:#f87171;">❌ AI Model failed to load<br><small>Error: ' + (err.message || 'Unknown') + '</small><br><br><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Reload Page</button></div>';
+          document.getElementById('cameraStart').style.display = 'none';
           return false;
         }
       }
       
       // Start camera with selected device
+      // Supports: Built-in, External USB, Virtual cameras
       async function startCamera() {
         const video = document.getElementById('videoElement');
         const errorDiv = document.getElementById('errorMsg');
         
-        // Build constraints with selected device
-        let constraints = {
+        log('Starting camera with device:', selectedDeviceId);
+        updateStatus('Connecting to camera...');
+        
+        // Build constraints based on selected device
+        const constraints = {
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 },
+            frameRate: { ideal: 30, min: 15 }
+          },
+          audio: false
         };
         
-        // Use specific device if selected
-        if (selectedDeviceId) {
+        // Use exact device ID if selected
+        if (selectedDeviceId && selectedDeviceId.length > 0) {
           constraints.video.deviceId = { exact: selectedDeviceId };
+          log('Using exact deviceId constraint');
         }
         
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-        } catch (e) {
-          console.warn('Preferred constraints failed, trying basic:', e);
-          // Fallback to basic video
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          attempts++;
+          log('Camera start attempt:', attempts);
+          
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          } catch (e2) {
-            errorDiv.innerHTML = '<div class="error-msg"><div class="title">Camera Error</div>' + (e2.message || 'Could not access camera') + '</div>';
-            throw e2;
+            // Try with current constraints
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            log('Camera stream obtained:', {
+              tracks: stream.getVideoTracks().map(t => ({
+                label: t.label,
+                enabled: t.enabled,
+                readyState: t.readyState
+              }))
+            });
+            break; // Success!
+            
+          } catch (e) {
+            log('Attempt ' + attempts + ' failed:', e.name, e.message);
+            
+            if (attempts === 1 && selectedDeviceId) {
+              // Try without exact deviceId (use ideal instead)
+              log('Retrying with ideal deviceId...');
+              constraints.video.deviceId = { ideal: selectedDeviceId };
+            } else if (attempts === 2) {
+              // Try with minimal constraints
+              log('Retrying with minimal constraints...');
+              delete constraints.video.deviceId;
+              delete constraints.video.width;
+              delete constraints.video.height;
+              delete constraints.video.frameRate;
+            } else {
+              // All attempts failed
+              let errorMsg = 'Could not access camera. ';
+              if (e.name === 'NotReadableError') {
+                errorMsg += 'Camera may be in use by another app.';
+              } else if (e.name === 'NotAllowedError') {
+                errorMsg += 'Permission denied.';
+              } else {
+                errorMsg += e.message || 'Unknown error.';
+              }
+              errorDiv.innerHTML = '<div class="error-msg"><div class="title">Camera Error</div>' + errorMsg + '</div>';
+              throw e;
+            }
           }
         }
         
+        // Set video source
         video.srcObject = stream;
         
+        // Wait for video to be ready
         return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Video load timeout - camera may not be responding'));
+          }, 10000); // 10 second timeout
+          
           video.onloadedmetadata = () => {
+            log('Video metadata loaded:', {
+              width: video.videoWidth,
+              height: video.videoHeight
+            });
+            
             video.play().then(() => {
+              clearTimeout(timeout);
+              
               const canvas = document.getElementById('canvasElement');
               canvas.width = video.videoWidth;
               canvas.height = video.videoHeight;
+              
+              log('Camera started successfully:', video.videoWidth + 'x' + video.videoHeight);
+              updateStatus('Camera active • AI tracking loading...');
               resolve();
-            }).catch(reject);
+              
+            }).catch(err => {
+              clearTimeout(timeout);
+              log('Video play failed:', err);
+              reject(err);
+            });
           };
-          video.onerror = reject;
+          
+          video.onerror = (e) => {
+            clearTimeout(timeout);
+            log('Video element error:', e);
+            reject(new Error('Video element error'));
+          };
         });
       }
       
@@ -2329,46 +2577,76 @@ app.get('/doctor/joints', (c) => {
       
       // Main prediction loop
       let lastVideoTime = -1;
+      let frameCount = 0;
+      let lastFpsTime = performance.now();
+      let currentFps = 0;
+      let noDetectionCount = 0;
+      
       function predictWebcam() {
-        if (!webcamRunning || !poseLandmarker) return;
+        if (!webcamRunning || !poseLandmarker) {
+          log('Prediction stopped:', !webcamRunning ? 'webcam off' : 'no landmarker');
+          return;
+        }
         
         const video = document.getElementById('videoElement');
         const canvas = document.getElementById('canvasElement');
         const ctx = canvas.getContext('2d');
         
-        const startTimeMs = performance.now();
-        
-        if (video.currentTime !== lastVideoTime) {
-          lastVideoTime = video.currentTime;
-          
-          const results = poseLandmarker.detectForVideo(video, startTimeMs);
-          
-          // Clear canvas
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          
-          if (results.landmarks && results.landmarks.length > 0) {
-            const landmarks = results.landmarks[0];
-            
-            // Draw skeleton with blue color
-            drawBlueSkeleton(ctx, landmarks, canvas.width, canvas.height);
-            
-            // Calculate angles
-            const angles = calculateAngles(landmarks);
-            lastAngles = angles;
-            
-            // Update angles display
-            updateAnglesDisplay(angles);
-            
-            // Check for rep completion
-            checkRepCompletion(angles);
-            
-            // Track max angles for current exercise
-            trackMaxAngles(angles);
-          }
+        // Ensure canvas matches video
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          log('Canvas resized:', canvas.width + 'x' + canvas.height);
         }
         
-        animationId = requestAnimationFrame(predictWebcam);
-      }
+        const startTimeMs = performance.now();
+        
+        // Calculate FPS
+        frameCount++;
+        if (startTimeMs - lastFpsTime >= 1000) {
+          currentFps = frameCount;
+          frameCount = 0;
+          lastFpsTime = startTimeMs;
+        }
+        
+        // Only process if video time changed (new frame)
+        if (video.currentTime !== lastVideoTime && video.readyState >= 2) {
+          lastVideoTime = video.currentTime;
+          
+          try {
+            const results = poseLandmarker.detectForVideo(video, startTimeMs);
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (results.landmarks && results.landmarks.length > 0) {
+              const landmarks = results.landmarks[0];
+              noDetectionCount = 0; // Reset no-detection counter
+              
+              // Calculate average visibility (tracking quality indicator)\n              const avgVisibility = landmarks.reduce((sum, l) => sum + (l.visibility || 0), 0) / landmarks.length;
+              
+              // Draw skeleton with blue color
+              drawBlueSkeleton(ctx, landmarks, canvas.width, canvas.height);
+              
+              // Calculate angles
+              const angles = calculateAngles(landmarks);
+              lastAngles = angles;
+              
+              // Update angles display with FPS and quality
+              updateAnglesDisplay(angles, currentFps, avgVisibility);
+              
+              // Check for rep completion
+              checkRepCompletion(angles);
+              
+              // Track max angles for current exercise
+              trackMaxAngles(angles);
+              
+            } else {
+              noDetectionCount++;
+              
+              // Show \"no person detected\" hint after 30 frames (~1 second)
+              if (noDetectionCount > 30) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';\n                ctx.fillRect(0, canvas.height/2 - 40, canvas.width, 80);\n                ctx.fillStyle = '#f87171';\n                ctx.font = '16px sans-serif';\n                ctx.textAlign = 'center';\n                ctx.fillText('⚠ No person detected', canvas.width/2, canvas.height/2 - 10);\n                ctx.fillStyle = '#888';\n                ctx.font = '12px sans-serif';\n                ctx.fillText('Stand in frame with full body visible', canvas.width/2, canvas.height/2 + 15);\n              }\n            }\n          } catch (e) {\n            log('Detection error:', e.message);\n          }\n        }\n        \n        animationId = requestAnimationFrame(predictWebcam);\n      }
       
       // Draw blue skeleton
       function drawBlueSkeleton(ctx, landmarks, w, h) {
@@ -2403,12 +2681,22 @@ app.get('/doctor/joints', (c) => {
         });
       }
       
-      // Update angles display
-      function updateAnglesDisplay(angles) {
+      // Update angles display with FPS and tracking quality
+      function updateAnglesDisplay(angles, fps = 0, quality = 0) {
         const exercise = exercises[currentTaskIdx];
         if (!exercise) return;
         
         let html = '';
+        
+        // Add FPS and quality indicator
+        const qualityPercent = Math.round(quality * 100);
+        const qualityColor = qualityPercent > 70 ? '#22c55e' : (qualityPercent > 40 ? '#f59e0b' : '#ef4444');
+        html += '<div class="angle-row" style="border-bottom:1px solid #333;margin-bottom:4px;padding-bottom:4px;">';
+        html += '<span style="font-size:9px;">FPS: ' + fps + '</span>';
+        html += '<span style="font-size:9px;color:' + qualityColor + '">Quality: ' + qualityPercent + '%</span>';
+        html += '</div>';
+        
+        // Joint angles
         exercise.joints.forEach(joint => {
           const val = angles[joint] || 0;
           const std = ROM_STANDARDS[joint];
@@ -2618,22 +2906,54 @@ app.get('/doctor/joints', (c) => {
       
       // Initialize on load
       document.addEventListener('DOMContentLoaded', async () => {
+        log('=== MSK Assessment v5.2 Initializing ===');
+        log('Protocol:', window.location.protocol);
+        log('User Agent:', navigator.userAgent);
+        
         renderTaskList();
         updateExerciseDisplay();
         
+        const startBtn = document.getElementById('startBtn');
+        const errorDiv = document.getElementById('errorMsg');
+        
+        // Check HTTPS (required for camera on most browsers)
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          log('WARNING: Not HTTPS');
+          // Still allow - some browsers work on http for testing
+        }
+        
         // Check for mediaDevices API
-        if (!navigator.mediaDevices?.getUserMedia) {
-          document.getElementById('startBtn').textContent = 'Camera Not Available';
-          document.getElementById('startBtn').disabled = true;
-          document.getElementById('errorMsg').innerHTML = '<div class="error-msg"><div class="title">Browser Not Supported</div>Use HTTPS and a modern browser (Chrome, Firefox, Safari, Edge)</div>';
+        if (!navigator.mediaDevices) {
+          log('ERROR: navigator.mediaDevices not available');
+          startBtn.textContent = 'Camera Not Available';
+          startBtn.disabled = true;
+          errorDiv.innerHTML = '<div class="error-msg"><div class="title">Browser Not Supported</div>navigator.mediaDevices API not available.<br><br>Possible causes:<br>• Not using HTTPS<br>• Old browser version<br>• Private/incognito mode restrictions<br><br>Try: Chrome, Firefox, Safari, or Edge on HTTPS</div>';
+          updateStatus('Browser does not support camera access', true);
           return;
         }
+        
+        if (!navigator.mediaDevices.getUserMedia) {
+          log('ERROR: getUserMedia not available');
+          startBtn.textContent = 'Camera Not Available';
+          startBtn.disabled = true;
+          errorDiv.innerHTML = '<div class="error-msg"><div class="title">Camera API Missing</div>getUserMedia not supported.<br><br>Use a modern browser (Chrome 53+, Firefox 36+, Safari 11+, Edge 12+)</div>';
+          updateStatus('getUserMedia not available', true);
+          return;
+        }
+        
+        log('MediaDevices API available');
+        updateStatus('Initializing camera detection...');
         
         // Enumerate available cameras
         await enumerateCameras();
         
         // Listen for device changes (camera plugged in/out)
-        navigator.mediaDevices.addEventListener('devicechange', enumerateCameras);
+        navigator.mediaDevices.addEventListener('devicechange', async () => {
+          log('Device change detected - re-enumerating cameras');
+          await enumerateCameras();
+        });
+        
+        log('=== Initialization complete ===');
       });
     </script>
   `, 'MSK Assessment - Thrive Ortho EHR'))
