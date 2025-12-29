@@ -1703,11 +1703,11 @@ app.get('/doctor', (c) => {
   `, 'Dashboard - Thrive Ortho EHR'))
 })
 
-// Full Body Joint Scan Page - Medical-Grade Real-Time Tracking with MediaPipe
+// Full Body Joint Scan Page - Advanced Real-Time Tracking with Camera Selection
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
-      /* Medical MSK Assessment - Real-Time Tracking */
+      /* Advanced MSK Assessment - Real-Time Tracking */
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: -apple-system, sans-serif; background: #000; color: #fff; overflow: hidden; }
       
@@ -1744,15 +1744,70 @@ app.get('/doctor/joints', (c) => {
       #videoElement {
         width: 100%; height: 100%;
         object-fit: cover;
-        transform: scaleX(-1);
       }
       #canvasElement {
         position: absolute;
         top: 0; left: 0;
         width: 100%; height: 100%;
         pointer-events: none;
-        transform: scaleX(-1);
       }
+      
+      /* Camera Selection */
+      .camera-select-wrap {
+        margin-bottom: 16px;
+        text-align: left;
+        width: 100%;
+        max-width: 300px;
+      }
+      .camera-select-wrap label {
+        display: block;
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 6px;
+      }
+      .camera-select {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        color: #fff;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .camera-select:focus { outline: none; border-color: #3b82f6; }
+      .camera-select option { background: #1a1a1a; }
+      
+      /* Model Quality Selector */
+      .model-select-wrap {
+        margin-top: 12px;
+        text-align: left;
+        width: 100%;
+        max-width: 300px;
+      }
+      .model-options {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .model-opt {
+        flex: 1;
+        padding: 8px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 6px;
+        text-align: center;
+        cursor: pointer;
+        font-size: 11px;
+        color: #888;
+      }
+      .model-opt.active {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+      }
+      .model-opt .name { font-weight: 600; }
+      .model-opt .desc { font-size: 9px; margin-top: 2px; opacity: 0.7; }
       
       /* REP COUNTER */
       .rep-box {
@@ -1811,14 +1866,29 @@ app.get('/doctor/joints', (c) => {
         position: absolute; top: 50%; left: 50%;
         transform: translate(-50%, -50%);
         text-align: center; z-index: 55;
+        width: 90%;
+        max-width: 320px;
       }
       .start-btn {
         background: #3b82f6; color: #fff; border: none;
         padding: 16px 32px; border-radius: 10px;
         font-size: 16px; font-weight: 600; cursor: pointer;
+        width: 100%;
       }
       .start-btn:disabled { background: #333; color: #555; }
-      .perm-note { font-size: 11px; color: #555; margin-top: 10px; max-width: 250px; }
+      .perm-note { font-size: 11px; color: #555; margin-top: 12px; }
+      .error-msg { 
+        background: rgba(220, 38, 38, 0.2);
+        border: 1px solid #dc2626;
+        color: #fca5a5;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 11px;
+        margin-top: 12px;
+        text-align: left;
+      }
+      .error-msg .title { font-weight: 600; margin-bottom: 4px; }
+      .no-cameras { color: #f59e0b; font-size: 12px; margin-top: 8px; }
       
       /* Bottom Controls */
       .bottom-bar {
@@ -1904,16 +1974,47 @@ app.get('/doctor/joints', (c) => {
           <div class="text">Loading AI Model...</div>
         </div>
         
-        <!-- Start Button -->
+        <!-- Start Button with Camera Selection -->
         <div class="camera-start" id="cameraStart">
-          <button class="start-btn" id="startBtn" onclick="startAssessment()">Start Camera</button>
-          <div class="perm-note" id="permNote">Real-time joint tracking with MediaPipe AI</div>
+          <!-- Camera Selection Dropdown -->
+          <div class="camera-select-wrap">
+            <label>Select Camera</label>
+            <select id="cameraSelect" class="camera-select">
+              <option value="">Loading cameras...</option>
+            </select>
+          </div>
+          
+          <!-- Model Quality Selection -->
+          <div class="model-select-wrap">
+            <label>Tracking Quality</label>
+            <div class="model-options">
+              <div class="model-opt active" data-model="heavy" onclick="selectModel('heavy')">
+                <div class="name">Heavy</div>
+                <div class="desc">Most Accurate</div>
+              </div>
+              <div class="model-opt" data-model="full" onclick="selectModel('full')">
+                <div class="name">Full</div>
+                <div class="desc">Balanced</div>
+              </div>
+              <div class="model-opt" data-model="lite" onclick="selectModel('lite')">
+                <div class="name">Lite</div>
+                <div class="desc">Fastest</div>
+              </div>
+            </div>
+          </div>
+          
+          <button class="start-btn" id="startBtn" onclick="startAssessment()" style="margin-top: 16px;">
+            Start Camera
+          </button>
+          
+          <div class="perm-note" id="permNote">Real-time 33-point joint tracking with MediaPipe AI</div>
+          <div id="errorMsg"></div>
         </div>
         
         <!-- Bottom Controls -->
         <div class="bottom-bar" id="bottomBar" style="display:none;">
           <div class="ctrl-row">
-            <button class="ctrl-btn" onclick="flipCamera()">Flip</button>
+            <button class="ctrl-btn" onclick="switchCamera()">Switch Cam</button>
             <button class="ctrl-btn primary" id="nextBtn" onclick="nextExercise()">Next Exercise →</button>
             <button class="ctrl-btn stop" onclick="stopAssessment()">Stop</button>
           </div>
@@ -1933,22 +2034,31 @@ app.get('/doctor/joints', (c) => {
       import { PoseLandmarker, FilesetResolver, DrawingUtils } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
       
       // ==========================================
-      // MEDICAL-GRADE MSK ASSESSMENT WITH MEDIAPIPE
-      // Real-time 33-point body tracking + angle calculation
+      // ADVANCED MSK ASSESSMENT WITH MEDIAPIPE
+      // Camera selection + Model quality + Real-time tracking
       // ==========================================
       
       let poseLandmarker = null;
       let webcamRunning = false;
       let stream = null;
-      let facingMode = 'user';
+      let selectedDeviceId = null;
+      let selectedModel = 'heavy'; // heavy, full, lite
       let animationId = null;
+      let availableCameras = [];
       
       // State
       let currentTaskIdx = 0;
       let currentReps = 0;
       let lastAngles = {};
-      let repState = 'up'; // For detecting rep completion
+      let repState = 'up';
       let assessmentData = [];
+      
+      // Model URLs - Heavy is most accurate for medical use
+      const MODEL_URLS = {
+        heavy: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task',
+        full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+        lite: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+      };
       
       // Medical-grade ROM thresholds (degrees)
       const ROM_STANDARDS = {
@@ -1959,7 +2069,7 @@ app.get('/doctor/joints', (c) => {
         elbow_flexion: { normal: 145, limited: 120, label: 'Elbow' }
       };
       
-      // Exercises with rep requirements and tracked joints
+      // Exercises with rep requirements
       const exercises = [
         { name: 'Deep Squat', hint: 'Squat down fully - tracking knee, hip, ankle', reps: 5, joints: ['knee_flexion', 'hip_flexion', 'ankle_dorsiflexion'], detectKey: 'knee_flexion', threshold: 90, done: 0, maxAngles: {} },
         { name: 'Shoulder Raise', hint: 'Raise arms overhead', reps: 5, joints: ['shoulder_flexion'], detectKey: 'shoulder_flexion', threshold: 150, done: 0, maxAngles: {} },
@@ -1980,7 +2090,89 @@ app.get('/doctor/joints', (c) => {
         LEFT_ANKLE: 27, RIGHT_ANKLE: 28
       };
       
-      // Calculate angle between 3 points (in degrees)
+      // ==========================================
+      // CAMERA ENUMERATION & SELECTION
+      // ==========================================
+      
+      async function enumerateCameras() {
+        const select = document.getElementById('cameraSelect');
+        const errorDiv = document.getElementById('errorMsg');
+        
+        try {
+          // First request permission to access cameras
+          await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(s => { s.getTracks().forEach(t => t.stop()); });
+          
+          // Now enumerate devices
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          availableCameras = devices.filter(d => d.kind === 'videoinput');
+          
+          if (availableCameras.length === 0) {
+            select.innerHTML = '<option value="">No cameras found</option>';
+            errorDiv.innerHTML = '<div class="error-msg"><div class="title">No Cameras Detected</div>Please connect a camera and reload the page.</div>';
+            document.getElementById('startBtn').disabled = true;
+            return;
+          }
+          
+          // Populate dropdown
+          select.innerHTML = availableCameras.map((cam, i) => {
+            const label = cam.label || 'Camera ' + (i + 1);
+            return '<option value="' + cam.deviceId + '">' + label + '</option>';
+          }).join('');
+          
+          // Select first camera by default
+          selectedDeviceId = availableCameras[0].deviceId;
+          
+          // Listen for camera selection change
+          select.addEventListener('change', (e) => {
+            selectedDeviceId = e.target.value;
+          });
+          
+          document.getElementById('startBtn').disabled = false;
+          errorDiv.innerHTML = '';
+          
+        } catch (err) {
+          console.error('Camera enumeration error:', err);
+          
+          let errorHtml = '<div class="error-msg"><div class="title">Camera Access Error</div>';
+          
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            errorHtml += 'Camera permission denied.<br><br><strong>To fix:</strong><br>';
+            errorHtml += '• Click the lock/camera icon in your address bar<br>';
+            errorHtml += '• Allow camera access<br>';
+            errorHtml += '• Reload this page';
+          } else if (err.name === 'NotFoundError') {
+            errorHtml += 'No camera found. Please connect a camera and reload.';
+          } else if (err.name === 'NotReadableError') {
+            errorHtml += 'Camera is in use by another application. Close other apps using the camera.';
+          } else if (err.name === 'OverconstrainedError') {
+            errorHtml += 'Camera constraints not supported.';
+          } else {
+            errorHtml += err.message || 'Unknown error accessing camera.';
+          }
+          
+          errorHtml += '</div>';
+          errorDiv.innerHTML = errorHtml;
+          
+          select.innerHTML = '<option value="">Camera access required</option>';
+          document.getElementById('startBtn').disabled = true;
+        }
+      }
+      
+      // Model selection
+      window.selectModel = function(model) {
+        selectedModel = model;
+        document.querySelectorAll('.model-opt').forEach(el => {
+          el.classList.toggle('active', el.dataset.model === model);
+        });
+        // Reset landmarker so it reloads with new model
+        poseLandmarker = null;
+      };
+      
+      // ==========================================
+      // ANGLE CALCULATIONS
+      // ==========================================
+      
       function calcAngle(a, b, c) {
         const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
         let angle = Math.abs(radians * 180 / Math.PI);
@@ -1988,7 +2180,6 @@ app.get('/doctor/joints', (c) => {
         return Math.round(angle);
       }
       
-      // Calculate all joint angles from landmarks
       function calculateAngles(landmarks) {
         if (!landmarks || landmarks.length < 33) return {};
         
@@ -2014,15 +2205,22 @@ app.get('/doctor/joints', (c) => {
         const elbowR = calcAngle(landmarks[LANDMARKS.RIGHT_SHOULDER], landmarks[LANDMARKS.RIGHT_ELBOW], landmarks[LANDMARKS.RIGHT_WRIST]);
         angles.elbow_flexion = Math.round((elbowL + elbowR) / 2);
         
-        // Ankle (simplified - using knee-ankle-foot estimation)
+        // Ankle (simplified)
         angles.ankle_dorsiflexion = Math.round(180 - angles.knee_flexion * 0.15);
         
         return angles;
       }
       
-      // Initialize MediaPipe Pose Landmarker
+      // ==========================================
+      // MEDIAPIPE INITIALIZATION
+      // ==========================================
+      
       async function initPoseLandmarker() {
         document.getElementById('loadingML').style.display = 'block';
+        document.getElementById('cameraStart').style.display = 'none';
+        
+        const modelUrl = MODEL_URLS[selectedModel];
+        console.log('Loading model:', selectedModel, modelUrl);
         
         try {
           const vision = await FilesetResolver.forVisionTasks(
@@ -2031,7 +2229,7 @@ app.get('/doctor/joints', (c) => {
           
           poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
             baseOptions: {
-              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+              modelAssetPath: modelUrl,
               delegate: 'GPU'
             },
             runningMode: 'VIDEO',
@@ -2041,41 +2239,60 @@ app.get('/doctor/joints', (c) => {
             minTrackingConfidence: 0.5
           });
           
-          console.log('MediaPipe Pose Landmarker loaded');
+          console.log('MediaPipe Pose Landmarker loaded:', selectedModel);
           document.getElementById('loadingML').style.display = 'none';
           return true;
         } catch (err) {
           console.error('Failed to load MediaPipe:', err);
-          document.getElementById('loadingML').innerHTML = '<div class="text" style="color:#f87171;">AI Model failed to load</div>';
+          document.getElementById('loadingML').innerHTML = '<div class="text" style="color:#f87171;">AI Model failed to load<br><small>Try "Lite" model</small></div>';
+          document.getElementById('cameraStart').style.display = 'block';
           return false;
         }
       }
       
-      // Start camera
+      // Start camera with selected device
       async function startCamera() {
         const video = document.getElementById('videoElement');
+        const errorDiv = document.getElementById('errorMsg');
         
-        const constraints = {
-          video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+        // Build constraints with selected device
+        let constraints = {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
         };
+        
+        // Use specific device if selected
+        if (selectedDeviceId) {
+          constraints.video.deviceId = { exact: selectedDeviceId };
+        }
         
         try {
           stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch (e) {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          console.warn('Preferred constraints failed, trying basic:', e);
+          // Fallback to basic video
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch (e2) {
+            errorDiv.innerHTML = '<div class="error-msg"><div class="title">Camera Error</div>' + (e2.message || 'Could not access camera') + '</div>';
+            throw e2;
+          }
         }
         
         video.srcObject = stream;
         
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           video.onloadedmetadata = () => {
-            video.play();
-            // Set canvas size to match video
-            const canvas = document.getElementById('canvasElement');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            resolve();
+            video.play().then(() => {
+              const canvas = document.getElementById('canvasElement');
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              resolve();
+            }).catch(reject);
           };
+          video.onerror = reject;
         });
       }
       
@@ -2092,9 +2309,16 @@ app.get('/doctor/joints', (c) => {
         }
       }
       
-      // Flip camera
-      window.flipCamera = async function() {
-        facingMode = facingMode === 'user' ? 'environment' : 'user';
+      // Switch to different camera
+      window.switchCamera = async function() {
+        if (availableCameras.length < 2) return;
+        
+        const currentIdx = availableCameras.findIndex(c => c.deviceId === selectedDeviceId);
+        const nextIdx = (currentIdx + 1) % availableCameras.length;
+        selectedDeviceId = availableCameras[nextIdx].deviceId;
+        
+        document.getElementById('cameraSelect').value = selectedDeviceId;
+        
         if (stream) {
           stopCamera();
           await startCamera();
@@ -2393,16 +2617,23 @@ app.get('/doctor/joints', (c) => {
       };
       
       // Initialize on load
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => {
         renderTaskList();
         updateExerciseDisplay();
         
-        // Check camera permission
+        // Check for mediaDevices API
         if (!navigator.mediaDevices?.getUserMedia) {
           document.getElementById('startBtn').textContent = 'Camera Not Available';
           document.getElementById('startBtn').disabled = true;
-          document.getElementById('permNote').textContent = 'Use HTTPS and modern browser';
+          document.getElementById('errorMsg').innerHTML = '<div class="error-msg"><div class="title">Browser Not Supported</div>Use HTTPS and a modern browser (Chrome, Firefox, Safari, Edge)</div>';
+          return;
         }
+        
+        // Enumerate available cameras
+        await enumerateCameras();
+        
+        // Listen for device changes (camera plugged in/out)
+        navigator.mediaDevices.addEventListener('devicechange', enumerateCameras);
       });
     </script>
   `, 'MSK Assessment - Thrive Ortho EHR'))
