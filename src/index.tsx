@@ -1709,10 +1709,14 @@ app.get('/doctor', (c) => {
 // Body (33 landmarks) + Face (468 landmarks) + Hands (21 landmarks each)
 // Total: 543 landmarks in real-time
 // =============================================================================
+
+// =============================================================================
+// GUIDED MSK ASSESSMENT v7.0
+// Voice Instructions + Real-Time Tracking + Auto Rep Count + Mic Recording
+// =============================================================================
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
-      /* 3D Body Scan - Medical Grade Assessment */
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { 
         font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
@@ -1722,64 +1726,88 @@ app.get('/doctor/joints', (c) => {
         touch-action: manipulation;
       }
       
-      .scan-page { 
+      .assess-page { 
         height: 100vh; 
         height: 100dvh;
         display: flex; 
         flex-direction: column; 
       }
       
-      /* Header */
-      .scan-header {
-        background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
-        padding: 10px 16px;
+      /* Header with Mic Status */
+      .assess-header {
+        background: #0a0a0a;
+        padding: 8px 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #1a1a1a;
-        z-index: 100;
-      }
-      .scan-header h1 { 
-        font-size: 14px; 
-        font-weight: 600; 
-        color: #3b82f6;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .scan-header h1::before {
-        content: '◉';
-        animation: pulse 1.5s infinite;
-      }
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
       }
       .back-link { 
         color: #666; 
         text-decoration: none; 
+        font-size: 12px;
+      }
+      .header-title {
         font-size: 13px;
-        padding: 6px 12px;
-        border-radius: 6px;
-        background: #111;
-        border: 1px solid #222;
+        font-weight: 600;
+        color: #3b82f6;
       }
-      .back-link:hover { border-color: #3b82f6; color: #3b82f6; }
-      
-      /* Stats Bar */
-      .stats-bar {
-        background: #050505;
-        padding: 8px 16px;
+      .mic-status {
         display: flex;
-        gap: 16px;
+        align-items: center;
+        gap: 6px;
         font-size: 10px;
-        color: #555;
-        border-bottom: 1px solid #111;
+        color: #666;
       }
-      .stat { display: flex; align-items: center; gap: 4px; }
-      .stat .val { color: #3b82f6; font-weight: 600; }
-      .stat.good .val { color: #22c55e; }
-      .stat.warn .val { color: #f59e0b; }
+      .mic-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #666;
+      }
+      .mic-dot.recording {
+        background: #ef4444;
+        animation: pulse-red 1s infinite;
+      }
+      @keyframes pulse-red {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+      }
+      
+      /* Exercise Info Bar */
+      .exercise-bar {
+        background: #111;
+        padding: 12px 16px;
+        border-bottom: 1px solid #1a1a1a;
+      }
+      .exercise-progress {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+      .progress-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #333;
+      }
+      .progress-dot.done { background: #22c55e; }
+      .progress-dot.active { background: #3b82f6; animation: pulse-blue 1s infinite; }
+      @keyframes pulse-blue {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+        50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+      }
+      .exercise-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 4px;
+      }
+      .exercise-instruction {
+        font-size: 13px;
+        color: #3b82f6;
+        line-height: 1.4;
+      }
       
       /* Camera Container */
       .camera-wrap {
@@ -1789,14 +1817,11 @@ app.get('/doctor/joints', (c) => {
         overflow: hidden;
         min-height: 0;
       }
-      
       #videoElement {
-        width: 100%; 
-        height: 100%;
+        width: 100%; height: 100%;
         object-fit: cover;
         transform: scaleX(-1);
       }
-      
       #canvasElement {
         position: absolute;
         top: 0; left: 0;
@@ -1805,91 +1830,149 @@ app.get('/doctor/joints', (c) => {
         transform: scaleX(-1);
       }
       
-      /* Tracking Info Overlay */
-      .tracking-info {
+      /* Rep Counter - Large */
+      .rep-counter {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(0,0,0,0.9);
+        border: 2px solid #3b82f6;
+        border-radius: 12px;
+        padding: 12px 20px;
+        text-align: center;
+        z-index: 50;
+      }
+      .rep-label {
+        font-size: 10px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .rep-value {
+        font-size: 48px;
+        font-weight: 700;
+        color: #3b82f6;
+        line-height: 1;
+      }
+      .rep-target {
+        font-size: 14px;
+        color: #555;
+      }
+      .rep-bar {
+        width: 100%;
+        height: 4px;
+        background: #222;
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+      }
+      .rep-fill {
+        height: 100%;
+        background: #3b82f6;
+        transition: width 0.3s ease;
+      }
+      
+      /* Joint Angles Panel */
+      .angles-panel {
         position: absolute;
         top: 12px;
         left: 12px;
-        background: rgba(0,0,0,0.85);
+        background: rgba(0,0,0,0.9);
         border: 1px solid #222;
         border-radius: 10px;
-        padding: 12px;
+        padding: 10px 12px;
         font-size: 11px;
-        min-width: 140px;
+        min-width: 130px;
         z-index: 50;
       }
-      .tracking-info .title {
+      .angles-title {
         color: #3b82f6;
+        font-size: 9px;
         font-weight: 600;
-        font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         display: flex;
         align-items: center;
         gap: 6px;
       }
-      .tracking-info .title::before {
+      .angles-title::before {
         content: '';
         width: 6px;
         height: 6px;
-        background: #3b82f6;
+        background: #22c55e;
         border-radius: 50%;
-        animation: blink 1s infinite;
+        animation: blink 0.5s infinite;
       }
       @keyframes blink {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.3; }
       }
-      .tracking-row {
+      .angle-row {
         display: flex;
         justify-content: space-between;
         padding: 3px 0;
-        color: #666;
-      }
-      .tracking-row .label { color: #888; }
-      .tracking-row .value { 
-        color: #fff; 
-        font-weight: 500;
-        font-family: monospace;
-      }
-      .tracking-row.highlight .value { color: #3b82f6; }
-      .tracking-row.good .value { color: #22c55e; }
-      .tracking-row.warn .value { color: #f59e0b; }
-      
-      /* Legend */
-      .legend {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: rgba(0,0,0,0.85);
-        border: 1px solid #222;
-        border-radius: 10px;
-        padding: 10px 12px;
-        font-size: 10px;
-        z-index: 50;
-      }
-      .legend-title {
-        color: #666;
-        font-size: 9px;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-      }
-      .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 2px 0;
         color: #888;
       }
-      .legend-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
+      .angle-row .val {
+        color: #fff;
+        font-weight: 600;
+        font-family: monospace;
       }
-      .legend-dot.body { background: #3b82f6; }
-      .legend-dot.face { background: #06b6d4; }
-      .legend-dot.hand { background: #8b5cf6; }
+      .angle-row.tracking .val { color: #3b82f6; }
+      .angle-row.good .val { color: #22c55e; }
+      .angle-row.warn .val { color: #f59e0b; }
+      
+      /* Red Flags Panel */
+      .flags-panel {
+        position: absolute;
+        bottom: 80px;
+        left: 12px;
+        right: 12px;
+        z-index: 55;
+      }
+      .flag-alert {
+        background: rgba(239, 68, 68, 0.95);
+        border: 1px solid #dc2626;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideIn 0.3s ease;
+      }
+      @keyframes slideIn {
+        from { transform: translateX(-20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      .flag-icon { font-size: 18px; }
+      .flag-text {
+        flex: 1;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .flag-time {
+        font-size: 10px;
+        color: rgba(255,255,255,0.7);
+      }
+      
+      /* Voice Status */
+      .voice-status {
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(59, 130, 246, 0.9);
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 55;
+        display: none;
+      }
+      .voice-status.speaking { display: block; }
       
       /* Start Screen */
       .start-screen {
@@ -1903,7 +1986,6 @@ app.get('/doctor/joints', (c) => {
         z-index: 60;
         padding: 20px;
       }
-      
       .start-icon {
         width: 80px;
         height: 80px;
@@ -1912,35 +1994,27 @@ app.get('/doctor/joints', (c) => {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 32px;
+        font-size: 36px;
         margin-bottom: 20px;
-        animation: glow 2s infinite;
       }
-      @keyframes glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-        50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
-      }
-      
       .start-title {
-        font-size: 20px;
-        font-weight: 600;
-        color: #fff;
+        font-size: 22px;
+        font-weight: 700;
         margin-bottom: 8px;
       }
       .start-subtitle {
-        font-size: 12px;
+        font-size: 13px;
         color: #666;
-        margin-bottom: 24px;
         text-align: center;
+        margin-bottom: 24px;
+        line-height: 1.5;
       }
-      
-      /* Camera Select */
-      .camera-select-group {
+      .camera-select-wrap {
         width: 100%;
-        max-width: 320px;
+        max-width: 300px;
         margin-bottom: 16px;
       }
-      .camera-select-group label {
+      .camera-select-wrap label {
         display: block;
         font-size: 11px;
         color: #666;
@@ -1955,12 +2029,9 @@ app.get('/doctor/joints', (c) => {
         border-radius: 8px;
         font-size: 13px;
       }
-      .camera-select:focus { outline: none; border-color: #3b82f6; }
-      
-      /* Start Button */
       .start-btn {
         width: 100%;
-        max-width: 320px;
+        max-width: 300px;
         background: #3b82f6;
         color: #fff;
         border: none;
@@ -1969,20 +2040,14 @@ app.get('/doctor/joints', (c) => {
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
-        margin-top: 8px;
-        transition: all 0.2s;
       }
-      .start-btn:hover:not(:disabled) { background: #2563eb; transform: scale(1.02); }
-      .start-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-      
+      .start-btn:disabled { background: #333; color: #666; }
       .start-note {
         font-size: 11px;
         color: #444;
         margin-top: 16px;
         text-align: center;
-        max-width: 300px;
       }
-      
       .error-box {
         background: rgba(239, 68, 68, 0.1);
         border: 1px solid #dc2626;
@@ -1991,20 +2056,14 @@ app.get('/doctor/joints', (c) => {
         border-radius: 8px;
         font-size: 11px;
         margin-top: 16px;
-        max-width: 320px;
-        text-align: left;
-      }
-      .error-box .error-title {
-        font-weight: 600;
-        margin-bottom: 6px;
-        color: #f87171;
+        max-width: 300px;
       }
       
       /* Loading */
       .loading-overlay {
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.9);
+        background: rgba(0,0,0,0.95);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -2021,24 +2080,17 @@ app.get('/doctor/joints', (c) => {
         margin-bottom: 16px;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .loading-text {
-        color: #888;
-        font-size: 13px;
-      }
-      .loading-sub {
-        color: #555;
-        font-size: 11px;
-        margin-top: 6px;
-      }
+      .loading-text { color: #888; font-size: 14px; }
+      .loading-sub { color: #555; font-size: 11px; margin-top: 6px; }
       
       /* Bottom Controls */
       .bottom-controls {
-        background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, transparent 100%);
-        padding: 20px 16px 16px;
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.95));
+        padding: 20px 16px 16px;
         z-index: 50;
       }
       .ctrl-row {
@@ -2050,165 +2102,151 @@ app.get('/doctor/joints', (c) => {
         background: rgba(30,30,30,0.9);
         border: 1px solid #333;
         color: #fff;
-        padding: 12px 20px;
+        padding: 12px 16px;
         border-radius: 10px;
         font-size: 13px;
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        transition: all 0.2s;
       }
-      .ctrl-btn:hover { border-color: #3b82f6; }
-      .ctrl-btn.primary { 
-        background: #3b82f6; 
+      .ctrl-btn.primary {
+        background: #3b82f6;
         border-color: #3b82f6;
         flex: 1;
-        justify-content: center;
         font-weight: 600;
       }
-      .ctrl-btn.stop { 
-        background: rgba(127, 29, 29, 0.8); 
-        border-color: #991b1b; 
+      .ctrl-btn.stop {
+        background: rgba(127, 29, 29, 0.9);
+        border-color: #991b1b;
+      }
+      .ctrl-btn.muted {
+        background: rgba(239, 68, 68, 0.3);
+        border-color: #dc2626;
       }
       
       /* Footer */
-      .scan-footer {
-        background: #050505;
+      .assess-footer {
+        background: #0a0a0a;
         padding: 12px 16px;
         display: flex;
         gap: 10px;
-        border-top: 1px solid #111;
+        border-top: 1px solid #1a1a1a;
       }
       .footer-btn {
         flex: 1;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 13px;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         border: none;
-        transition: all 0.2s;
       }
-      .footer-btn.secondary {
-        background: #1a1a1a;
-        color: #888;
-      }
-      .footer-btn.primary {
-        background: #3b82f6;
-        color: #fff;
-      }
-      .footer-btn:hover { transform: scale(1.02); }
+      .footer-btn.secondary { background: #1a1a1a; color: #666; }
+      .footer-btn.primary { background: #3b82f6; color: #fff; }
+      .footer-btn:disabled { opacity: 0.5; }
       
-      /* No detection warning */
-      .no-detection {
+      /* Completion Screen */
+      .complete-overlay {
         position: absolute;
-        bottom: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(239, 68, 68, 0.9);
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-        z-index: 55;
-        display: none;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 80;
+        padding: 20px;
       }
-      .no-detection.show { display: block; }
+      .complete-icon {
+        font-size: 60px;
+        margin-bottom: 16px;
+      }
+      .complete-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #22c55e;
+        margin-bottom: 8px;
+      }
+      .complete-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 24px;
+      }
+      .complete-stats {
+        background: #111;
+        border-radius: 12px;
+        padding: 16px 24px;
+        margin-bottom: 24px;
+        min-width: 250px;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #222;
+        font-size: 13px;
+      }
+      .stat-row:last-child { border-bottom: none; }
+      .stat-row .label { color: #888; }
+      .stat-row .value { color: #fff; font-weight: 600; }
+      .stat-row.flag .value { color: #ef4444; }
       
-      /* Responsive */
       @media (min-width: 768px) {
-        .scan-page { max-width: 500px; margin: 0 auto; }
+        .assess-page { max-width: 500px; margin: 0 auto; }
       }
     </style>
     
-    <div class="scan-page">
-      <div class="scan-header">
+    <div class="assess-page">
+      <!-- Header -->
+      <div class="assess-header">
         <a href="/doctor" class="back-link">← Back</a>
-        <h1>3D Body Scan</h1>
-        <span style="width: 60px;"></span>
-      </div>
-      
-      <div class="stats-bar" id="statsBar">
-        <div class="stat">
-          <span>FPS:</span>
-          <span class="val" id="fpsVal">--</span>
-        </div>
-        <div class="stat">
-          <span>Landmarks:</span>
-          <span class="val" id="landmarkCount">0/543</span>
-        </div>
-        <div class="stat">
-          <span>Body:</span>
-          <span class="val" id="bodyStatus">--</span>
-        </div>
-        <div class="stat">
-          <span>Face:</span>
-          <span class="val" id="faceStatus">--</span>
-        </div>
-        <div class="stat">
-          <span>Hands:</span>
-          <span class="val" id="handsStatus">--</span>
+        <span class="header-title">Guided MSK Assessment</span>
+        <div class="mic-status">
+          <div class="mic-dot" id="micDot"></div>
+          <span id="micText">MIC</span>
         </div>
       </div>
       
+      <!-- Exercise Bar -->
+      <div class="exercise-bar">
+        <div class="exercise-progress" id="progressDots"></div>
+        <div class="exercise-name" id="exerciseName">Ready to Start</div>
+        <div class="exercise-instruction" id="exerciseInstruction">Click Start to begin the guided assessment</div>
+      </div>
+      
+      <!-- Camera -->
       <div class="camera-wrap">
         <video id="videoElement" autoplay playsinline muted></video>
         <canvas id="canvasElement"></canvas>
         
-        <!-- Tracking Info -->
-        <div class="tracking-info" id="trackingInfo" style="display:none;">
-          <div class="title">LIVE TRACKING</div>
-          <div class="tracking-row highlight">
-            <span class="label">Pose</span>
-            <span class="value" id="poseAngle">--</span>
-          </div>
-          <div class="tracking-row">
-            <span class="label">Knee L</span>
-            <span class="value" id="kneeL">--°</span>
-          </div>
-          <div class="tracking-row">
-            <span class="label">Knee R</span>
-            <span class="value" id="kneeR">--°</span>
-          </div>
-          <div class="tracking-row">
-            <span class="label">Hip</span>
-            <span class="value" id="hipAngle">--°</span>
-          </div>
-          <div class="tracking-row">
-            <span class="label">Shoulder</span>
-            <span class="value" id="shoulderAngle">--°</span>
-          </div>
+        <!-- Rep Counter -->
+        <div class="rep-counter" id="repCounter" style="display:none;">
+          <div class="rep-label">REPS</div>
+          <div class="rep-value" id="repValue">0</div>
+          <div class="rep-target" id="repTarget">/ 5</div>
+          <div class="rep-bar"><div class="rep-fill" id="repFill"></div></div>
         </div>
         
-        <!-- Legend -->
-        <div class="legend" id="legend" style="display:none;">
-          <div class="legend-title">Tracking</div>
-          <div class="legend-item">
-            <div class="legend-dot body"></div>
-            <span>Body (33 pts)</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot face"></div>
-            <span>Face (468 pts)</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot hand"></div>
-            <span>Hands (42 pts)</span>
-          </div>
+        <!-- Angles Panel -->
+        <div class="angles-panel" id="anglesPanel" style="display:none;">
+          <div class="angles-title">LIVE TRACKING</div>
+          <div id="anglesList"></div>
         </div>
+        
+        <!-- Red Flags -->
+        <div class="flags-panel" id="flagsPanel"></div>
+        
+        <!-- Voice Status -->
+        <div class="voice-status" id="voiceStatus">🔊 Speaking...</div>
         
         <!-- Start Screen -->
         <div class="start-screen" id="startScreen">
-          <div class="start-icon">🦴</div>
-          <div class="start-title">3D Body Scanner</div>
+          <div class="start-icon">🏥</div>
+          <div class="start-title">Guided MSK Assessment</div>
           <div class="start-subtitle">
-            Medical-grade full body tracking<br>
-            Face • Body • Hands • Fingers
+            Voice-guided exercises with<br>
+            real-time joint tracking & auto-counting
           </div>
           
-          <div class="camera-select-group">
+          <div class="camera-select-wrap">
             <label>Select Camera</label>
             <select class="camera-select" id="cameraSelect">
               <option value="">Detecting cameras...</option>
@@ -2216,214 +2254,607 @@ app.get('/doctor/joints', (c) => {
           </div>
           
           <button class="start-btn" id="startBtn">
-            Start 3D Scan
+            🎬 Start Assessment
           </button>
           
           <div class="start-note" id="startNote">
-            543 landmarks • Real-time tracking<br>
-            Body joints • Facial features • Finger positions
+            📹 Camera + 🎤 Microphone required<br>
+            Voice instructions will guide you
           </div>
           
           <div class="error-box" id="errorBox" style="display:none;">
-            <div class="error-title">Camera Access Required</div>
-            <div id="errorMsg">Please allow camera access to use the body scanner.</div>
+            <div id="errorMsg"></div>
           </div>
         </div>
         
         <!-- Loading -->
         <div class="loading-overlay" id="loadingOverlay" style="display:none;">
           <div class="loading-spinner"></div>
-          <div class="loading-text" id="loadingText">Loading AI models...</div>
-          <div class="loading-sub" id="loadingSub">This may take 10-20 seconds</div>
+          <div class="loading-text" id="loadingText">Loading...</div>
+          <div class="loading-sub" id="loadingSub"></div>
         </div>
         
-        <!-- No Detection Warning -->
-        <div class="no-detection" id="noDetection">
-          ⚠ No body detected - Stand in frame
+        <!-- Completion -->
+        <div class="complete-overlay" id="completeOverlay" style="display:none;">
+          <div class="complete-icon">✅</div>
+          <div class="complete-title">Assessment Complete!</div>
+          <div class="complete-subtitle">All exercises finished</div>
+          <div class="complete-stats" id="completeStats"></div>
+          <button class="start-btn" id="generateReportBtn" style="max-width:280px;">
+            📋 Generate Medical Report
+          </button>
         </div>
         
         <!-- Bottom Controls -->
         <div class="bottom-controls" id="bottomControls" style="display:none;">
           <div class="ctrl-row">
-            <button class="ctrl-btn" id="switchCamBtn">🔄 Switch</button>
-            <button class="ctrl-btn primary" id="captureBtn">📸 Capture</button>
-            <button class="ctrl-btn stop" id="stopBtn">⏹ Stop</button>
+            <button class="ctrl-btn" id="muteBtn">🔊</button>
+            <button class="ctrl-btn" id="skipBtn">Skip →</button>
+            <button class="ctrl-btn primary" id="nextBtn">Next Exercise</button>
+            <button class="ctrl-btn stop" id="stopBtn">⏹</button>
           </div>
         </div>
       </div>
       
-      <div class="scan-footer">
+      <!-- Footer -->
+      <div class="assess-footer">
         <button class="footer-btn secondary" id="restartBtn">Restart</button>
-        <button class="footer-btn primary" id="generateBtn">Generate Report</button>
+        <button class="footer-btn primary" id="reportBtn" disabled>Generate Report</button>
       </div>
     </div>
     
-    <!-- MediaPipe Holistic CDN -->
+    <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
     
     <script>
       // ============================================================
-      // MEDICAL-GRADE 3D BODY SCANNER
-      // MediaPipe Holistic: 543 landmarks (33 pose + 468 face + 42 hands)
+      // GUIDED MSK ASSESSMENT v7.0
+      // Voice + Tracking + Auto-Count + Mic Recording + Red Flags
       // ============================================================
       
-      console.log('[3D Scanner] Initializing v6.0...');
+      console.log('[Assessment] v7.0 Initializing...');
       
-      // State
+      // ==================== STATE ====================
       let holistic = null;
-      let camera = null;
       let stream = null;
       let isRunning = false;
       let selectedDeviceId = null;
       let availableCameras = [];
-      let lastResults = null;
-      let frameCount = 0;
-      let lastFpsTime = performance.now();
-      let currentFps = 0;
-      let noDetectionFrames = 0;
       
-      // Captured data for report
-      let capturedData = {
-        poses: [],
-        maxAngles: {},
-        timestamps: []
-      };
+      // Exercise state
+      let currentExerciseIdx = 0;
+      let currentReps = 0;
+      let repState = 'neutral'; // neutral, down, up
+      let lastAngles = {};
       
-      // DOM elements
+      // Speech
+      let speechSynth = window.speechSynthesis;
+      let isMuted = false;
+      let isSpeaking = false;
+      
+      // Microphone & Speech Recognition
+      let recognition = null;
+      let micStream = null;
+      let transcript = '';
+      let redFlags = [];
+      
+      // Results
+      let assessmentResults = [];
+      let startTime = null;
+      
+      // ==================== EXERCISES ====================
+      const exercises = [
+        {
+          name: 'Deep Squat',
+          instruction: 'Stand with feet shoulder-width apart. Squat down as low as comfortable, keeping heels on the ground. Rise back up.',
+          voicePrompt: 'Exercise 1: Deep Squat. Stand with feet shoulder-width apart. Squat down as low as you can, then stand back up. Complete 5 repetitions.',
+          reps: 5,
+          trackJoint: 'knee',
+          downThreshold: 100, // knee angle when squatting
+          upThreshold: 160,   // knee angle when standing
+          joints: ['knee', 'hip', 'ankle']
+        },
+        {
+          name: 'Shoulder Raise',
+          instruction: 'Raise both arms overhead as high as possible, then lower them back down.',
+          voicePrompt: 'Exercise 2: Shoulder Raise. Raise both arms straight up overhead, then lower them. Complete 5 repetitions.',
+          reps: 5,
+          trackJoint: 'shoulder',
+          downThreshold: 50,
+          upThreshold: 150,
+          joints: ['shoulder', 'elbow']
+        },
+        {
+          name: 'Hip Hinge',
+          instruction: 'Bend forward at the hips, keeping your back straight. Return to standing.',
+          voicePrompt: 'Exercise 3: Hip Hinge. Bend forward at your hips, keeping your back straight, then stand up. Complete 5 repetitions.',
+          reps: 5,
+          trackJoint: 'hip',
+          downThreshold: 100,
+          upThreshold: 160,
+          joints: ['hip', 'knee']
+        },
+        {
+          name: 'Arm Curl',
+          instruction: 'Bend your elbows to curl your hands toward your shoulders, then extend.',
+          voicePrompt: 'Exercise 4: Arm Curl. Bend your elbows to bring your hands to your shoulders, then straighten. Complete 5 repetitions.',
+          reps: 5,
+          trackJoint: 'elbow',
+          downThreshold: 60,
+          upThreshold: 140,
+          joints: ['elbow', 'shoulder']
+        },
+        {
+          name: 'Side Step',
+          instruction: 'Step to the right, then back to center. Step to the left, then back to center.',
+          voicePrompt: 'Exercise 5: Side Step. Step to your right, return to center, then step to your left and return. Complete 4 repetitions each side.',
+          reps: 4,
+          trackJoint: 'hip',
+          downThreshold: 140,
+          upThreshold: 170,
+          joints: ['hip', 'knee', 'ankle']
+        },
+        {
+          name: 'Single Leg Balance',
+          instruction: 'Stand on one leg for 3 seconds, then switch. Keep your arms out for balance.',
+          voicePrompt: 'Exercise 6: Single Leg Balance. Lift one foot off the ground and balance for 3 seconds, then switch legs. Complete 3 repetitions each side.',
+          reps: 3,
+          trackJoint: 'hip',
+          downThreshold: 150,
+          upThreshold: 175,
+          joints: ['hip', 'knee']
+        }
+      ];
+      
+      // ==================== RED FLAG KEYWORDS ====================
+      const redFlagKeywords = [
+        { words: ['pain', 'painful', 'hurts', 'hurt', 'ache', 'aching', 'sore'], type: 'PAIN', icon: '⚠️' },
+        { words: ['fall', 'fell', 'falling', 'fallen', 'stumble', 'trip'], type: 'FALL RISK', icon: '🚨' },
+        { words: ['dizzy', 'dizziness', 'lightheaded', 'faint', 'vertigo'], type: 'DIZZINESS', icon: '💫' },
+        { words: ['numb', 'numbness', 'tingling', 'pins and needles'], type: 'NUMBNESS', icon: '🔴' },
+        { words: ['weak', 'weakness', 'cant move', 'cannot move'], type: 'WEAKNESS', icon: '⚡' },
+        { words: ['sharp', 'shooting', 'stabbing', 'burning'], type: 'ACUTE PAIN', icon: '🔥' },
+        { words: ['swollen', 'swelling', 'inflamed'], type: 'INFLAMMATION', icon: '🫀' }
+      ];
+      
+      // ==================== DOM ELEMENTS ====================
       const videoElement = document.getElementById('videoElement');
       const canvasElement = document.getElementById('canvasElement');
       const ctx = canvasElement.getContext('2d');
       
-      // ============================================================
-      // CAMERA ENUMERATION
-      // ============================================================
-      
+      // ==================== CAMERA ====================
       async function enumerateCameras() {
-        console.log('[3D Scanner] Enumerating cameras...');
         const select = document.getElementById('cameraSelect');
         const startBtn = document.getElementById('startBtn');
-        const errorBox = document.getElementById('errorBox');
         
         try {
-          // Request permission first
-          const tempStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: { ideal: 'environment' } },
-            audio: false 
-          });
+          const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           tempStream.getTracks().forEach(t => t.stop());
           
-          // Enumerate devices
           const devices = await navigator.mediaDevices.enumerateDevices();
           availableCameras = devices.filter(d => d.kind === 'videoinput');
           
-          console.log('[3D Scanner] Found cameras:', availableCameras.length);
+          if (availableCameras.length === 0) throw new Error('No cameras found');
           
-          if (availableCameras.length === 0) {
-            throw new Error('No cameras found');
-          }
+          select.innerHTML = availableCameras.map((cam, i) => 
+            '<option value="' + cam.deviceId + '">' + (cam.label || 'Camera ' + (i+1)) + '</option>'
+          ).join('');
           
-          // Populate dropdown
-          select.innerHTML = availableCameras.map((cam, i) => {
-            const label = cam.label || 'Camera ' + (i + 1);
-            return '<option value="' + cam.deviceId + '">' + label.substring(0, 40) + '</option>';
-          }).join('');
-          
-          // Select back camera by default if available
-          const backIdx = availableCameras.findIndex(c => 
-            c.label && (c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'))
-          );
-          selectedDeviceId = availableCameras[backIdx >= 0 ? backIdx : 0].deviceId;
-          select.value = selectedDeviceId;
-          
-          select.onchange = (e) => { selectedDeviceId = e.target.value; };
-          
+          selectedDeviceId = availableCameras[0].deviceId;
           startBtn.disabled = false;
-          startBtn.textContent = 'Start 3D Scan';
-          errorBox.style.display = 'none';
           
         } catch (err) {
-          console.error('[3D Scanner] Camera error:', err);
-          
-          let msg = 'Camera access error: ' + err.message;
-          if (err.name === 'NotAllowedError') {
-            msg = 'Camera permission denied. Click the lock icon in your address bar and allow camera access, then reload.';
-          } else if (err.name === 'NotFoundError') {
-            msg = 'No camera found. Please connect a camera and reload.';
-          }
-          
-          document.getElementById('errorMsg').innerHTML = msg;
-          errorBox.style.display = 'block';
+          console.error('[Assessment] Camera error:', err);
+          document.getElementById('errorMsg').textContent = err.message;
+          document.getElementById('errorBox').style.display = 'block';
           startBtn.disabled = true;
-          startBtn.textContent = 'Camera Required';
-          select.innerHTML = '<option>No camera access</option>';
         }
       }
       
-      // ============================================================
-      // HOLISTIC MODEL INITIALIZATION
-      // ============================================================
-      
+      // ==================== HOLISTIC INIT ====================
       async function initHolistic() {
-        console.log('[3D Scanner] Initializing MediaPipe Holistic...');
-        
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
         const loadingSub = document.getElementById('loadingSub');
         
         loadingOverlay.style.display = 'flex';
-        loadingText.textContent = 'Loading AI models...';
-        loadingSub.textContent = 'Pose + Face + Hands (may take 10-20s)';
+        loadingText.textContent = 'Loading AI tracking...';
+        loadingSub.textContent = 'Body + Face + Hands';
         
         try {
           holistic = new Holistic({
-            locateFile: (file) => {
-              return 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file;
-            }
+            locateFile: (file) => 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file
           });
           
-          // Configure holistic for medical-grade accuracy
           holistic.setOptions({
-            modelComplexity: 2, // Highest accuracy (0, 1, or 2)
+            modelComplexity: 1,
             smoothLandmarks: true,
-            enableSegmentation: false,
-            smoothSegmentation: false,
-            refineFaceLandmarks: true, // More accurate face mesh
+            refineFaceLandmarks: true,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
           });
           
-          // Set up results callback
           holistic.onResults(onResults);
           
-          loadingText.textContent = 'AI models ready!';
-          loadingSub.textContent = 'Starting camera...';
-          
-          console.log('[3D Scanner] Holistic initialized successfully');
+          loadingText.textContent = 'AI ready!';
           return true;
           
         } catch (err) {
-          console.error('[3D Scanner] Holistic init error:', err);
+          console.error('[Assessment] Holistic error:', err);
           loadingText.textContent = 'Failed to load AI';
           loadingSub.textContent = err.message;
           return false;
         }
       }
       
-      // ============================================================
-      // START CAMERA AND TRACKING
-      // ============================================================
-      
-      async function startScanning() {
-        console.log('[3D Scanner] Starting scan...');
+      // ==================== SPEECH SYNTHESIS (TTS) ====================
+      function speak(text, onEnd = null) {
+        if (isMuted || !speechSynth) return;
         
+        speechSynth.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        utterance.onstart = () => {
+          isSpeaking = true;
+          document.getElementById('voiceStatus').classList.add('speaking');
+        };
+        
+        utterance.onend = () => {
+          isSpeaking = false;
+          document.getElementById('voiceStatus').classList.remove('speaking');
+          if (onEnd) onEnd();
+        };
+        
+        speechSynth.speak(utterance);
+      }
+      
+      function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+        document.getElementById('muteBtn').classList.toggle('muted', isMuted);
+        if (isMuted) speechSynth.cancel();
+      }
+      
+      // ==================== SPEECH RECOGNITION (MIC) ====================
+      function initSpeechRecognition() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+          console.warn('[Assessment] Speech recognition not supported');
+          return;
+        }
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        recognition.onresult = (event) => {
+          let interimTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            if (result.isFinal) {
+              transcript += result[0].transcript + ' ';
+              checkForRedFlags(result[0].transcript);
+            } else {
+              interimTranscript += result[0].transcript;
+            }
+          }
+        };
+        
+        recognition.onerror = (err) => {
+          console.warn('[Assessment] Speech recognition error:', err.error);
+          // Restart on error
+          if (isRunning && err.error !== 'no-speech') {
+            setTimeout(() => {
+              try { recognition.start(); } catch(e) {}
+            }, 1000);
+          }
+        };
+        
+        recognition.onend = () => {
+          // Restart if still running
+          if (isRunning) {
+            try { recognition.start(); } catch(e) {}
+          }
+        };
+      }
+      
+      function startMicRecording() {
+        document.getElementById('micDot').classList.add('recording');
+        document.getElementById('micText').textContent = 'REC';
+        
+        if (recognition) {
+          try { recognition.start(); } catch(e) {}
+        }
+      }
+      
+      function stopMicRecording() {
+        document.getElementById('micDot').classList.remove('recording');
+        document.getElementById('micText').textContent = 'MIC';
+        
+        if (recognition) {
+          try { recognition.stop(); } catch(e) {}
+        }
+      }
+      
+      // ==================== RED FLAG DETECTION ====================
+      function checkForRedFlags(text) {
+        const lowerText = text.toLowerCase();
+        
+        for (const flagGroup of redFlagKeywords) {
+          for (const word of flagGroup.words) {
+            if (lowerText.includes(word)) {
+              addRedFlag(flagGroup.type, flagGroup.icon, text);
+              return;
+            }
+          }
+        }
+      }
+      
+      function addRedFlag(type, icon, context) {
+        const flag = {
+          type,
+          icon,
+          context,
+          time: new Date().toLocaleTimeString(),
+          exercise: exercises[currentExerciseIdx]?.name || 'General'
+        };
+        
+        redFlags.push(flag);
+        
+        // Show alert
+        const panel = document.getElementById('flagsPanel');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'flag-alert';
+        alertDiv.innerHTML = 
+          '<span class="flag-icon">' + icon + '</span>' +
+          '<span class="flag-text">' + type + ' detected</span>' +
+          '<span class="flag-time">' + flag.time + '</span>';
+        panel.appendChild(alertDiv);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => alertDiv.remove(), 5000);
+        
+        // Announce
+        if (!isMuted) {
+          speak('I noticed you mentioned ' + type.toLowerCase() + '. I will note this in your report.');
+        }
+      }
+      
+      // ==================== EXERCISE FLOW ====================
+      function startExercise(idx) {
+        if (idx >= exercises.length) {
+          completeAssessment();
+          return;
+        }
+        
+        currentExerciseIdx = idx;
+        currentReps = 0;
+        repState = 'neutral';
+        
+        const exercise = exercises[idx];
+        
+        // Update UI
+        document.getElementById('exerciseName').textContent = (idx + 1) + '. ' + exercise.name;
+        document.getElementById('exerciseInstruction').textContent = exercise.instruction;
+        document.getElementById('repValue').textContent = '0';
+        document.getElementById('repTarget').textContent = '/ ' + exercise.reps;
+        document.getElementById('repFill').style.width = '0%';
+        
+        updateProgressDots();
+        
+        // Speak instructions
+        speak(exercise.voicePrompt, () => {
+          speak('Begin now.');
+        });
+      }
+      
+      function updateProgressDots() {
+        const dotsHtml = exercises.map((_, i) => {
+          let cls = 'progress-dot';
+          if (i < currentExerciseIdx) cls += ' done';
+          else if (i === currentExerciseIdx) cls += ' active';
+          return '<div class="' + cls + '"></div>';
+        }).join('');
+        document.getElementById('progressDots').innerHTML = dotsHtml;
+      }
+      
+      function completeRep() {
+        currentReps++;
+        const exercise = exercises[currentExerciseIdx];
+        
+        document.getElementById('repValue').textContent = currentReps;
+        document.getElementById('repFill').style.width = (currentReps / exercise.reps * 100) + '%';
+        
+        // Speak rep count
+        if (currentReps < exercise.reps) {
+          speak(currentReps + '');
+        }
+        
+        // Check if exercise complete
+        if (currentReps >= exercise.reps) {
+          // Save result
+          assessmentResults.push({
+            exercise: exercise.name,
+            reps: currentReps,
+            target: exercise.reps,
+            maxAngles: { ...lastAngles },
+            score: currentReps >= exercise.reps ? 3 : (currentReps >= exercise.reps/2 ? 2 : 1)
+          });
+          
+          // Move to next
+          speak('Good job! Moving to next exercise.', () => {
+            setTimeout(() => startExercise(currentExerciseIdx + 1), 1000);
+          });
+        }
+      }
+      
+      function skipExercise() {
+        const exercise = exercises[currentExerciseIdx];
+        
+        assessmentResults.push({
+          exercise: exercise.name,
+          reps: currentReps,
+          target: exercise.reps,
+          maxAngles: { ...lastAngles },
+          score: currentReps > 0 ? 1 : 0,
+          skipped: true
+        });
+        
+        speak('Skipping to next exercise.');
+        startExercise(currentExerciseIdx + 1);
+      }
+      
+      function completeAssessment() {
+        isRunning = false;
+        stopMicRecording();
+        
+        // Show completion screen
+        document.getElementById('bottomControls').style.display = 'none';
+        document.getElementById('anglesPanel').style.display = 'none';
+        document.getElementById('repCounter').style.display = 'none';
+        
+        const overlay = document.getElementById('completeOverlay');
+        overlay.style.display = 'flex';
+        
+        // Build stats
+        const totalReps = assessmentResults.reduce((sum, r) => sum + r.reps, 0);
+        const totalTarget = assessmentResults.reduce((sum, r) => sum + r.target, 0);
+        const duration = Math.round((Date.now() - startTime) / 1000);
+        
+        let statsHtml = 
+          '<div class="stat-row"><span class="label">Exercises</span><span class="value">' + assessmentResults.length + '/' + exercises.length + '</span></div>' +
+          '<div class="stat-row"><span class="label">Total Reps</span><span class="value">' + totalReps + '/' + totalTarget + '</span></div>' +
+          '<div class="stat-row"><span class="label">Duration</span><span class="value">' + Math.floor(duration/60) + 'm ' + (duration%60) + 's</span></div>';
+        
+        if (redFlags.length > 0) {
+          statsHtml += '<div class="stat-row flag"><span class="label">Red Flags</span><span class="value">' + redFlags.length + ' detected</span></div>';
+        }
+        
+        document.getElementById('completeStats').innerHTML = statsHtml;
+        document.getElementById('reportBtn').disabled = false;
+        
+        speak('Assessment complete! You completed ' + assessmentResults.length + ' exercises. ' + 
+              (redFlags.length > 0 ? 'I noted ' + redFlags.length + ' concerns during the session.' : ''));
+      }
+      
+      // ==================== JOINT TRACKING ====================
+      function onResults(results) {
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        if (results.poseLandmarks) {
+          // Draw pose skeleton (blue)
+          drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#3b82f6', lineWidth: 3 });
+          drawLandmarks(ctx, results.poseLandmarks, { color: '#93c5fd', fillColor: '#3b82f6', radius: 4 });
+          
+          // Calculate and display angles
+          calculateAngles(results.poseLandmarks);
+          
+          // Check for rep completion
+          detectRep();
+        }
+        
+        // Draw face (cyan)
+        if (results.faceLandmarks) {
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, { color: 'rgba(6, 182, 212, 0.2)', lineWidth: 1 });
+          drawConnectors(ctx, results.faceLandmarks, FACEMESH_FACE_OVAL, { color: '#06b6d4', lineWidth: 2 });
+        }
+        
+        // Draw hands (purple)
+        if (results.leftHandLandmarks) {
+          drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
+          drawLandmarks(ctx, results.leftHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
+        }
+        if (results.rightHandLandmarks) {
+          drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
+          drawLandmarks(ctx, results.rightHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
+        }
+      }
+      
+      function calculateAngles(landmarks) {
+        if (!landmarks || landmarks.length < 33) return;
+        
+        const L_SHOULDER = 11, R_SHOULDER = 12;
+        const L_ELBOW = 13, R_ELBOW = 14;
+        const L_WRIST = 15, R_WRIST = 16;
+        const L_HIP = 23, R_HIP = 24;
+        const L_KNEE = 25, R_KNEE = 26;
+        const L_ANKLE = 27, R_ANKLE = 28;
+        
+        function angle(a, b, c) {
+          const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+          let deg = Math.abs(rad * 180 / Math.PI);
+          if (deg > 180) deg = 360 - deg;
+          return Math.round(deg);
+        }
+        
+        // Calculate all angles
+        const kneeL = angle(landmarks[L_HIP], landmarks[L_KNEE], landmarks[L_ANKLE]);
+        const kneeR = angle(landmarks[R_HIP], landmarks[R_KNEE], landmarks[R_ANKLE]);
+        const hipL = angle(landmarks[L_SHOULDER], landmarks[L_HIP], landmarks[L_KNEE]);
+        const hipR = angle(landmarks[R_SHOULDER], landmarks[R_HIP], landmarks[R_KNEE]);
+        const shoulderL = angle(landmarks[L_ELBOW], landmarks[L_SHOULDER], landmarks[L_HIP]);
+        const shoulderR = angle(landmarks[R_ELBOW], landmarks[R_SHOULDER], landmarks[R_HIP]);
+        const elbowL = angle(landmarks[L_SHOULDER], landmarks[L_ELBOW], landmarks[L_WRIST]);
+        const elbowR = angle(landmarks[R_SHOULDER], landmarks[R_ELBOW], landmarks[R_WRIST]);
+        
+        lastAngles = {
+          knee: Math.round((kneeL + kneeR) / 2),
+          hip: Math.round((hipL + hipR) / 2),
+          shoulder: Math.round((shoulderL + shoulderR) / 2),
+          elbow: Math.round((elbowL + elbowR) / 2)
+        };
+        
+        // Update angles panel
+        const exercise = exercises[currentExerciseIdx];
+        if (exercise) {
+          let html = '';
+          exercise.joints.forEach(joint => {
+            const val = lastAngles[joint] || 0;
+            const isTracking = joint === exercise.trackJoint;
+            html += '<div class="angle-row ' + (isTracking ? 'tracking' : '') + '">' +
+                    '<span>' + joint.charAt(0).toUpperCase() + joint.slice(1) + '</span>' +
+                    '<span class="val">' + val + '°</span></div>';
+          });
+          document.getElementById('anglesList').innerHTML = html;
+        }
+      }
+      
+      function detectRep() {
+        const exercise = exercises[currentExerciseIdx];
+        if (!exercise) return;
+        
+        const angle = lastAngles[exercise.trackJoint];
+        if (!angle) return;
+        
+        // State machine for rep detection
+        if (repState === 'neutral' || repState === 'up') {
+          if (angle <= exercise.downThreshold) {
+            repState = 'down';
+          }
+        } else if (repState === 'down') {
+          if (angle >= exercise.upThreshold) {
+            repState = 'up';
+            completeRep();
+          }
+        }
+      }
+      
+      // ==================== MAIN FLOW ====================
+      async function startAssessment() {
         const startBtn = document.getElementById('startBtn');
         startBtn.disabled = true;
         startBtn.textContent = 'Starting...';
         
         try {
-          // Initialize holistic if not done
+          // Init holistic
           if (!holistic) {
             const success = await initHolistic();
             if (!success) {
@@ -2433,317 +2864,63 @@ app.get('/doctor/joints', (c) => {
             }
           }
           
-          // Build constraints
+          // Get camera
           const constraints = {
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              frameRate: { ideal: 30 }
-            }
+            video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+            audio: false
           };
           
-          if (selectedDeviceId) {
-            constraints.video.deviceId = { exact: selectedDeviceId };
-          }
-          
-          // Get camera stream
-          try {
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-          } catch (e) {
-            console.warn('[3D Scanner] Preferred constraints failed, using fallback');
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          }
-          
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
           videoElement.srcObject = stream;
           
-          await new Promise((resolve) => {
-            videoElement.onloadedmetadata = () => {
-              videoElement.play().then(resolve);
-            };
+          await new Promise(resolve => {
+            videoElement.onloadedmetadata = () => videoElement.play().then(resolve);
           });
           
-          // Set canvas size
           canvasElement.width = videoElement.videoWidth;
           canvasElement.height = videoElement.videoHeight;
           
-          console.log('[3D Scanner] Video ready:', videoElement.videoWidth, 'x', videoElement.videoHeight);
-          
-          // Hide start screen, show controls
-          document.getElementById('startScreen').style.display = 'none';
+          // Hide loading, show UI
           document.getElementById('loadingOverlay').style.display = 'none';
-          document.getElementById('trackingInfo').style.display = 'block';
-          document.getElementById('legend').style.display = 'block';
+          document.getElementById('startScreen').style.display = 'none';
+          document.getElementById('repCounter').style.display = 'block';
+          document.getElementById('anglesPanel').style.display = 'block';
           document.getElementById('bottomControls').style.display = 'block';
           
           isRunning = true;
+          startTime = Date.now();
           
-          // Start processing loop
+          // Start mic recording
+          startMicRecording();
+          
+          // Start processing
           processFrame();
           
+          // Start first exercise with intro
+          speak('Welcome to the guided musculoskeletal assessment. I will guide you through ' + exercises.length + ' exercises. Please follow the voice instructions. Let me know if you experience any pain or discomfort.', () => {
+            startExercise(0);
+          });
+          
         } catch (err) {
-          console.error('[3D Scanner] Start error:', err);
+          console.error('[Assessment] Start error:', err);
           document.getElementById('errorMsg').textContent = err.message;
           document.getElementById('errorBox').style.display = 'block';
+          document.getElementById('loadingOverlay').style.display = 'none';
           startBtn.disabled = false;
           startBtn.textContent = 'Try Again';
-          document.getElementById('loadingOverlay').style.display = 'none';
         }
       }
       
-      // ============================================================
-      // FRAME PROCESSING LOOP
-      // ============================================================
-      
       async function processFrame() {
-        if (!isRunning || !holistic) return;
-        
-        // Calculate FPS
-        frameCount++;
-        const now = performance.now();
-        if (now - lastFpsTime >= 1000) {
-          currentFps = frameCount;
-          frameCount = 0;
-          lastFpsTime = now;
-          document.getElementById('fpsVal').textContent = currentFps;
-        }
-        
-        // Send frame to holistic
+        if (!isRunning) return;
         await holistic.send({ image: videoElement });
-        
-        // Continue loop
         requestAnimationFrame(processFrame);
       }
       
-      // ============================================================
-      // RESULTS CALLBACK - Draw Landmarks
-      // ============================================================
-      
-      function onResults(results) {
-        lastResults = results;
-        
-        // Clear canvas
-        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        
-        // Count detected landmarks
-        let totalLandmarks = 0;
-        let bodyDetected = false;
-        let faceDetected = false;
-        let handsDetected = false;
-        
-        const w = canvasElement.width;
-        const h = canvasElement.height;
-        
-        // ================== POSE (33 landmarks) ==================
-        if (results.poseLandmarks && results.poseLandmarks.length > 0) {
-          bodyDetected = true;
-          totalLandmarks += results.poseLandmarks.length;
-          
-          // Draw pose connections (blue)
-          drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
-            color: '#3b82f6',
-            lineWidth: 3
-          });
-          
-          // Draw pose landmarks (blue dots)
-          drawLandmarks(ctx, results.poseLandmarks, {
-            color: '#93c5fd',
-            fillColor: '#3b82f6',
-            lineWidth: 1,
-            radius: 4
-          });
-          
-          // Calculate joint angles
-          calculateAngles(results.poseLandmarks);
-        }
-        
-        // ================== FACE (468 landmarks) ==================
-        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-          faceDetected = true;
-          totalLandmarks += results.faceLandmarks.length;
-          
-          // Draw face mesh (cyan)
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, {
-            color: 'rgba(6, 182, 212, 0.3)',
-            lineWidth: 1
-          });
-          
-          // Draw face contours
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_FACE_OVAL, {
-            color: '#06b6d4',
-            lineWidth: 2
-          });
-          
-          // Draw eyes
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_LEFT_EYE, {
-            color: '#06b6d4',
-            lineWidth: 1
-          });
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_RIGHT_EYE, {
-            color: '#06b6d4',
-            lineWidth: 1
-          });
-          
-          // Draw lips
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_LIPS, {
-            color: '#06b6d4',
-            lineWidth: 1
-          });
-        }
-        
-        // ================== LEFT HAND (21 landmarks) ==================
-        if (results.leftHandLandmarks && results.leftHandLandmarks.length > 0) {
-          handsDetected = true;
-          totalLandmarks += results.leftHandLandmarks.length;
-          
-          // Draw hand connections (purple)
-          drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, {
-            color: '#8b5cf6',
-            lineWidth: 2
-          });
-          
-          // Draw hand landmarks
-          drawLandmarks(ctx, results.leftHandLandmarks, {
-            color: '#c4b5fd',
-            fillColor: '#8b5cf6',
-            lineWidth: 1,
-            radius: 3
-          });
-        }
-        
-        // ================== RIGHT HAND (21 landmarks) ==================
-        if (results.rightHandLandmarks && results.rightHandLandmarks.length > 0) {
-          handsDetected = true;
-          totalLandmarks += results.rightHandLandmarks.length;
-          
-          // Draw hand connections (purple)
-          drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, {
-            color: '#8b5cf6',
-            lineWidth: 2
-          });
-          
-          // Draw hand landmarks
-          drawLandmarks(ctx, results.rightHandLandmarks, {
-            color: '#c4b5fd',
-            fillColor: '#8b5cf6',
-            lineWidth: 1,
-            radius: 3
-          });
-        }
-        
-        // Update stats
-        document.getElementById('landmarkCount').textContent = totalLandmarks + '/543';
-        document.getElementById('bodyStatus').textContent = bodyDetected ? '✓' : '--';
-        document.getElementById('faceStatus').textContent = faceDetected ? '✓' : '--';
-        document.getElementById('handsStatus').textContent = handsDetected ? '✓' : '--';
-        
-        // Show/hide no detection warning
-        if (!bodyDetected) {
-          noDetectionFrames++;
-          if (noDetectionFrames > 30) {
-            document.getElementById('noDetection').classList.add('show');
-          }
-        } else {
-          noDetectionFrames = 0;
-          document.getElementById('noDetection').classList.remove('show');
-        }
-      }
-      
-      // ============================================================
-      // ANGLE CALCULATIONS
-      // ============================================================
-      
-      function calculateAngles(landmarks) {
-        if (!landmarks || landmarks.length < 33) return;
-        
-        // Pose landmark indices
-        const LEFT_SHOULDER = 11, RIGHT_SHOULDER = 12;
-        const LEFT_ELBOW = 13, RIGHT_ELBOW = 14;
-        const LEFT_WRIST = 15, RIGHT_WRIST = 16;
-        const LEFT_HIP = 23, RIGHT_HIP = 24;
-        const LEFT_KNEE = 25, RIGHT_KNEE = 26;
-        const LEFT_ANKLE = 27, RIGHT_ANKLE = 28;
-        
-        // Calculate angle between three points
-        function calcAngle(a, b, c) {
-          const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-          let angle = Math.abs(radians * 180 / Math.PI);
-          if (angle > 180) angle = 360 - angle;
-          return Math.round(angle);
-        }
-        
-        // Left knee angle
-        const kneeL = calcAngle(
-          landmarks[LEFT_HIP],
-          landmarks[LEFT_KNEE],
-          landmarks[LEFT_ANKLE]
-        );
-        document.getElementById('kneeL').textContent = kneeL + '°';
-        
-        // Right knee angle
-        const kneeR = calcAngle(
-          landmarks[RIGHT_HIP],
-          landmarks[RIGHT_KNEE],
-          landmarks[RIGHT_ANKLE]
-        );
-        document.getElementById('kneeR').textContent = kneeR + '°';
-        
-        // Hip angle (average)
-        const hipL = calcAngle(
-          landmarks[LEFT_SHOULDER],
-          landmarks[LEFT_HIP],
-          landmarks[LEFT_KNEE]
-        );
-        const hipR = calcAngle(
-          landmarks[RIGHT_SHOULDER],
-          landmarks[RIGHT_HIP],
-          landmarks[RIGHT_KNEE]
-        );
-        const hipAvg = Math.round((hipL + hipR) / 2);
-        document.getElementById('hipAngle').textContent = hipAvg + '°';
-        
-        // Shoulder angle
-        const shoulderL = calcAngle(
-          landmarks[LEFT_ELBOW],
-          landmarks[LEFT_SHOULDER],
-          landmarks[LEFT_HIP]
-        );
-        const shoulderR = calcAngle(
-          landmarks[RIGHT_ELBOW],
-          landmarks[RIGHT_SHOULDER],
-          landmarks[RIGHT_HIP]
-        );
-        const shoulderAvg = Math.round((shoulderL + shoulderR) / 2);
-        document.getElementById('shoulderAngle').textContent = shoulderAvg + '°';
-        
-        // Determine pose state
-        let poseState = 'Standing';
-        if (kneeL < 130 && kneeR < 130) poseState = 'Squatting';
-        else if (hipAvg < 120) poseState = 'Bending';
-        else if (shoulderAvg > 140) poseState = 'Arms Raised';
-        document.getElementById('poseAngle').textContent = poseState;
-        
-        // Track max angles
-        if (!capturedData.maxAngles.kneeL || kneeL > capturedData.maxAngles.kneeL) {
-          capturedData.maxAngles.kneeL = kneeL;
-        }
-        if (!capturedData.maxAngles.kneeR || kneeR > capturedData.maxAngles.kneeR) {
-          capturedData.maxAngles.kneeR = kneeR;
-        }
-        if (!capturedData.maxAngles.hip || hipAvg > capturedData.maxAngles.hip) {
-          capturedData.maxAngles.hip = hipAvg;
-        }
-        if (!capturedData.maxAngles.shoulder || shoulderAvg > capturedData.maxAngles.shoulder) {
-          capturedData.maxAngles.shoulder = shoulderAvg;
-        }
-      }
-      
-      // ============================================================
-      // CONTROL FUNCTIONS
-      // ============================================================
-      
-      function stopScanning() {
-        console.log('[3D Scanner] Stopping...');
+      function stopAssessment() {
         isRunning = false;
+        stopMicRecording();
+        speechSynth.cancel();
         
         if (stream) {
           stream.getTracks().forEach(t => t.stop());
@@ -2753,134 +2930,93 @@ app.get('/doctor/joints', (c) => {
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         
         document.getElementById('startScreen').style.display = 'flex';
-        document.getElementById('trackingInfo').style.display = 'none';
-        document.getElementById('legend').style.display = 'none';
+        document.getElementById('repCounter').style.display = 'none';
+        document.getElementById('anglesPanel').style.display = 'none';
         document.getElementById('bottomControls').style.display = 'none';
-        document.getElementById('noDetection').classList.remove('show');
+        document.getElementById('completeOverlay').style.display = 'none';
         
-        const startBtn = document.getElementById('startBtn');
-        startBtn.disabled = false;
-        startBtn.textContent = 'Resume Scan';
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('startBtn').textContent = 'Resume Assessment';
       }
       
-      function switchCamera() {
-        if (availableCameras.length < 2) return;
+      function restartAssessment() {
+        stopAssessment();
         
-        const currentIdx = availableCameras.findIndex(c => c.deviceId === selectedDeviceId);
-        const nextIdx = (currentIdx + 1) % availableCameras.length;
-        selectedDeviceId = availableCameras[nextIdx].deviceId;
-        document.getElementById('cameraSelect').value = selectedDeviceId;
+        currentExerciseIdx = 0;
+        currentReps = 0;
+        repState = 'neutral';
+        assessmentResults = [];
+        redFlags = [];
+        transcript = '';
         
-        console.log('[3D Scanner] Switching to camera:', nextIdx + 1);
+        document.getElementById('exerciseName').textContent = 'Ready to Start';
+        document.getElementById('exerciseInstruction').textContent = 'Click Start to begin the guided assessment';
+        document.getElementById('flagsPanel').innerHTML = '';
+        document.getElementById('reportBtn').disabled = true;
         
-        if (isRunning) {
-          stopScanning();
-          setTimeout(startScanning, 500);
-        }
-      }
-      
-      function captureFrame() {
-        if (!lastResults) return;
-        
-        console.log('[3D Scanner] Capturing frame...');
-        
-        // Save current state
-        capturedData.poses.push({
-          timestamp: Date.now(),
-          hasBody: !!lastResults.poseLandmarks,
-          hasFace: !!lastResults.faceLandmarks,
-          hasLeftHand: !!lastResults.leftHandLandmarks,
-          hasRightHand: !!lastResults.rightHandLandmarks,
-          angles: { ...capturedData.maxAngles }
-        });
-        
-        // Flash effect
-        canvasElement.style.opacity = '0.5';
-        setTimeout(() => { canvasElement.style.opacity = '1'; }, 100);
-        
-        alert('Frame captured! ' + capturedData.poses.length + ' frames saved.');
-      }
-      
-      function restartScan() {
-        console.log('[3D Scanner] Restarting...');
-        capturedData = { poses: [], maxAngles: {}, timestamps: [] };
-        
-        if (isRunning) {
-          stopScanning();
-        }
-        
-        // Reset UI
-        document.getElementById('kneeL').textContent = '--°';
-        document.getElementById('kneeR').textContent = '--°';
-        document.getElementById('hipAngle').textContent = '--°';
-        document.getElementById('shoulderAngle').textContent = '--°';
-        document.getElementById('poseAngle').textContent = '--';
-        document.getElementById('landmarkCount').textContent = '0/543';
+        updateProgressDots();
       }
       
       function generateReport() {
-        console.log('[3D Scanner] Generating report...');
-        
         const reportData = {
-          scanDate: new Date().toISOString(),
-          totalCaptures: capturedData.poses.length,
-          maxAngles: capturedData.maxAngles,
-          assessment: {
-            kneeROM: capturedData.maxAngles.kneeL ? 
-              (capturedData.maxAngles.kneeL >= 120 ? 'Normal' : 'Limited') : 'Not measured',
-            hipROM: capturedData.maxAngles.hip ? 
-              (capturedData.maxAngles.hip >= 100 ? 'Normal' : 'Limited') : 'Not measured',
-            shoulderROM: capturedData.maxAngles.shoulder ? 
-              (capturedData.maxAngles.shoulder >= 150 ? 'Normal' : 'Limited') : 'Not measured'
+          date: new Date().toISOString(),
+          duration: Math.round((Date.now() - startTime) / 1000),
+          exercises: assessmentResults,
+          redFlags: redFlags,
+          transcript: transcript,
+          summary: {
+            totalExercises: exercises.length,
+            completedExercises: assessmentResults.filter(r => r.reps >= r.target).length,
+            totalReps: assessmentResults.reduce((s, r) => s + r.reps, 0),
+            flagCount: redFlags.length
           }
         };
         
-        // Store for notes page
-        sessionStorage.setItem('bodyScanner', JSON.stringify(reportData));
-        sessionStorage.setItem('jointAnalysis', JSON.stringify([{
-          name: '3D Body Scan',
-          maxAngles: capturedData.maxAngles,
-          captures: capturedData.poses.length
-        }]));
+        sessionStorage.setItem('mskAssessment', JSON.stringify(reportData));
+        sessionStorage.setItem('jointAnalysis', JSON.stringify(assessmentResults));
+        sessionStorage.setItem('redFlags', JSON.stringify(redFlags));
         
-        // Navigate to notes
         window.location.href = '/doctor/notes';
       }
       
-      // ============================================================
-      // INITIALIZATION
-      // ============================================================
-      
+      // ==================== INIT ====================
       document.addEventListener('DOMContentLoaded', async () => {
-        console.log('[3D Scanner] DOM ready, setting up...');
+        console.log('[Assessment] DOM ready');
         
-        // Attach event listeners
-        document.getElementById('startBtn').addEventListener('click', startScanning);
-        document.getElementById('switchCamBtn').addEventListener('click', switchCamera);
-        document.getElementById('stopBtn').addEventListener('click', stopScanning);
-        document.getElementById('captureBtn').addEventListener('click', captureFrame);
-        document.getElementById('restartBtn').addEventListener('click', restartScan);
-        document.getElementById('generateBtn').addEventListener('click', generateReport);
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startAssessment);
+        document.getElementById('muteBtn').addEventListener('click', toggleMute);
+        document.getElementById('skipBtn').addEventListener('click', skipExercise);
+        document.getElementById('nextBtn').addEventListener('click', () => {
+          assessmentResults.push({
+            exercise: exercises[currentExerciseIdx].name,
+            reps: currentReps,
+            target: exercises[currentExerciseIdx].reps,
+            maxAngles: { ...lastAngles },
+            score: currentReps >= exercises[currentExerciseIdx].reps ? 3 : 1
+          });
+          startExercise(currentExerciseIdx + 1);
+        });
+        document.getElementById('stopBtn').addEventListener('click', stopAssessment);
+        document.getElementById('restartBtn').addEventListener('click', restartAssessment);
+        document.getElementById('reportBtn').addEventListener('click', generateReport);
+        document.getElementById('generateReportBtn').addEventListener('click', generateReport);
         
-        // Check for mediaDevices
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          document.getElementById('errorMsg').textContent = 
-            'Camera API not available. Use HTTPS and a modern browser.';
-          document.getElementById('errorBox').style.display = 'block';
-          document.getElementById('startBtn').disabled = true;
-          return;
-        }
+        // Init speech recognition
+        initSpeechRecognition();
         
         // Enumerate cameras
-        await enumerateCameras();
+        if (navigator.mediaDevices) {
+          await enumerateCameras();
+        } else {
+          document.getElementById('errorMsg').textContent = 'Camera API not available';
+          document.getElementById('errorBox').style.display = 'block';
+        }
         
-        // Listen for device changes
-        navigator.mediaDevices.addEventListener('devicechange', enumerateCameras);
-        
-        console.log('[3D Scanner] Setup complete');
+        updateProgressDots();
       });
     </script>
-  `, '3D Body Scanner - Thrive Ortho EHR'))
+  `, 'Guided MSK Assessment - Thrive Ortho EHR'))
 })
 
 
