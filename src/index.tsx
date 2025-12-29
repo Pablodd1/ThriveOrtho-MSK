@@ -1987,23 +1987,23 @@ app.get('/doctor/joints', (c) => {
           <!-- Model Quality Selection -->
           <div class="model-select-wrap">
             <label>Tracking Quality</label>
-            <div class="model-options">
-              <div class="model-opt active" data-model="heavy" onclick="selectModel('heavy')">
+            <div class="model-options" id="modelOptions">
+              <div class="model-opt active" data-model="heavy">
                 <div class="name">Heavy</div>
                 <div class="desc">Most Accurate</div>
               </div>
-              <div class="model-opt" data-model="full" onclick="selectModel('full')">
+              <div class="model-opt" data-model="full">
                 <div class="name">Full</div>
                 <div class="desc">Balanced</div>
               </div>
-              <div class="model-opt" data-model="lite" onclick="selectModel('lite')">
+              <div class="model-opt" data-model="lite">
                 <div class="name">Lite</div>
                 <div class="desc">Fastest</div>
               </div>
             </div>
           </div>
           
-          <button class="start-btn" id="startBtn" onclick="startAssessment()" style="margin-top: 16px;">
+          <button class="start-btn" id="startBtn" style="margin-top: 16px;">
             Start Camera
           </button>
           
@@ -2014,9 +2014,9 @@ app.get('/doctor/joints', (c) => {
         <!-- Bottom Controls -->
         <div class="bottom-bar" id="bottomBar" style="display:none;">
           <div class="ctrl-row">
-            <button class="ctrl-btn" onclick="switchCamera()">Switch Cam</button>
-            <button class="ctrl-btn primary" id="nextBtn" onclick="nextExercise()">Next Exercise →</button>
-            <button class="ctrl-btn stop" onclick="stopAssessment()">Stop</button>
+            <button class="ctrl-btn" id="switchCamBtn">Switch Cam</button>
+            <button class="ctrl-btn primary" id="nextBtn">Next Exercise →</button>
+            <button class="ctrl-btn stop" id="stopBtn">Stop</button>
           </div>
         </div>
       </div>
@@ -2024,8 +2024,8 @@ app.get('/doctor/joints', (c) => {
       <div class="task-panel" id="taskPanel"></div>
       
       <div class="action-footer">
-        <button class="btn secondary" onclick="restartAll()">Restart</button>
-        <button class="btn primary" onclick="generateNote()">Generate Note</button>
+        <button class="btn secondary" id="restartBtn">Restart</button>
+        <button class="btn primary" id="generateNoteBtn">Generate Note</button>
       </div>
     </div>
     
@@ -2275,14 +2275,15 @@ app.get('/doctor/joints', (c) => {
       }
       
       // Model selection
-      window.selectModel = function(model) {
+      function selectModel(model) {
         selectedModel = model;
         document.querySelectorAll('.model-opt').forEach(el => {
           el.classList.toggle('active', el.dataset.model === model);
         });
         // Reset landmarker so it reloads with new model
         poseLandmarker = null;
-      };
+        log('Model selected:', model);
+      }
       
       // ==========================================
       // ANGLE CALCULATIONS
@@ -2790,7 +2791,7 @@ app.get('/doctor/joints', (c) => {
       }
       
       // Next exercise
-      window.nextExercise = function() {
+      function nextExercise() {
         const exercise = exercises[currentTaskIdx];
         if (exercise) {
           exercise.done = Math.max(exercise.done, currentReps);
@@ -2808,24 +2809,29 @@ app.get('/doctor/joints', (c) => {
         updateExerciseDisplay();
         updateRepDisplay();
         renderTaskList();
-      };
+      }
       
       // Start assessment
-      window.startAssessment = async function() {
+      async function startAssessment() {
         const btn = document.getElementById('startBtn');
         btn.textContent = 'Starting...';
         btn.disabled = true;
         
+        log('Starting assessment...');
+        
         try {
           // Init MediaPipe if not done
           if (!poseLandmarker) {
+            log('Loading MediaPipe model...');
             const loaded = await initPoseLandmarker();
             if (!loaded) {
-              btn.textContent = 'Model Failed';
+              btn.textContent = 'Model Failed - Retry';
+              btn.disabled = false;
               return;
             }
           }
           
+          log('Starting camera...');
           await startCamera();
           
           document.getElementById('cameraStart').style.display = 'none';
@@ -2840,18 +2846,21 @@ app.get('/doctor/joints', (c) => {
           updateRepDisplay();
           renderTaskList();
           
+          log('Starting prediction loop...');
           predictWebcam();
           
         } catch (err) {
+          log('Start error:', err);
           console.error('Start error:', err);
           btn.textContent = 'Try Again';
           btn.disabled = false;
-          document.getElementById('permNote').textContent = 'Camera access required';
+          document.getElementById('permNote').textContent = 'Error: ' + (err.message || 'Camera access required');
         }
-      };
+      }
       
       // Stop assessment
-      window.stopAssessment = function() {
+      function stopAssessment() {
+        log('Stopping assessment...');
         stopCamera();
         
         document.getElementById('cameraStart').style.display = 'block';
@@ -2864,10 +2873,11 @@ app.get('/doctor/joints', (c) => {
         
         document.getElementById('startBtn').textContent = 'Resume';
         document.getElementById('startBtn').disabled = false;
-      };
+      }
       
       // Restart all
-      window.restartAll = function() {
+      function restartAll() {
+        log('Restarting assessment...');
         exercises.forEach(ex => { ex.done = 0; ex.maxAngles = {}; });
         currentTaskIdx = 0;
         currentReps = 0;
@@ -2879,10 +2889,11 @@ app.get('/doctor/joints', (c) => {
         
         document.getElementById('nextBtn').textContent = 'Next Exercise →';
         document.getElementById('nextBtn').disabled = false;
-      };
+      }
       
       // Generate note
-      window.generateNote = function() {
+      function generateNote() {
+        log('Generating note...');
         const scores = {};
         const jointData = [];
         
@@ -2902,13 +2913,40 @@ app.get('/doctor/joints', (c) => {
         sessionStorage.setItem('fmsScores', JSON.stringify(scores));
         sessionStorage.setItem('jointAnalysis', JSON.stringify(jointData));
         location.href = '/doctor/notes';
-      };
+      }
       
       // Initialize on load
       document.addEventListener('DOMContentLoaded', async () => {
-        log('=== MSK Assessment v5.2 Initializing ===');
+        log('=== MSK Assessment v5.3 Initializing ===');
         log('Protocol:', window.location.protocol);
         log('User Agent:', navigator.userAgent);
+        
+        // ==========================================
+        // ATTACH EVENT LISTENERS (critical for module scope)
+        // ==========================================
+        
+        // Start button
+        document.getElementById('startBtn').addEventListener('click', startAssessment);
+        
+        // Model selection
+        document.querySelectorAll('.model-opt').forEach(el => {
+          el.addEventListener('click', () => selectModel(el.dataset.model));
+        });
+        
+        // Bottom controls
+        document.getElementById('switchCamBtn')?.addEventListener('click', switchCamera);
+        document.getElementById('nextBtn')?.addEventListener('click', nextExercise);
+        document.getElementById('stopBtn')?.addEventListener('click', stopAssessment);
+        
+        // Footer buttons
+        document.getElementById('restartBtn')?.addEventListener('click', restartAll);
+        document.getElementById('generateNoteBtn')?.addEventListener('click', generateNote);
+        
+        log('Event listeners attached');
+        
+        // ==========================================
+        // INITIALIZE UI
+        // ==========================================
         
         renderTaskList();
         updateExerciseDisplay();
@@ -2918,8 +2956,7 @@ app.get('/doctor/joints', (c) => {
         
         // Check HTTPS (required for camera on most browsers)
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-          log('WARNING: Not HTTPS');
-          // Still allow - some browsers work on http for testing
+          log('WARNING: Not HTTPS - camera may not work');
         }
         
         // Check for mediaDevices API
