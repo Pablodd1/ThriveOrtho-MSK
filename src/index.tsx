@@ -1070,244 +1070,446 @@ app.get('/api/health', (c) => {
 })
 
 // ============================================================================
-// ERROR NOTIFICATION SYSTEM - Robust Error Logging
+// ERROR NOTIFICATION SYSTEM - D1 Database Storage
 // Fails silently - never crashes the app
 // ============================================================================
 
-interface ErrorLogEntry {
-  timestamp: string;
-  type: 'error' | 'warning' | 'critical';
-  message: string;
-  stack?: string;
-  url?: string;
-  userAgent?: string;
-  userId?: string;
-  context?: Record<string, unknown>;
-}
-
-// In-memory error log (in production, use D1 or external service)
-const errorLogs: ErrorLogEntry[] = [];
-const MAX_ERROR_LOGS = 1000;
-
-// Utility function to safely log errors
-function logError(entry: Partial<ErrorLogEntry>): void {
-  try {
-    const fullEntry: ErrorLogEntry = {
-      timestamp: new Date().toISOString(),
-      type: entry.type || 'error',
-      message: entry.message || 'Unknown error',
-      stack: entry.stack,
-      url: entry.url,
-      userAgent: entry.userAgent,
-      userId: entry.userId,
-      context: entry.context
-    };
-    
-    errorLogs.unshift(fullEntry);
-    
-    // Keep only last N entries
-    if (errorLogs.length > MAX_ERROR_LOGS) {
-      errorLogs.pop();
-    }
-    
-    // Console log for debugging (remove in production)
-    console.log('[ERROR LOG]', fullEntry.type.toUpperCase(), fullEntry.message);
-    
-  } catch (e) {
-    // Fail silently - never crash due to logging
-    console.warn('[ERROR LOG] Failed to log error:', e);
+// Helper: Generate UUID compatible with both Node and Workers
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
   }
+  // Fallback UUID generation
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
-// Public API route for frontend error logging
+// Public API route for frontend error logging - D1 Storage
 app.post('/api/log-error', async (c) => {
   try {
     const body = await c.req.json();
     const userAgent = c.req.header('user-agent') || 'unknown';
+    const db = c.env?.DB;
     
-    logError({
-      type: body.type || 'error',
+    const errorData = {
+      id: generateUUID(),
+      error_type: body.type || 'error',
       message: body.message || 'Unknown error',
-      stack: body.stack,
-      url: body.url,
-      userAgent,
-      userId: body.userId,
-      context: body.context
-    });
+      stack_trace: body.stack || null,
+      url: body.url || null,
+      user_agent: userAgent,
+      user_id: body.userId || null,
+      patient_id: body.patientId || null,
+      assessment_id: body.assessmentId || null,
+      context: body.context ? JSON.stringify(body.context) : null
+    };
+    
+    // Try D1 first, fallback to console
+    if (db) {
+      try {
+        await db.prepare(`
+          INSERT INTO error_logs (id, error_type, message, stack_trace, url, user_agent, user_id, patient_id, assessment_id, context)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          errorData.id, errorData.error_type, errorData.message, errorData.stack_trace,
+          errorData.url, errorData.user_agent, errorData.user_id, errorData.patient_id,
+          errorData.assessment_id, errorData.context
+        ).run();
+      } catch (dbErr) {
+        // D1 failed - log to console but don't crash
+        console.error('[ERROR LOG] D1 insert failed:', dbErr);
+      }
+    }
+    
+    // Also log to console for debugging
+    console.log('[ERROR LOG]', errorData.error_type.toUpperCase(), errorData.message);
     
     // Always return success - don't expose internal state
-    return c.json({ success: true, logged: true });
+    return c.json({ success: true, logged: true, id: errorData.id });
     
   } catch (e) {
     // Fail silently
+    console.warn('[ERROR LOG] Failed to log error:', e);
     return c.json({ success: true, logged: false });
   }
 })
 
-// Get recent errors (admin only in production)
-app.get('/api/errors', (c) => {
-  return c.json({
-    count: errorLogs.length,
-    errors: errorLogs.slice(0, 50) // Return last 50
-  });
+// Get recent errors from D1 (admin only in production)
+app.get('/api/errors', async (c) => {
+  try {
+    const db = c.env?.DB;
+    
+    if (db) {
+      const result = await db.prepare(`
+        SELECT * FROM error_logs 
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `).all();
+      
+      return c.json({
+        count: result.results?.length || 0,
+        errors: result.results || []
+      });
+    }
+    
+    return c.json({ count: 0, errors: [], message: 'Database not configured' });
+  } catch (e) {
+    return c.json({ count: 0, errors: [], error: 'Failed to fetch errors' });
+  }
 })
 
 // ============================================================================
-// ASSESSMENT DATA LOGGING API
-// Stores assessment results, red flags, and transcripts
+// ASSESSMENT DATA LOGGING API - D1 Database Storage
+// Stores assessment results with persistent history
 // ============================================================================
 
-interface AssessmentLog {
-  id: string;
-  timestamp: string;
-  patientId?: string;
-  duration: number;
-  exercises: Array<{
-    name: string;
-    reps: number;
-    target: number;
-    score: number;
-    maxAngles: Record<string, number>;
-    skipped?: boolean;
-  }>;
-  redFlags: Array<{
-    type: string;
-    context: string;
-    time: string;
-    exercise: string;
-  }>;
-  transcript: string;
-  summary: {
-    totalExercises: number;
-    completedExercises: number;
-    totalReps: number;
-    flagCount: number;
-    overallScore: number;
-  };
-}
-
-const assessmentLogs: AssessmentLog[] = [];
-const MAX_ASSESSMENT_LOGS = 500;
-
-// Log assessment results
+// Log assessment results to D1
 app.post('/api/assessment/log', async (c) => {
   try {
     const body = await c.req.json();
+    const userAgent = c.req.header('user-agent') || 'unknown';
+    const db = c.env?.DB;
     
-    const assessment: AssessmentLog = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      patientId: body.patientId,
-      duration: body.duration || 0,
-      exercises: body.exercises || [],
-      redFlags: body.redFlags || [],
-      transcript: body.transcript || '',
-      summary: body.summary || {
-        totalExercises: 0,
-        completedExercises: 0,
-        totalReps: 0,
-        flagCount: 0,
-        overallScore: 0
+    const assessmentId = generateUUID();
+    const sessionId = body.sessionId || generateUUID();
+    const now = new Date().toISOString();
+    
+    // Calculate summary
+    const exercises = body.exercises || [];
+    const completedExercises = exercises.filter((e: any) => !e.skipped && e.reps >= e.target).length;
+    const totalReps = exercises.reduce((sum: number, e: any) => sum + (e.reps || 0), 0);
+    const overallScore = exercises.length > 0 
+      ? Math.round((completedExercises / exercises.length) * 100) 
+      : 0;
+    
+    if (db) {
+      try {
+        // Insert main assessment
+        await db.prepare(`
+          INSERT INTO msk_assessments (
+            id, patient_id, session_id, start_time, end_time, duration_seconds, status,
+            avg_fps, avg_quality, total_frames, landmarks_detected,
+            exercises, total_exercises, completed_exercises, total_reps, overall_score,
+            transcript, user_agent, camera_device
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          assessmentId,
+          body.patientId || null,
+          sessionId,
+          body.startTime || now,
+          now,
+          body.duration || 0,
+          'completed',
+          body.avgFps || null,
+          body.avgQuality || null,
+          body.totalFrames || null,
+          body.landmarksDetected || null,
+          JSON.stringify(exercises),
+          exercises.length,
+          completedExercises,
+          totalReps,
+          overallScore,
+          body.transcript || '',
+          userAgent,
+          body.cameraDevice || null
+        ).run();
+        
+        // Insert red flags if any
+        const redFlags = body.redFlags || [];
+        for (const flag of redFlags) {
+          await db.prepare(`
+            INSERT INTO msk_red_flags (
+              id, assessment_id, patient_id, flag_type, severity,
+              context, exercise_name, detected_keyword
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            generateUUID(),
+            assessmentId,
+            body.patientId || null,
+            flag.type || 'other',
+            flag.severity || 'medium',
+            flag.context || '',
+            flag.exercise || null,
+            flag.keyword || null
+          ).run();
+        }
+        
+        return c.json({ 
+          success: true, 
+          id: assessmentId,
+          sessionId,
+          summary: {
+            totalExercises: exercises.length,
+            completedExercises,
+            totalReps,
+            flagCount: redFlags.length,
+            overallScore
+          }
+        });
+        
+      } catch (dbErr) {
+        console.error('[ASSESSMENT] D1 insert failed:', dbErr);
+        // Return success anyway with ID - don't block user
+        return c.json({ success: true, id: assessmentId, warning: 'Database save failed' });
       }
-    };
-    
-    assessmentLogs.unshift(assessment);
-    
-    if (assessmentLogs.length > MAX_ASSESSMENT_LOGS) {
-      assessmentLogs.pop();
     }
     
-    return c.json({ success: true, id: assessment.id });
+    // No DB - return success with generated ID
+    return c.json({ success: true, id: assessmentId, warning: 'Database not configured' });
     
   } catch (e) {
-    logError({ type: 'error', message: 'Failed to log assessment', context: { error: String(e) } });
+    console.error('[ASSESSMENT] Failed to log:', e);
     return c.json({ success: false, error: 'Failed to log assessment' }, 500);
   }
 })
 
-// Get assessment by ID
-app.get('/api/assessment/:id', (c) => {
-  const id = c.req.param('id');
-  const assessment = assessmentLogs.find(a => a.id === id);
-  
-  if (!assessment) {
-    return c.json({ error: 'Assessment not found' }, 404);
+// Get assessment by ID from D1
+app.get('/api/assessment/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = c.env?.DB;
+    
+    if (db) {
+      const assessment = await db.prepare(`
+        SELECT * FROM msk_assessments WHERE id = ?
+      `).bind(id).first();
+      
+      if (!assessment) {
+        return c.json({ error: 'Assessment not found' }, 404);
+      }
+      
+      // Get associated red flags
+      const flags = await db.prepare(`
+        SELECT * FROM msk_red_flags WHERE assessment_id = ? ORDER BY created_at
+      `).bind(id).all();
+      
+      return c.json({
+        ...assessment,
+        exercises: JSON.parse(assessment.exercises as string || '[]'),
+        redFlags: flags.results || []
+      });
+    }
+    
+    return c.json({ error: 'Database not configured' }, 500);
+  } catch (e) {
+    return c.json({ error: 'Failed to fetch assessment' }, 500);
   }
-  
-  return c.json(assessment);
 })
 
-// Get recent assessments
-app.get('/api/assessments', (c) => {
-  return c.json({
-    count: assessmentLogs.length,
-    assessments: assessmentLogs.slice(0, 20).map(a => ({
-      id: a.id,
-      timestamp: a.timestamp,
-      patientId: a.patientId,
-      duration: a.duration,
-      summary: a.summary
-    }))
-  });
+// Get recent assessments from D1
+app.get('/api/assessments', async (c) => {
+  try {
+    const db = c.env?.DB;
+    const limit = parseInt(c.req.query('limit') || '20');
+    const patientId = c.req.query('patientId');
+    
+    if (db) {
+      let query = `
+        SELECT 
+          a.id, a.patient_id, a.session_id, a.start_time, a.end_time,
+          a.duration_seconds, a.status, a.total_exercises, a.completed_exercises,
+          a.total_reps, a.overall_score, a.created_at,
+          COUNT(rf.id) as red_flag_count
+        FROM msk_assessments a
+        LEFT JOIN msk_red_flags rf ON rf.assessment_id = a.id
+      `;
+      
+      const bindings: any[] = [];
+      if (patientId) {
+        query += ' WHERE a.patient_id = ?';
+        bindings.push(patientId);
+      }
+      
+      query += ' GROUP BY a.id ORDER BY a.created_at DESC LIMIT ?';
+      bindings.push(limit);
+      
+      const result = await db.prepare(query).bind(...bindings).all();
+      
+      // Get total count
+      const countResult = await db.prepare('SELECT COUNT(*) as total FROM msk_assessments').first();
+      
+      return c.json({
+        count: countResult?.total || 0,
+        assessments: result.results || []
+      });
+    }
+    
+    return c.json({ count: 0, assessments: [], message: 'Database not configured' });
+  } catch (e) {
+    return c.json({ count: 0, assessments: [], error: 'Failed to fetch assessments' });
+  }
+})
+
+// Get patient assessment history
+app.get('/api/patient/:patientId/assessments', async (c) => {
+  try {
+    const patientId = c.req.param('patientId');
+    const db = c.env?.DB;
+    
+    if (db) {
+      const result = await db.prepare(`
+        SELECT 
+          a.*,
+          COUNT(rf.id) as red_flag_count,
+          SUM(CASE WHEN rf.severity IN ('high', 'critical') THEN 1 ELSE 0 END) as critical_flags
+        FROM msk_assessments a
+        LEFT JOIN msk_red_flags rf ON rf.assessment_id = a.id
+        WHERE a.patient_id = ?
+        GROUP BY a.id
+        ORDER BY a.created_at DESC
+        LIMIT 50
+      `).bind(patientId).all();
+      
+      return c.json({
+        patientId,
+        count: result.results?.length || 0,
+        assessments: result.results || []
+      });
+    }
+    
+    return c.json({ patientId, count: 0, assessments: [] });
+  } catch (e) {
+    return c.json({ error: 'Failed to fetch patient assessments' }, 500);
+  }
 })
 
 // ============================================================================
-// RED FLAG NOTIFICATION API
+// RED FLAG NOTIFICATION API - D1 Database Storage
 // Critical alerts for pain, fall risk, etc.
 // ============================================================================
-
-interface RedFlagAlert {
-  id: string;
-  timestamp: string;
-  type: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  context: string;
-  assessmentId?: string;
-  patientId?: string;
-  acknowledged: boolean;
-}
-
-const redFlagAlerts: RedFlagAlert[] = [];
 
 app.post('/api/red-flag', async (c) => {
   try {
     const body = await c.req.json();
+    const db = c.env?.DB;
     
-    const alert: RedFlagAlert = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      type: body.type || 'UNKNOWN',
-      severity: body.severity || 'medium',
-      context: body.context || '',
-      assessmentId: body.assessmentId,
-      patientId: body.patientId,
-      acknowledged: false
-    };
+    const flagId = generateUUID();
+    const flagType = (body.type || 'other').toLowerCase().replace(/[^a-z_]/g, '_');
+    const validTypes = ['pain', 'fall_risk', 'acute', 'numbness', 'weakness', 'dizziness', 'swelling', 'instability', 'other'];
+    const finalType = validTypes.includes(flagType) ? flagType : 'other';
     
-    redFlagAlerts.unshift(alert);
-    
-    // Log critical alerts specially
-    if (alert.severity === 'critical') {
-      logError({
-        type: 'critical',
-        message: `CRITICAL RED FLAG: ${alert.type}`,
-        context: { alert }
-      });
+    if (db) {
+      try {
+        await db.prepare(`
+          INSERT INTO msk_red_flags (
+            id, assessment_id, patient_id, flag_type, severity,
+            context, exercise_name, detected_keyword
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          flagId,
+          body.assessmentId || null,
+          body.patientId || null,
+          finalType,
+          body.severity || 'medium',
+          body.context || '',
+          body.exerciseName || null,
+          body.keyword || null
+        ).run();
+      } catch (dbErr) {
+        console.error('[RED FLAG] D1 insert failed:', dbErr);
+      }
     }
     
-    return c.json({ success: true, id: alert.id });
+    // Log critical alerts to error log
+    if (body.severity === 'critical' || body.severity === 'high') {
+      console.log('[RED FLAG] CRITICAL:', finalType, body.context);
+    }
+    
+    return c.json({ success: true, id: flagId });
     
   } catch (e) {
     return c.json({ success: false }, 500);
   }
 })
 
-app.get('/api/red-flags', (c) => {
-  return c.json({
-    count: redFlagAlerts.length,
-    unacknowledged: redFlagAlerts.filter(a => !a.acknowledged).length,
-    alerts: redFlagAlerts.slice(0, 50)
-  });
+app.get('/api/red-flags', async (c) => {
+  try {
+    const db = c.env?.DB;
+    const unacknowledgedOnly = c.req.query('unacknowledged') === 'true';
+    
+    if (db) {
+      let query = 'SELECT * FROM msk_red_flags';
+      if (unacknowledgedOnly) {
+        query += ' WHERE acknowledged = 0';
+      }
+      query += ' ORDER BY created_at DESC LIMIT 50';
+      
+      const result = await db.prepare(query).all();
+      
+      const countResult = await db.prepare(
+        'SELECT COUNT(*) as total, SUM(CASE WHEN acknowledged = 0 THEN 1 ELSE 0 END) as unack FROM msk_red_flags'
+      ).first();
+      
+      return c.json({
+        count: countResult?.total || 0,
+        unacknowledged: countResult?.unack || 0,
+        alerts: result.results || []
+      });
+    }
+    
+    return c.json({ count: 0, unacknowledged: 0, alerts: [] });
+  } catch (e) {
+    return c.json({ count: 0, unacknowledged: 0, alerts: [], error: 'Failed to fetch red flags' });
+  }
+})
+
+// Acknowledge a red flag
+app.post('/api/red-flag/:id/acknowledge', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const db = c.env?.DB;
+    
+    if (db) {
+      await db.prepare(`
+        UPDATE msk_red_flags 
+        SET acknowledged = 1, acknowledged_by = ?, acknowledged_at = ?, clinical_notes = ?
+        WHERE id = ?
+      `).bind(
+        body.acknowledgedBy || 'system',
+        new Date().toISOString(),
+        body.notes || null,
+        id
+      ).run();
+      
+      return c.json({ success: true });
+    }
+    
+    return c.json({ success: false, error: 'Database not configured' });
+  } catch (e) {
+    return c.json({ success: false }, 500);
+  }
+})
+
+// Get critical/unacknowledged flags (for dashboard alerts)
+app.get('/api/red-flags/critical', async (c) => {
+  try {
+    const db = c.env?.DB;
+    
+    if (db) {
+      const result = await db.prepare(`
+        SELECT rf.*, a.session_id, p.first_name, p.last_name
+        FROM msk_red_flags rf
+        LEFT JOIN msk_assessments a ON rf.assessment_id = a.id
+        LEFT JOIN patients p ON rf.patient_id = p.id
+        WHERE rf.acknowledged = 0 AND rf.severity IN ('high', 'critical')
+        ORDER BY rf.created_at DESC
+        LIMIT 20
+      `).all();
+      
+      return c.json({
+        count: result.results?.length || 0,
+        alerts: result.results || []
+      });
+    }
+    
+    return c.json({ count: 0, alerts: [] });
+  } catch (e) {
+    return c.json({ count: 0, alerts: [] });
+  }
 })
 
 // COMPREHENSIVE JOINT ANALYSIS - All Body Parts
@@ -2953,6 +3155,144 @@ app.get('/doctor/joints', (c) => {
       ];
       
       // ================================================================
+      // TEMPORAL SMOOTHING - Exponential Moving Average Filter
+      // Reduces jitter and provides stable angle measurements
+      // ================================================================
+      const TemporalSmoother = {
+        // History buffers for each joint
+        history: {
+          knee: [],
+          hip: [],
+          shoulder: [],
+          elbow: [],
+          knee_L: [],
+          knee_R: [],
+          hip_L: [],
+          hip_R: [],
+          shoulder_L: [],
+          shoulder_R: [],
+          elbow_L: [],
+          elbow_R: []
+        },
+        
+        // Configuration
+        config: {
+          windowSize: 5,      // Number of frames to average
+          alpha: 0.3,         // EMA smoothing factor (0.1=smooth, 0.5=responsive)
+          outlierThreshold: 30, // Reject angles that change more than this per frame
+          minConfidence: 0.5   // Minimum landmark confidence to include
+        },
+        
+        // Apply smoothing to an angle value
+        smooth: function(joint, rawValue, confidence = 1.0) {
+          if (!this.history[joint]) {
+            this.history[joint] = [];
+          }
+          
+          const hist = this.history[joint];
+          
+          // Skip low confidence readings
+          if (confidence < this.config.minConfidence) {
+            return hist.length > 0 ? hist[hist.length - 1].smoothed : rawValue;
+          }
+          
+          // Outlier rejection - if value jumps too much, likely tracking error
+          if (hist.length > 0) {
+            const lastValue = hist[hist.length - 1].smoothed;
+            if (Math.abs(rawValue - lastValue) > this.config.outlierThreshold) {
+              // Likely a tracking glitch - use EMA with higher smoothing
+              rawValue = lastValue + (rawValue - lastValue) * 0.1;
+            }
+          }
+          
+          // Calculate EMA (Exponential Moving Average)
+          let ema;
+          if (hist.length === 0) {
+            ema = rawValue;
+          } else {
+            const lastEma = hist[hist.length - 1].smoothed;
+            ema = this.config.alpha * rawValue + (1 - this.config.alpha) * lastEma;
+          }
+          
+          // Add to history
+          hist.push({
+            raw: rawValue,
+            smoothed: Math.round(ema),
+            timestamp: Date.now()
+          });
+          
+          // Keep history limited
+          if (hist.length > this.config.windowSize * 2) {
+            hist.shift();
+          }
+          
+          return Math.round(ema);
+        },
+        
+        // Get smoothed value with Simple Moving Average fallback
+        getSMA: function(joint) {
+          const hist = this.history[joint];
+          if (!hist || hist.length === 0) return 0;
+          
+          const recent = hist.slice(-this.config.windowSize);
+          const sum = recent.reduce((a, b) => a + b.smoothed, 0);
+          return Math.round(sum / recent.length);
+        },
+        
+        // Get velocity (rate of change per second)
+        getVelocity: function(joint) {
+          const hist = this.history[joint];
+          if (!hist || hist.length < 2) return 0;
+          
+          const recent = hist.slice(-3);
+          if (recent.length < 2) return 0;
+          
+          const first = recent[0];
+          const last = recent[recent.length - 1];
+          const dt = (last.timestamp - first.timestamp) / 1000; // seconds
+          
+          if (dt === 0) return 0;
+          return Math.round((last.smoothed - first.smoothed) / dt);
+        },
+        
+        // Check if movement is stable (low velocity)
+        isStable: function(joint, threshold = 5) {
+          return Math.abs(this.getVelocity(joint)) < threshold;
+        },
+        
+        // Reset history for a joint or all joints
+        reset: function(joint = null) {
+          if (joint && this.history[joint]) {
+            this.history[joint] = [];
+          } else {
+            Object.keys(this.history).forEach(k => this.history[k] = []);
+          }
+        },
+        
+        // Get statistics for debugging
+        getStats: function(joint) {
+          const hist = this.history[joint];
+          if (!hist || hist.length === 0) return null;
+          
+          const values = hist.map(h => h.smoothed);
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          const avg = values.reduce((a, b) => a + b, 0) / values.length;
+          const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / values.length;
+          
+          return {
+            count: hist.length,
+            min: Math.round(min),
+            max: Math.round(max),
+            avg: Math.round(avg),
+            stdDev: Math.round(Math.sqrt(variance)),
+            velocity: this.getVelocity(joint),
+            stable: this.isStable(joint)
+          };
+        }
+      };
+      
+      // ================================================================
       // MAIN APPLICATION STATE
       // ================================================================
       const App = {
@@ -2967,8 +3307,11 @@ app.get('/doctor/joints', (c) => {
         reps: 0,
         repState: 'neutral',
         angles: {},
+        rawAngles: {},  // Unsmoothed angles for debugging
         results: [],
         startTime: null,
+        frameCount: 0,
+        lastFps: 0,
         
         // DOM
         video: null,
@@ -3193,26 +3536,82 @@ app.get('/doctor/joints', (c) => {
           }
         },
         
-        // ============== ANGLE CALCULATION ==============
+        // ============== ANGLE CALCULATION WITH TEMPORAL SMOOTHING ==============
         calculateAngles: function(lm) {
           if (!lm || lm.length < 33) return;
           
-          const angle = (a, b, c) => {
+          // Calculate angle between three points with confidence
+          const angleWithConf = (a, b, c) => {
             const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
             let deg = Math.abs(rad * 180 / Math.PI);
             if (deg > 180) deg = 360 - deg;
-            return Math.round(deg);
+            
+            // Average confidence of the three landmarks
+            const conf = ((a.visibility || 0) + (b.visibility || 0) + (c.visibility || 0)) / 3;
+            
+            return { angle: deg, confidence: conf };
           };
           
-          // Indices
+          // Landmark indices (MediaPipe Pose)
           const LS=11, RS=12, LE=13, RE=14, LW=15, RW=16, LH=23, RH=24, LK=25, RK=26, LA=27, RA=28;
           
-          this.angles = {
-            knee: Math.round((angle(lm[LH], lm[LK], lm[LA]) + angle(lm[RH], lm[RK], lm[RA])) / 2),
-            hip: Math.round((angle(lm[LS], lm[LH], lm[LK]) + angle(lm[RS], lm[RH], lm[RK])) / 2),
-            shoulder: Math.round((angle(lm[LE], lm[LS], lm[LH]) + angle(lm[RE], lm[RS], lm[RH])) / 2),
-            elbow: Math.round((angle(lm[LS], lm[LE], lm[LW]) + angle(lm[RS], lm[RE], lm[RW])) / 2)
+          // Calculate raw angles for each joint (left and right separately)
+          const rawKneeL = angleWithConf(lm[LH], lm[LK], lm[LA]);
+          const rawKneeR = angleWithConf(lm[RH], lm[RK], lm[RA]);
+          const rawHipL = angleWithConf(lm[LS], lm[LH], lm[LK]);
+          const rawHipR = angleWithConf(lm[RS], lm[RH], lm[RK]);
+          const rawShoulderL = angleWithConf(lm[LE], lm[LS], lm[LH]);
+          const rawShoulderR = angleWithConf(lm[RE], lm[RS], lm[RH]);
+          const rawElbowL = angleWithConf(lm[LS], lm[LE], lm[LW]);
+          const rawElbowR = angleWithConf(lm[RS], lm[RE], lm[RW]);
+          
+          // Store raw angles for debugging
+          this.rawAngles = {
+            knee_L: Math.round(rawKneeL.angle),
+            knee_R: Math.round(rawKneeR.angle),
+            hip_L: Math.round(rawHipL.angle),
+            hip_R: Math.round(rawHipR.angle),
+            shoulder_L: Math.round(rawShoulderL.angle),
+            shoulder_R: Math.round(rawShoulderR.angle),
+            elbow_L: Math.round(rawElbowL.angle),
+            elbow_R: Math.round(rawElbowR.angle)
           };
+          
+          // Apply temporal smoothing to individual joints
+          const smoothedKneeL = TemporalSmoother.smooth('knee_L', rawKneeL.angle, rawKneeL.confidence);
+          const smoothedKneeR = TemporalSmoother.smooth('knee_R', rawKneeR.angle, rawKneeR.confidence);
+          const smoothedHipL = TemporalSmoother.smooth('hip_L', rawHipL.angle, rawHipL.confidence);
+          const smoothedHipR = TemporalSmoother.smooth('hip_R', rawHipR.angle, rawHipR.confidence);
+          const smoothedShoulderL = TemporalSmoother.smooth('shoulder_L', rawShoulderL.angle, rawShoulderL.confidence);
+          const smoothedShoulderR = TemporalSmoother.smooth('shoulder_R', rawShoulderR.angle, rawShoulderR.confidence);
+          const smoothedElbowL = TemporalSmoother.smooth('elbow_L', rawElbowL.angle, rawElbowL.confidence);
+          const smoothedElbowR = TemporalSmoother.smooth('elbow_R', rawElbowR.angle, rawElbowR.confidence);
+          
+          // Average left and right for bilateral angles
+          const avgKnee = Math.round((smoothedKneeL + smoothedKneeR) / 2);
+          const avgHip = Math.round((smoothedHipL + smoothedHipR) / 2);
+          const avgShoulder = Math.round((smoothedShoulderL + smoothedShoulderR) / 2);
+          const avgElbow = Math.round((smoothedElbowL + smoothedElbowR) / 2);
+          
+          // Apply final smoothing to averaged values
+          this.angles = {
+            knee: TemporalSmoother.smooth('knee', avgKnee),
+            hip: TemporalSmoother.smooth('hip', avgHip),
+            shoulder: TemporalSmoother.smooth('shoulder', avgShoulder),
+            elbow: TemporalSmoother.smooth('elbow', avgElbow),
+            // Also store individual side angles (smoothed)
+            knee_L: smoothedKneeL,
+            knee_R: smoothedKneeR,
+            hip_L: smoothedHipL,
+            hip_R: smoothedHipR,
+            shoulder_L: smoothedShoulderL,
+            shoulder_R: smoothedShoulderR,
+            elbow_L: smoothedElbowL,
+            elbow_R: smoothedElbowR
+          };
+          
+          // Track frame count for FPS
+          this.frameCount++;
           
           this.updateAnglesUI();
         },
@@ -3225,9 +3624,34 @@ app.get('/doctor/joints', (c) => {
           exercise.track.forEach((joint, i) => {
             const val = this.angles[joint] || 0;
             const isPrimary = joint === exercise.joint;
+            const stats = TemporalSmoother.getStats(joint);
+            const velocity = stats ? stats.velocity : 0;
+            const isStable = stats ? stats.stable : true;
+            
+            // Stability indicator
+            const stabilityIcon = isStable ? '●' : '◐';
+            const stabilityColor = isStable ? '#22c55e' : '#f59e0b';
+            
+            // Show L/R breakdown for bilateral joints
+            const leftVal = this.angles[joint + '_L'];
+            const rightVal = this.angles[joint + '_R'];
+            const hasLR = leftVal !== undefined && rightVal !== undefined;
+            
             html += '<div class="angle-item ' + (isPrimary ? 'primary' : '') + '">' +
-                    '<span class="angle-label">' + joint.charAt(0).toUpperCase() + joint.slice(1) + '</span>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                    '<span class="angle-label">' + joint.charAt(0).toUpperCase() + joint.slice(1) + 
+                    ' <span style="color:' + stabilityColor + ';font-size:8px;">' + stabilityIcon + '</span></span>' +
                     '<span class="angle-value">' + val + '°</span></div>';
+            
+            // Show L/R if tracking primary joint
+            if (hasLR && isPrimary) {
+              html += '<div style="font-size:9px;color:#666;margin-top:2px;display:flex;justify-content:space-between;">' +
+                      '<span>L:' + leftVal + '°</span><span>R:' + rightVal + '°</span>' +
+                      '<span style="color:' + (Math.abs(leftVal - rightVal) > 10 ? '#f59e0b' : '#22c55e') + '">' +
+                      'Δ' + Math.abs(leftVal - rightVal) + '°</span></div>';
+            }
+            
+            html += '</div>';
           });
           
           document.getElementById('anglesList').innerHTML = html;
@@ -3289,6 +3713,10 @@ app.get('/doctor/joints', (c) => {
           this.currentIdx = idx;
           this.reps = 0;
           this.repState = 'neutral';
+          this.frameCount = 0;
+          
+          // Reset temporal smoother for fresh tracking on new exercise
+          TemporalSmoother.reset();
           
           const ex = EXERCISES[idx];
           
@@ -3299,6 +3727,8 @@ app.get('/doctor/joints', (c) => {
           document.getElementById('repFill').style.width = '0%';
           
           this.renderProgress();
+          
+          console.log('[MSK] Starting exercise:', ex.name, '- tracking:', ex.track.join(', '));
           
           TTS.speak(ex.voice, () => {
             TTS.speak('Begin now.');
@@ -3436,8 +3866,14 @@ app.get('/doctor/joints', (c) => {
           this.reps = 0;
           this.repState = 'neutral';
           this.results = [];
+          this.frameCount = 0;
+          this.angles = {};
+          this.rawAngles = {};
+          
+          // Reset all modules
           RedFlagDetector.clear();
           SpeechRecognizer.clear();
+          TemporalSmoother.reset();
           
           document.getElementById('exerciseTitle').textContent = 'Ready to Begin';
           document.getElementById('exerciseDesc').textContent = 'Press Start to begin your guided assessment';
@@ -3445,6 +3881,7 @@ app.get('/doctor/joints', (c) => {
           document.getElementById('reportBtn').disabled = true;
           document.getElementById('startBtn').textContent = '🎬 Start Assessment';
           
+          console.log('[MSK] Assessment restarted');
           this.renderProgress();
         },
         
