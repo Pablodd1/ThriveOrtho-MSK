@@ -2053,12 +2053,24 @@ app.get('/doctor/joints', (c) => {
         <div class="skeleton-overlay" id="skeletonOverlay"></div>
         
         <div class="camera-placeholder" id="cameraPlaceholder">
-          <i class="fas fa-camera"></i>
-          <p>Real-Time Joint Tracking</p>
-          <button class="start-camera-btn" onclick="startCamera()">
-            <i class="fas fa-video"></i>
-            Start Camera
+          <i class="fas fa-camera" style="font-size: 48px; color: #2563eb; margin-bottom: 16px;"></i>
+          <p style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Real-Time Joint Tracking</p>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 24px; text-align: center;">Camera access required for MSK assessment</p>
+          
+          <div id="permissionStatus" style="display: none; background: #fef3c7; border: 1px solid #fcd34d; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 12px; color: #92400e; text-align: left; width: 100%; max-width: 280px;">
+            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+            <span id="permissionText">Checking permissions...</span>
+          </div>
+          
+          <button class="start-camera-btn" id="startCameraBtn" onclick="requestCameraPermission()" style="font-size: 16px; padding: 16px 32px;">
+            <i class="fas fa-video" style="font-size: 20px;"></i>
+            <span id="cameraButtonText">Allow Camera Access</span>
           </button>
+          
+          <div style="margin-top: 16px; font-size: 11px; color: #94a3b8;">
+            <i class="fas fa-lock" style="margin-right: 4px;"></i>
+            Secure • HIPAA Compliant • On-Device Processing
+          </div>
         </div>
         
         <div class="status-indicator" id="statusIndicator">
@@ -2137,6 +2149,104 @@ app.get('/doctor/joints', (c) => {
       let lastAnalysis = null;
       let facingMode = 'environment'; // Start with back camera for assessing others
       let scores = {};
+      let cameraPermissionState = 'unknown';
+      
+      // Check permission status on page load
+      document.addEventListener('DOMContentLoaded', async () => {
+        await checkCameraPermission();
+      });
+      
+      // Check camera permission status (without requesting)
+      async function checkCameraPermission() {
+        const statusDiv = document.getElementById('permissionStatus');
+        const statusText = document.getElementById('permissionText');
+        const buttonText = document.getElementById('cameraButtonText');
+        const startBtn = document.getElementById('startCameraBtn');
+        
+        if (!statusDiv || !statusText || !buttonText || !startBtn) return;
+        
+        try {
+          // First check if the API even exists (HTTPS requirement)
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            cameraPermissionState = 'unavailable';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fee2e2';
+            statusDiv.style.borderColor = '#fca5a5';
+            statusDiv.style.color = '#991b1b';
+            statusText.innerHTML = '<strong>Camera API not available</strong><br>This page must be accessed via HTTPS for camera access.';
+            buttonText.textContent = 'Camera Not Available';
+            startBtn.disabled = true;
+            startBtn.style.opacity = '0.5';
+            return;
+          }
+          
+          // Try to check permissions if API is available
+          if (navigator.permissions && navigator.permissions.query) {
+            try {
+              const result = await navigator.permissions.query({ name: 'camera' });
+              cameraPermissionState = result.state;
+              
+              if (result.state === 'granted') {
+                buttonText.textContent = 'Start Camera';
+                statusDiv.style.display = 'none';
+              } else if (result.state === 'denied') {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.borderColor = '#fca5a5';
+                statusDiv.style.color = '#991b1b';
+                statusText.innerHTML = '<strong>Camera blocked</strong><br>Go to browser settings → Site permissions → Camera → Allow';
+                buttonText.textContent = 'Permission Blocked - Tap for Help';
+              } else {
+                // prompt state
+                buttonText.textContent = 'Allow Camera Access';
+                statusDiv.style.display = 'none';
+              }
+              
+              // Listen for permission changes
+              result.addEventListener('change', () => {
+                cameraPermissionState = result.state;
+                checkCameraPermission();
+              });
+            } catch (permErr) {
+              // Some browsers don't support camera permission query
+              console.log('Permission query not supported:', permErr);
+              cameraPermissionState = 'prompt';
+              buttonText.textContent = 'Allow Camera Access';
+            }
+          } else {
+            // No permissions API - just try to start
+            cameraPermissionState = 'prompt';
+            buttonText.textContent = 'Allow Camera Access';
+          }
+        } catch (err) {
+          console.error('Permission check error:', err);
+          buttonText.textContent = 'Start Camera';
+        }
+      }
+      
+      // Request camera permission explicitly
+      async function requestCameraPermission() {
+        const statusDiv = document.getElementById('permissionStatus');
+        const statusText = document.getElementById('permissionText');
+        const buttonText = document.getElementById('cameraButtonText');
+        const startBtn = document.getElementById('startCameraBtn');
+        
+        // Update UI to show requesting state
+        buttonText.textContent = 'Requesting Access...';
+        startBtn.disabled = true;
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = '#dbeafe';
+        statusDiv.style.borderColor = '#93c5fd';
+        statusDiv.style.color = '#1e40af';
+        statusText.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>When prompted, tap <strong>"Allow"</strong> to enable camera';
+        
+        try {
+          await startCamera();
+        } catch (err) {
+          startBtn.disabled = false;
+          await checkCameraPermission();
+        }
+      }
       
       // Show status message
       function showStatus(message, type = 'info') {
@@ -2174,23 +2284,37 @@ app.get('/doctor/joints', (c) => {
         const video = document.getElementById('videoElement');
         const placeholder = document.getElementById('cameraPlaceholder');
         const controls = document.getElementById('analysisControls');
+        const statusDiv = document.getElementById('permissionStatus');
+        const statusText = document.getElementById('permissionText');
+        const buttonText = document.getElementById('cameraButtonText');
+        const startBtn = document.getElementById('startCameraBtn');
         
         // Check if mediaDevices is available (HTTPS required)
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           showStatus('Camera not supported. Use HTTPS.', 'error');
+          if (statusDiv && statusText) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fee2e2';
+            statusDiv.style.borderColor = '#fca5a5';
+            statusDiv.style.color = '#991b1b';
+            statusText.innerHTML = '<strong>Camera API Not Available</strong><br>• Ensure page is loaded via HTTPS<br>• Use Chrome, Safari, or Firefox<br>• Check camera is connected';
+          }
+          if (buttonText) buttonText.textContent = 'Camera Not Available';
+          if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
           document.getElementById('jointResults').innerHTML = 
             '<div class="section-label" style="color: #dc2626;">Camera Not Available</div>' +
             '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
-            '<span style="font-weight: bold;">Possible reasons:</span>' +
-            '<span style="font-weight: normal;">• Page must be served over HTTPS</span>' +
-            '<span style="font-weight: normal;">• Browser doesn\\'t support camera</span>' +
-            '<span style="font-weight: normal;">• No camera device found</span>' +
+            '<span style="font-weight: bold;">To use camera assessment:</span>' +
+            '<span style="font-weight: normal;">• Use Chrome, Safari, or Firefox</span>' +
+            '<span style="font-weight: normal;">• Page must use HTTPS (secure)</span>' +
+            '<span style="font-weight: normal;">• Ensure camera is connected</span>' +
             '</div>';
           return;
         }
         
         try {
           showStatus('Requesting camera access...', 'info');
+          if (statusText) statusText.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Opening camera...';
           
           // First try with ideal constraints
           let constraints = {
@@ -2227,6 +2351,13 @@ app.get('/doctor/joints', (c) => {
               hideStatus();
               showStatus('Camera ready! Position patient in frame.', 'success');
               
+              // Reset button state for when camera is stopped
+              if (startBtn) {
+                startBtn.disabled = false;
+                if (buttonText) buttonText.textContent = 'Start Camera';
+              }
+              if (statusDiv) statusDiv.style.display = 'none';
+              
               // Update results panel
               document.getElementById('jointResults').innerHTML = 
                 '<div class="section-label" style="color: #22c55e;">✓ Camera Active</div>' +
@@ -2236,6 +2367,7 @@ app.get('/doctor/joints', (c) => {
             }).catch(e => {
               console.error('Video play error:', e);
               showStatus('Tap screen to start video', 'info');
+              if (startBtn) startBtn.disabled = false;
             });
           };
           
@@ -2247,35 +2379,80 @@ app.get('/doctor/joints', (c) => {
         } catch (err) {
           console.error('Camera error:', err.name, err.message);
           
+          // Re-enable button
+          if (startBtn) startBtn.disabled = false;
+          
           let errorMessage = 'Camera access denied.';
-          let helpText = '';
+          let helpHtml = '';
           
           if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
             errorMessage = 'Camera permission denied';
-            helpText = 
-              '<span style="font-weight: bold;">To enable camera:</span>' +
-              '<span style="font-weight: normal;">1. Tap the lock/info icon in address bar</span>' +
-              '<span style="font-weight: normal;">2. Find "Camera" and set to "Allow"</span>' +
-              '<span style="font-weight: normal;">3. Reload the page</span>';
+            if (statusDiv && statusText) {
+              statusDiv.style.display = 'block';
+              statusDiv.style.background = '#fee2e2';
+              statusDiv.style.borderColor = '#fca5a5';
+              statusDiv.style.color = '#991b1b';
+              statusText.innerHTML = '<strong>Permission Denied</strong><br>' +
+                '1. Tap the <strong>lock/info icon</strong> in address bar<br>' +
+                '2. Find "Camera" → Set to <strong>Allow</strong><br>' +
+                '3. <strong>Reload</strong> this page';
+            }
+            if (buttonText) buttonText.textContent = 'Try Again';
+            helpHtml = 
+              '<span style="font-weight: bold;">To enable camera on mobile:</span>' +
+              '<span style="font-weight: normal;">• <strong>iPhone Safari:</strong> Settings → Safari → Camera → Allow</span>' +
+              '<span style="font-weight: normal;">• <strong>Chrome:</strong> Tap lock icon → Permissions → Camera → Allow</span>' +
+              '<span style="font-weight: normal;">• <strong>Android:</strong> Settings → Apps → Browser → Permissions → Camera</span>';
           } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
             errorMessage = 'No camera found';
-            helpText = '<span>Please connect a camera device</span>';
+            if (statusDiv && statusText) {
+              statusDiv.style.display = 'block';
+              statusDiv.style.background = '#fef3c7';
+              statusDiv.style.borderColor = '#fcd34d';
+              statusDiv.style.color = '#92400e';
+              statusText.innerHTML = '<strong>No Camera Detected</strong><br>Please use a device with a camera.';
+            }
+            if (buttonText) buttonText.textContent = 'No Camera Found';
+            helpHtml = '<span>Please use a device with a camera (phone, tablet, or laptop with webcam)</span>';
           } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-            errorMessage = 'Camera is in use by another app';
-            helpText = '<span>Close other apps using the camera and try again</span>';
+            errorMessage = 'Camera is in use';
+            if (statusDiv && statusText) {
+              statusDiv.style.display = 'block';
+              statusDiv.style.background = '#fef3c7';
+              statusDiv.style.borderColor = '#fcd34d';
+              statusDiv.style.color = '#92400e';
+              statusText.innerHTML = '<strong>Camera Busy</strong><br>Another app is using the camera. Close other apps and try again.';
+            }
+            if (buttonText) buttonText.textContent = 'Try Again';
+            helpHtml = '<span>Close other apps using the camera (video calls, other browser tabs) and try again</span>';
           } else if (err.name === 'OverconstrainedError') {
             errorMessage = 'Camera settings not supported';
-            helpText = '<span>Trying with default settings...</span>';
             // Try again with basic constraints
             try {
               stream = await navigator.mediaDevices.getUserMedia({ video: true });
               video.srcObject = stream;
               return;
             } catch (e2) {
-              helpText = '<span>Camera not compatible</span>';
+              if (statusDiv && statusText) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.borderColor = '#fca5a5';
+                statusDiv.style.color = '#991b1b';
+                statusText.innerHTML = '<strong>Camera Incompatible</strong><br>Your camera may not be compatible.';
+              }
+              if (buttonText) buttonText.textContent = 'Not Compatible';
             }
+            helpHtml = '<span>Camera not compatible with required settings</span>';
           } else {
-            helpText = '<span>' + err.message + '</span>';
+            if (statusDiv && statusText) {
+              statusDiv.style.display = 'block';
+              statusDiv.style.background = '#fee2e2';
+              statusDiv.style.borderColor = '#fca5a5';
+              statusDiv.style.color = '#991b1b';
+              statusText.innerHTML = '<strong>Error: ' + err.name + '</strong><br>' + err.message;
+            }
+            if (buttonText) buttonText.textContent = 'Try Again';
+            helpHtml = '<span>' + err.message + '</span>';
           }
           
           showStatus(errorMessage, 'error');
@@ -2283,7 +2460,7 @@ app.get('/doctor/joints', (c) => {
           document.getElementById('jointResults').innerHTML = 
             '<div class="section-label" style="color: #dc2626;">⚠️ ' + errorMessage + '</div>' +
             '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
-            helpText +
+            helpHtml +
             '</div>';
         }
       }
@@ -2686,11 +2863,15 @@ app.get('/doctor/intake', (c) => {
             <span class="card-title"><i class="fas fa-microphone text-accent" style="margin-right: 6px;"></i>Voice Recording</span>
           </div>
           <div class="card-body">
+            <div id="micPermissionAlert" style="display: none; background: #fef3c7; border: 1px solid #fcd34d; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 12px; color: #92400e;">
+              <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+              <span id="micPermissionText">Checking microphone access...</span>
+            </div>
             <div class="voice-area">
               <button class="voice-btn" id="voiceBtn" onclick="toggleRecording()">
                 <i class="fas fa-microphone" id="voiceIcon"></i>
               </button>
-              <div class="voice-status" id="voiceStatus">Click to start recording</div>
+              <div class="voice-status" id="voiceStatus">Tap microphone to start recording</div>
             </div>
             
             <div style="margin-top: 20px;">
@@ -2788,20 +2969,92 @@ app.get('/doctor/intake', (c) => {
       
       // Request microphone permission explicitly
       async function requestMicPermission() {
+        const alertDiv = document.getElementById('micPermissionAlert');
+        const alertText = document.getElementById('micPermissionText');
+        
         try {
+          // Show requesting state
+          if (alertDiv && alertText) {
+            alertDiv.style.display = 'block';
+            alertDiv.style.background = '#dbeafe';
+            alertDiv.style.borderColor = '#93c5fd';
+            alertDiv.style.color = '#1e40af';
+            alertText.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>When prompted, tap <strong>"Allow"</strong> to enable microphone';
+          }
+          
           // This will trigger the permission prompt
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           // Stop the stream immediately - we just needed permission
           stream.getTracks().forEach(track => track.stop());
           micPermissionGranted = true;
+          
+          // Hide alert on success
+          if (alertDiv) alertDiv.style.display = 'none';
           return true;
         } catch (err) {
           console.error('Microphone permission error:', err);
-          if (err.name === 'NotAllowedError') {
-            document.getElementById('voiceStatus').innerHTML = 
-              '<span style="color: #dc2626;">Microphone blocked.</span> Tap lock icon in address bar to allow.';
+          
+          if (alertDiv && alertText) {
+            alertDiv.style.display = 'block';
+            alertDiv.style.background = '#fee2e2';
+            alertDiv.style.borderColor = '#fca5a5';
+            alertDiv.style.color = '#991b1b';
+            
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              alertText.innerHTML = '<strong>Microphone Permission Denied</strong><br>' +
+                '1. Tap the <strong>lock/info icon</strong> in address bar<br>' +
+                '2. Find "Microphone" → Set to <strong>Allow</strong><br>' +
+                '3. <strong>Reload</strong> this page';
+              document.getElementById('voiceStatus').innerHTML = 
+                '<span style="color: #dc2626;">Permission denied. See instructions above.</span>';
+            } else if (err.name === 'NotFoundError') {
+              alertText.innerHTML = '<strong>No Microphone Found</strong><br>Please use a device with a microphone.';
+              document.getElementById('voiceStatus').textContent = 'No microphone detected';
+            } else {
+              alertText.innerHTML = '<strong>Microphone Error</strong><br>' + err.message;
+              document.getElementById('voiceStatus').textContent = 'Error: ' + err.name;
+            }
           }
           return false;
+        }
+      }
+      
+      // Check microphone permission on page load
+      async function checkMicPermission() {
+        const alertDiv = document.getElementById('micPermissionAlert');
+        const alertText = document.getElementById('micPermissionText');
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          if (alertDiv && alertText) {
+            alertDiv.style.display = 'block';
+            alertDiv.style.background = '#fee2e2';
+            alertDiv.style.borderColor = '#fca5a5';
+            alertDiv.style.color = '#991b1b';
+            alertText.innerHTML = '<strong>Microphone API not available</strong><br>Page must be accessed via HTTPS.';
+          }
+          return;
+        }
+        
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const result = await navigator.permissions.query({ name: 'microphone' });
+            if (result.state === 'granted') {
+              micPermissionGranted = true;
+              if (alertDiv) alertDiv.style.display = 'none';
+            } else if (result.state === 'denied') {
+              if (alertDiv && alertText) {
+                alertDiv.style.display = 'block';
+                alertDiv.style.background = '#fee2e2';
+                alertDiv.style.borderColor = '#fca5a5';
+                alertDiv.style.color = '#991b1b';
+                alertText.innerHTML = '<strong>Microphone blocked</strong><br>Go to browser settings → Site permissions → Microphone → Allow';
+              }
+            }
+            // Listen for changes
+            result.addEventListener('change', () => checkMicPermission());
+          } catch (e) {
+            console.log('Microphone permission query not supported');
+          }
         }
       }
       
@@ -2846,6 +3099,7 @@ app.get('/doctor/intake', (c) => {
       
       // Initialize on page load
       initSpeechRecognition();
+      checkMicPermission();
       
       async function analyzeVoice() {
         if (!transcript) {
