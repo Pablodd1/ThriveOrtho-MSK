@@ -2153,50 +2153,137 @@ app.get('/doctor/joints', (c) => {
         document.getElementById('statusIndicator').classList.remove('visible');
       }
       
-      // Start camera - mobile optimized
+      // Check and request permissions
+      async function checkPermissions() {
+        try {
+          // Check if permissions API is available
+          if (navigator.permissions) {
+            const cameraResult = await navigator.permissions.query({ name: 'camera' });
+            console.log('Camera permission:', cameraResult.state);
+            return cameraResult.state;
+          }
+          return 'prompt'; // Default to prompt if API not available
+        } catch (e) {
+          console.log('Permissions API not supported, will request directly');
+          return 'prompt';
+        }
+      }
+      
+      // Start camera - mobile optimized with better permission handling
       async function startCamera() {
         const video = document.getElementById('videoElement');
         const placeholder = document.getElementById('cameraPlaceholder');
         const controls = document.getElementById('analysisControls');
         
+        // Check if mediaDevices is available (HTTPS required)
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showStatus('Camera not supported. Use HTTPS.', 'error');
+          document.getElementById('jointResults').innerHTML = 
+            '<div class="section-label" style="color: #dc2626;">Camera Not Available</div>' +
+            '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
+            '<span style="font-weight: bold;">Possible reasons:</span>' +
+            '<span style="font-weight: normal;">• Page must be served over HTTPS</span>' +
+            '<span style="font-weight: normal;">• Browser doesn\\'t support camera</span>' +
+            '<span style="font-weight: normal;">• No camera device found</span>' +
+            '</div>';
+          return;
+        }
+        
         try {
           showStatus('Requesting camera access...', 'info');
           
-          // Request camera with mobile-friendly settings
-          const constraints = {
+          // First try with ideal constraints
+          let constraints = {
             video: {
-              facingMode: facingMode,
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
+              facingMode: { ideal: facingMode },
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 }
             },
             audio: false
           };
           
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          } catch (e) {
+            // If that fails, try with basic constraints
+            console.log('Ideal constraints failed, trying basic:', e);
+            constraints = { video: true, audio: false };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          }
+          
           video.srcObject = stream;
+          
+          // Important for iOS Safari
+          video.setAttribute('playsinline', 'true');
+          video.setAttribute('webkit-playsinline', 'true');
+          video.muted = true;
           
           // Wait for video to be ready
           video.onloadedmetadata = () => {
-            video.play();
-            video.style.display = 'block';
-            placeholder.style.display = 'none';
-            controls.style.display = 'block';
-            hideStatus();
-            showStatus('Camera ready! Position patient in frame.', 'success');
+            video.play().then(() => {
+              video.style.display = 'block';
+              placeholder.style.display = 'none';
+              controls.style.display = 'block';
+              hideStatus();
+              showStatus('Camera ready! Position patient in frame.', 'success');
+              
+              // Update results panel
+              document.getElementById('jointResults').innerHTML = 
+                '<div class="section-label" style="color: #22c55e;">✓ Camera Active</div>' +
+                '<div class="joint-result-item" style="grid-column: span 2; justify-content: center;">' +
+                '<span>Select an analysis type above, then tap "Analyze Joints Now"</span>' +
+                '</div>';
+            }).catch(e => {
+              console.error('Video play error:', e);
+              showStatus('Tap screen to start video', 'info');
+            });
+          };
+          
+          video.onerror = (e) => {
+            console.error('Video error:', e);
+            showStatus('Video error. Try again.', 'error');
           };
           
         } catch (err) {
-          console.error('Camera error:', err);
-          showStatus('Camera access denied. Please allow camera permissions.', 'error');
+          console.error('Camera error:', err.name, err.message);
           
-          // Show helpful message
+          let errorMessage = 'Camera access denied.';
+          let helpText = '';
+          
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            errorMessage = 'Camera permission denied';
+            helpText = 
+              '<span style="font-weight: bold;">To enable camera:</span>' +
+              '<span style="font-weight: normal;">1. Tap the lock/info icon in address bar</span>' +
+              '<span style="font-weight: normal;">2. Find "Camera" and set to "Allow"</span>' +
+              '<span style="font-weight: normal;">3. Reload the page</span>';
+          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            errorMessage = 'No camera found';
+            helpText = '<span>Please connect a camera device</span>';
+          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            errorMessage = 'Camera is in use by another app';
+            helpText = '<span>Close other apps using the camera and try again</span>';
+          } else if (err.name === 'OverconstrainedError') {
+            errorMessage = 'Camera settings not supported';
+            helpText = '<span>Trying with default settings...</span>';
+            // Try again with basic constraints
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ video: true });
+              video.srcObject = stream;
+              return;
+            } catch (e2) {
+              helpText = '<span>Camera not compatible</span>';
+            }
+          } else {
+            helpText = '<span>' + err.message + '</span>';
+          }
+          
+          showStatus(errorMessage, 'error');
+          
           document.getElementById('jointResults').innerHTML = 
-            '<div class="section-label" style="color: #dc2626;">Camera Permission Required</div>' +
+            '<div class="section-label" style="color: #dc2626;">⚠️ ' + errorMessage + '</div>' +
             '<div class="joint-result-item" style="grid-column: span 2; flex-direction: column; gap: 8px;">' +
-            '<span>To perform MSK assessment:</span>' +
-            '<span style="font-weight: normal;">1. Tap the camera button again</span>' +
-            '<span style="font-weight: normal;">2. Allow camera access when prompted</span>' +
-            '<span style="font-weight: normal;">3. If denied, check browser settings</span>' +
+            helpText +
             '</div>';
         }
       }
@@ -2204,22 +2291,30 @@ app.get('/doctor/joints', (c) => {
       // Stop camera
       function stopCamera() {
         if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+          stream.getTracks().forEach(track => {
+            track.stop();
+            console.log('Stopped track:', track.kind);
+          });
           stream = null;
         }
         const video = document.getElementById('videoElement');
         const placeholder = document.getElementById('cameraPlaceholder');
         const controls = document.getElementById('analysisControls');
         
+        video.srcObject = null;
         video.style.display = 'none';
         placeholder.style.display = 'flex';
         controls.style.display = 'none';
         document.getElementById('skeletonOverlay').innerHTML = '';
+        
+        showStatus('Camera stopped', 'info');
+        setTimeout(hideStatus, 1500);
       }
       
       // Toggle camera (flip between front and back)
       async function toggleCamera() {
         facingMode = facingMode === 'environment' ? 'user' : 'environment';
+        showStatus('Switching camera...', 'info');
         if (stream) {
           stopCamera();
           await startCamera();
@@ -2627,12 +2722,28 @@ app.get('/doctor/intake', (c) => {
       let isRecording = false;
       let recognition;
       let transcript = '';
+      let micPermissionGranted = false;
       
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      // Initialize speech recognition with better error handling
+      async function initSpeechRecognition() {
+        // Check if Speech Recognition is supported
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+          document.getElementById('voiceStatus').textContent = 'Speech recognition not supported in this browser';
+          document.getElementById('voiceStatus').style.color = '#dc2626';
+          document.getElementById('voiceBtn').disabled = true;
+          return false;
+        }
+        
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        recognition.onstart = () => {
+          console.log('Speech recognition started');
+          micPermissionGranted = true;
+        };
         
         recognition.onresult = (e) => {
           transcript = '';
@@ -2642,23 +2753,99 @@ app.get('/doctor/intake', (c) => {
           document.getElementById('transcript').textContent = transcript || 'Listening...';
           document.getElementById('transcript').style.color = 'var(--gray-900)';
         };
+        
+        recognition.onerror = (e) => {
+          console.error('Speech recognition error:', e.error);
+          
+          if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+            document.getElementById('voiceStatus').textContent = 'Microphone permission denied. Please allow access.';
+            document.getElementById('voiceStatus').style.color = '#dc2626';
+            isRecording = false;
+            document.getElementById('voiceBtn').classList.remove('recording');
+            document.getElementById('voiceIcon').className = 'fas fa-microphone';
+          } else if (e.error === 'no-speech') {
+            document.getElementById('voiceStatus').textContent = 'No speech detected. Try again.';
+          } else if (e.error === 'network') {
+            document.getElementById('voiceStatus').textContent = 'Network error. Check connection.';
+          } else {
+            document.getElementById('voiceStatus').textContent = 'Error: ' + e.error;
+          }
+        };
+        
+        recognition.onend = () => {
+          if (isRecording) {
+            // Restart if still recording (speech recognition auto-stops)
+            try {
+              recognition.start();
+            } catch (e) {
+              console.log('Could not restart recognition');
+            }
+          }
+        };
+        
+        return true;
       }
       
-      function toggleRecording() {
+      // Request microphone permission explicitly
+      async function requestMicPermission() {
+        try {
+          // This will trigger the permission prompt
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Stop the stream immediately - we just needed permission
+          stream.getTracks().forEach(track => track.stop());
+          micPermissionGranted = true;
+          return true;
+        } catch (err) {
+          console.error('Microphone permission error:', err);
+          if (err.name === 'NotAllowedError') {
+            document.getElementById('voiceStatus').innerHTML = 
+              '<span style="color: #dc2626;">Microphone blocked.</span> Tap lock icon in address bar to allow.';
+          }
+          return false;
+        }
+      }
+      
+      async function toggleRecording() {
+        if (!recognition) {
+          const initialized = await initSpeechRecognition();
+          if (!initialized) return;
+        }
+        
         if (isRecording) {
+          // Stop recording
           isRecording = false;
           document.getElementById('voiceBtn').classList.remove('recording');
           document.getElementById('voiceIcon').className = 'fas fa-microphone';
           document.getElementById('voiceStatus').textContent = 'Click to start recording';
-          if (recognition) recognition.stop();
+          document.getElementById('voiceStatus').style.color = '';
+          if (recognition) {
+            try { recognition.stop(); } catch (e) {}
+          }
         } else {
+          // Start recording - first ensure we have permission
+          if (!micPermissionGranted) {
+            document.getElementById('voiceStatus').textContent = 'Requesting microphone access...';
+            const hasPermission = await requestMicPermission();
+            if (!hasPermission) return;
+          }
+          
           isRecording = true;
           document.getElementById('voiceBtn').classList.add('recording');
           document.getElementById('voiceIcon').className = 'fas fa-stop';
-          document.getElementById('voiceStatus').textContent = 'Recording...';
-          if (recognition) recognition.start();
+          document.getElementById('voiceStatus').textContent = 'Recording... Speak now';
+          document.getElementById('voiceStatus').style.color = '#dc2626';
+          
+          try {
+            recognition.start();
+          } catch (e) {
+            console.error('Start error:', e);
+            // Already started, ignore
+          }
         }
       }
+      
+      // Initialize on page load
+      initSpeechRecognition();
       
       async function analyzeVoice() {
         if (!transcript) {
