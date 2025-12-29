@@ -1065,8 +1065,249 @@ app.get('/api/health', (c) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     services: { gemini: true, openai: true, d1: true },
-    version: '3.1'
+    version: '7.1'
   })
+})
+
+// ============================================================================
+// ERROR NOTIFICATION SYSTEM - Robust Error Logging
+// Fails silently - never crashes the app
+// ============================================================================
+
+interface ErrorLogEntry {
+  timestamp: string;
+  type: 'error' | 'warning' | 'critical';
+  message: string;
+  stack?: string;
+  url?: string;
+  userAgent?: string;
+  userId?: string;
+  context?: Record<string, unknown>;
+}
+
+// In-memory error log (in production, use D1 or external service)
+const errorLogs: ErrorLogEntry[] = [];
+const MAX_ERROR_LOGS = 1000;
+
+// Utility function to safely log errors
+function logError(entry: Partial<ErrorLogEntry>): void {
+  try {
+    const fullEntry: ErrorLogEntry = {
+      timestamp: new Date().toISOString(),
+      type: entry.type || 'error',
+      message: entry.message || 'Unknown error',
+      stack: entry.stack,
+      url: entry.url,
+      userAgent: entry.userAgent,
+      userId: entry.userId,
+      context: entry.context
+    };
+    
+    errorLogs.unshift(fullEntry);
+    
+    // Keep only last N entries
+    if (errorLogs.length > MAX_ERROR_LOGS) {
+      errorLogs.pop();
+    }
+    
+    // Console log for debugging (remove in production)
+    console.log('[ERROR LOG]', fullEntry.type.toUpperCase(), fullEntry.message);
+    
+  } catch (e) {
+    // Fail silently - never crash due to logging
+    console.warn('[ERROR LOG] Failed to log error:', e);
+  }
+}
+
+// Public API route for frontend error logging
+app.post('/api/log-error', async (c) => {
+  try {
+    const body = await c.req.json();
+    const userAgent = c.req.header('user-agent') || 'unknown';
+    
+    logError({
+      type: body.type || 'error',
+      message: body.message || 'Unknown error',
+      stack: body.stack,
+      url: body.url,
+      userAgent,
+      userId: body.userId,
+      context: body.context
+    });
+    
+    // Always return success - don't expose internal state
+    return c.json({ success: true, logged: true });
+    
+  } catch (e) {
+    // Fail silently
+    return c.json({ success: true, logged: false });
+  }
+})
+
+// Get recent errors (admin only in production)
+app.get('/api/errors', (c) => {
+  return c.json({
+    count: errorLogs.length,
+    errors: errorLogs.slice(0, 50) // Return last 50
+  });
+})
+
+// ============================================================================
+// ASSESSMENT DATA LOGGING API
+// Stores assessment results, red flags, and transcripts
+// ============================================================================
+
+interface AssessmentLog {
+  id: string;
+  timestamp: string;
+  patientId?: string;
+  duration: number;
+  exercises: Array<{
+    name: string;
+    reps: number;
+    target: number;
+    score: number;
+    maxAngles: Record<string, number>;
+    skipped?: boolean;
+  }>;
+  redFlags: Array<{
+    type: string;
+    context: string;
+    time: string;
+    exercise: string;
+  }>;
+  transcript: string;
+  summary: {
+    totalExercises: number;
+    completedExercises: number;
+    totalReps: number;
+    flagCount: number;
+    overallScore: number;
+  };
+}
+
+const assessmentLogs: AssessmentLog[] = [];
+const MAX_ASSESSMENT_LOGS = 500;
+
+// Log assessment results
+app.post('/api/assessment/log', async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const assessment: AssessmentLog = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      patientId: body.patientId,
+      duration: body.duration || 0,
+      exercises: body.exercises || [],
+      redFlags: body.redFlags || [],
+      transcript: body.transcript || '',
+      summary: body.summary || {
+        totalExercises: 0,
+        completedExercises: 0,
+        totalReps: 0,
+        flagCount: 0,
+        overallScore: 0
+      }
+    };
+    
+    assessmentLogs.unshift(assessment);
+    
+    if (assessmentLogs.length > MAX_ASSESSMENT_LOGS) {
+      assessmentLogs.pop();
+    }
+    
+    return c.json({ success: true, id: assessment.id });
+    
+  } catch (e) {
+    logError({ type: 'error', message: 'Failed to log assessment', context: { error: String(e) } });
+    return c.json({ success: false, error: 'Failed to log assessment' }, 500);
+  }
+})
+
+// Get assessment by ID
+app.get('/api/assessment/:id', (c) => {
+  const id = c.req.param('id');
+  const assessment = assessmentLogs.find(a => a.id === id);
+  
+  if (!assessment) {
+    return c.json({ error: 'Assessment not found' }, 404);
+  }
+  
+  return c.json(assessment);
+})
+
+// Get recent assessments
+app.get('/api/assessments', (c) => {
+  return c.json({
+    count: assessmentLogs.length,
+    assessments: assessmentLogs.slice(0, 20).map(a => ({
+      id: a.id,
+      timestamp: a.timestamp,
+      patientId: a.patientId,
+      duration: a.duration,
+      summary: a.summary
+    }))
+  });
+})
+
+// ============================================================================
+// RED FLAG NOTIFICATION API
+// Critical alerts for pain, fall risk, etc.
+// ============================================================================
+
+interface RedFlagAlert {
+  id: string;
+  timestamp: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  context: string;
+  assessmentId?: string;
+  patientId?: string;
+  acknowledged: boolean;
+}
+
+const redFlagAlerts: RedFlagAlert[] = [];
+
+app.post('/api/red-flag', async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const alert: RedFlagAlert = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      type: body.type || 'UNKNOWN',
+      severity: body.severity || 'medium',
+      context: body.context || '',
+      assessmentId: body.assessmentId,
+      patientId: body.patientId,
+      acknowledged: false
+    };
+    
+    redFlagAlerts.unshift(alert);
+    
+    // Log critical alerts specially
+    if (alert.severity === 'critical') {
+      logError({
+        type: 'critical',
+        message: `CRITICAL RED FLAG: ${alert.type}`,
+        context: { alert }
+      });
+    }
+    
+    return c.json({ success: true, id: alert.id });
+    
+  } catch (e) {
+    return c.json({ success: false }, 500);
+  }
+})
+
+app.get('/api/red-flags', (c) => {
+  return c.json({
+    count: redFlagAlerts.length,
+    unacknowledged: redFlagAlerts.filter(a => !a.acknowledged).length,
+    alerts: redFlagAlerts.slice(0, 50)
+  });
 })
 
 // COMPREHENSIVE JOINT ANALYSIS - All Body Parts
@@ -1714,45 +1955,49 @@ app.get('/doctor', (c) => {
 // GUIDED MSK ASSESSMENT v7.0
 // Voice Instructions + Real-Time Tracking + Auto Rep Count + Mic Recording
 // =============================================================================
+
+// =============================================================================
+// GUIDED MSK ASSESSMENT v8.0 - Production Ready
+// Robust Architecture with Error Handling, Voice, Tracking, Mic Recording
+// =============================================================================
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
+      /* ========== RESET & BASE ========== */
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { 
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
         background: #000; 
         color: #fff; 
         overflow: hidden;
-        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
       
-      .assess-page { 
-        height: 100vh; 
-        height: 100dvh;
-        display: flex; 
-        flex-direction: column; 
-      }
+      .app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
       
-      /* Header with Mic Status */
-      .assess-header {
-        background: #0a0a0a;
-        padding: 8px 12px;
+      /* ========== HEADER ========== */
+      .header {
+        background: linear-gradient(180deg, #0d0d0d 0%, #0a0a0a 100%);
+        padding: 10px 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #1a1a1a;
+        z-index: 100;
       }
-      .back-link { 
+      .back-btn { 
         color: #666; 
         text-decoration: none; 
-        font-size: 12px;
-      }
-      .header-title {
         font-size: 13px;
-        font-weight: 600;
-        color: #3b82f6;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: #111;
+        border: 1px solid #222;
+        transition: all 0.2s;
       }
-      .mic-status {
+      .back-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+      .title { font-size: 14px; font-weight: 600; color: #3b82f6; }
+      .mic-indicator {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -1763,306 +2008,344 @@ app.get('/doctor/joints', (c) => {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #666;
+        background: #333;
+        transition: all 0.3s;
       }
-      .mic-dot.recording {
+      .mic-dot.active {
         background: #ef4444;
-        animation: pulse-red 1s infinite;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+        animation: pulse 1s infinite;
       }
-      @keyframes pulse-red {
-        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-        50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
       }
       
-      /* Exercise Info Bar */
-      .exercise-bar {
-        background: #111;
+      /* ========== EXERCISE INFO ========== */
+      .exercise-info {
+        background: #0a0a0a;
         padding: 12px 16px;
         border-bottom: 1px solid #1a1a1a;
       }
-      .exercise-progress {
+      .progress-track {
         display: flex;
-        gap: 4px;
-        margin-bottom: 8px;
+        gap: 6px;
+        margin-bottom: 10px;
       }
-      .progress-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #333;
+      .progress-step {
+        flex: 1;
+        height: 4px;
+        background: #222;
+        border-radius: 2px;
+        transition: background 0.3s;
       }
-      .progress-dot.done { background: #22c55e; }
-      .progress-dot.active { background: #3b82f6; animation: pulse-blue 1s infinite; }
-      @keyframes pulse-blue {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-        50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
-      }
-      .exercise-name {
-        font-size: 18px;
+      .progress-step.done { background: #22c55e; }
+      .progress-step.active { background: #3b82f6; }
+      .exercise-title {
+        font-size: 20px;
         font-weight: 700;
         color: #fff;
         margin-bottom: 4px;
       }
-      .exercise-instruction {
+      .exercise-desc {
         font-size: 13px;
         color: #3b82f6;
         line-height: 1.4;
       }
       
-      /* Camera Container */
-      .camera-wrap {
+      /* ========== CAMERA VIEW ========== */
+      .camera-container {
         flex: 1;
         position: relative;
         background: #000;
         overflow: hidden;
-        min-height: 0;
       }
-      #videoElement {
-        width: 100%; height: 100%;
+      #video {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
         transform: scaleX(-1);
       }
-      #canvasElement {
+      #canvas {
         position: absolute;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         pointer-events: none;
         transform: scaleX(-1);
       }
       
-      /* Rep Counter - Large */
-      .rep-counter {
+      /* ========== REP COUNTER ========== */
+      .rep-display {
         position: absolute;
-        top: 12px;
-        right: 12px;
+        top: 16px;
+        right: 16px;
         background: rgba(0,0,0,0.9);
         border: 2px solid #3b82f6;
-        border-radius: 12px;
-        padding: 12px 20px;
+        border-radius: 16px;
+        padding: 16px 24px;
         text-align: center;
         z-index: 50;
+        min-width: 100px;
       }
       .rep-label {
-        font-size: 10px;
+        font-size: 11px;
         color: #666;
         text-transform: uppercase;
         letter-spacing: 1px;
       }
-      .rep-value {
-        font-size: 48px;
-        font-weight: 700;
+      .rep-num {
+        font-size: 56px;
+        font-weight: 800;
         color: #3b82f6;
         line-height: 1;
+        font-variant-numeric: tabular-nums;
       }
       .rep-target {
-        font-size: 14px;
-        color: #555;
+        font-size: 16px;
+        color: #444;
       }
       .rep-bar {
         width: 100%;
-        height: 4px;
-        background: #222;
-        border-radius: 2px;
-        margin-top: 8px;
+        height: 6px;
+        background: #1a1a1a;
+        border-radius: 3px;
+        margin-top: 10px;
         overflow: hidden;
       }
       .rep-fill {
         height: 100%;
-        background: #3b82f6;
-        transition: width 0.3s ease;
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        border-radius: 3px;
+        transition: width 0.3s ease-out;
       }
       
-      /* Joint Angles Panel */
+      /* ========== ANGLES PANEL ========== */
       .angles-panel {
         position: absolute;
-        top: 12px;
-        left: 12px;
+        top: 16px;
+        left: 16px;
         background: rgba(0,0,0,0.9);
         border: 1px solid #222;
-        border-radius: 10px;
-        padding: 10px 12px;
-        font-size: 11px;
-        min-width: 130px;
+        border-radius: 12px;
+        padding: 12px 14px;
+        min-width: 140px;
         z-index: 50;
       }
-      .angles-title {
-        color: #3b82f6;
-        font-size: 9px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 6px;
+      .angles-header {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #222;
       }
-      .angles-title::before {
-        content: '';
-        width: 6px;
-        height: 6px;
+      .live-dot {
+        width: 8px;
+        height: 8px;
         background: #22c55e;
         border-radius: 50%;
-        animation: blink 0.5s infinite;
+        animation: blink 0.6s infinite;
       }
       @keyframes blink {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.3; }
       }
-      .angle-row {
+      .angles-title {
+        font-size: 10px;
+        font-weight: 600;
+        color: #3b82f6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .angle-item {
         display: flex;
         justify-content: space-between;
-        padding: 3px 0;
-        color: #888;
+        padding: 4px 0;
+        font-size: 12px;
       }
-      .angle-row .val {
-        color: #fff;
+      .angle-label { color: #888; }
+      .angle-value { 
+        color: #fff; 
         font-weight: 600;
-        font-family: monospace;
+        font-family: 'SF Mono', Monaco, monospace;
       }
-      .angle-row.tracking .val { color: #3b82f6; }
-      .angle-row.good .val { color: #22c55e; }
-      .angle-row.warn .val { color: #f59e0b; }
+      .angle-item.primary .angle-value { color: #3b82f6; font-size: 14px; }
+      .angle-item.good .angle-value { color: #22c55e; }
+      .angle-item.warn .angle-value { color: #f59e0b; }
       
-      /* Red Flags Panel */
-      .flags-panel {
+      /* ========== RED FLAG ALERTS ========== */
+      .alerts-container {
         position: absolute;
-        bottom: 80px;
-        left: 12px;
-        right: 12px;
+        bottom: 90px;
+        left: 16px;
+        right: 16px;
         z-index: 55;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
-      .flag-alert {
+      .alert-item {
         background: rgba(239, 68, 68, 0.95);
-        border: 1px solid #dc2626;
-        border-radius: 8px;
-        padding: 10px 14px;
-        margin-bottom: 8px;
+        border-radius: 10px;
+        padding: 12px 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        animation: slideIn 0.3s ease;
+        gap: 12px;
+        animation: slideUp 0.3s ease-out;
       }
-      @keyframes slideIn {
-        from { transform: translateX(-20px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
       }
-      .flag-icon { font-size: 18px; }
-      .flag-text {
-        flex: 1;
-        font-size: 12px;
-        font-weight: 500;
-      }
-      .flag-time {
-        font-size: 10px;
-        color: rgba(255,255,255,0.7);
-      }
+      .alert-icon { font-size: 20px; }
+      .alert-content { flex: 1; }
+      .alert-type { font-size: 12px; font-weight: 600; }
+      .alert-detail { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+      .alert-time { font-size: 10px; opacity: 0.7; }
       
-      /* Voice Status */
-      .voice-status {
+      /* ========== SPEAKING INDICATOR ========== */
+      .speaking-indicator {
         position: absolute;
-        bottom: 80px;
+        bottom: 90px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(59, 130, 246, 0.9);
-        color: #fff;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 12px;
+        background: rgba(59, 130, 246, 0.95);
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 13px;
         font-weight: 500;
-        z-index: 55;
         display: none;
+        z-index: 55;
       }
-      .voice-status.speaking { display: block; }
+      .speaking-indicator.active { display: flex; align-items: center; gap: 8px; }
+      .speaking-waves {
+        display: flex;
+        gap: 2px;
+        align-items: center;
+      }
+      .speaking-wave {
+        width: 3px;
+        height: 12px;
+        background: #fff;
+        border-radius: 2px;
+        animation: wave 0.5s ease-in-out infinite;
+      }
+      .speaking-wave:nth-child(2) { animation-delay: 0.1s; height: 16px; }
+      .speaking-wave:nth-child(3) { animation-delay: 0.2s; }
+      @keyframes wave {
+        0%, 100% { transform: scaleY(0.5); }
+        50% { transform: scaleY(1); }
+      }
       
-      /* Start Screen */
+      /* ========== START SCREEN ========== */
       .start-screen {
         position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
+        inset: 0;
+        background: rgba(0,0,0,0.98);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        background: rgba(0,0,0,0.95);
+        padding: 24px;
         z-index: 60;
-        padding: 20px;
       }
       .start-icon {
-        width: 80px;
-        height: 80px;
+        width: 90px;
+        height: 90px;
         border: 3px solid #3b82f6;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 36px;
-        margin-bottom: 20px;
+        font-size: 40px;
+        margin-bottom: 24px;
+        animation: glow 2s infinite;
+      }
+      @keyframes glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
       }
       .start-title {
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 700;
         margin-bottom: 8px;
       }
       .start-subtitle {
-        font-size: 13px;
+        font-size: 14px;
         color: #666;
         text-align: center;
-        margin-bottom: 24px;
         line-height: 1.5;
-      }
-      .camera-select-wrap {
-        width: 100%;
+        margin-bottom: 32px;
         max-width: 300px;
+      }
+      .camera-selector {
+        width: 100%;
+        max-width: 320px;
         margin-bottom: 16px;
       }
-      .camera-select-wrap label {
+      .camera-selector label {
         display: block;
-        font-size: 11px;
+        font-size: 12px;
         color: #666;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
       }
-      .camera-select {
+      .camera-selector select {
         width: 100%;
         background: #111;
         border: 1px solid #333;
         color: #fff;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 13px;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 14px;
       }
       .start-btn {
         width: 100%;
-        max-width: 300px;
-        background: #3b82f6;
+        max-width: 320px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         color: #fff;
         border: none;
-        padding: 16px;
-        border-radius: 10px;
-        font-size: 16px;
+        padding: 18px;
+        border-radius: 12px;
+        font-size: 17px;
         font-weight: 600;
         cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
       }
-      .start-btn:disabled { background: #333; color: #666; }
+      .start-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+      }
+      .start-btn:disabled { 
+        background: #333; 
+        color: #666; 
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
       .start-note {
-        font-size: 11px;
+        font-size: 12px;
         color: #444;
-        margin-top: 16px;
+        margin-top: 20px;
         text-align: center;
       }
-      .error-box {
+      .error-display {
         background: rgba(239, 68, 68, 0.1);
         border: 1px solid #dc2626;
         color: #fca5a5;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 11px;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 12px;
         margin-top: 16px;
-        max-width: 300px;
+        max-width: 320px;
+        line-height: 1.5;
       }
       
-      /* Loading */
-      .loading-overlay {
+      /* ========== LOADING ========== */
+      .loading-screen {
         position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
+        inset: 0;
         background: rgba(0,0,0,0.95);
         display: flex;
         flex-direction: column;
@@ -2070,64 +2353,110 @@ app.get('/doctor/joints', (c) => {
         justify-content: center;
         z-index: 70;
       }
-      .loading-spinner {
-        width: 50px;
-        height: 50px;
-        border: 3px solid #222;
+      .loader {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #1a1a1a;
         border-top-color: #3b82f6;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin-bottom: 16px;
+        margin-bottom: 20px;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .loading-text { color: #888; font-size: 14px; }
-      .loading-sub { color: #555; font-size: 11px; margin-top: 6px; }
+      .loading-text { font-size: 15px; color: #888; }
+      .loading-sub { font-size: 12px; color: #555; margin-top: 8px; }
       
-      /* Bottom Controls */
+      /* ========== BOTTOM CONTROLS ========== */
       .bottom-controls {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        background: linear-gradient(transparent, rgba(0,0,0,0.95));
-        padding: 20px 16px 16px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.98));
+        padding: 24px 16px 16px;
         z-index: 50;
       }
-      .ctrl-row {
+      .controls-row {
         display: flex;
         gap: 10px;
-        justify-content: center;
       }
       .ctrl-btn {
-        background: rgba(30,30,30,0.9);
+        background: rgba(26,26,26,0.95);
         border: 1px solid #333;
         color: #fff;
-        padding: 12px 16px;
-        border-radius: 10px;
-        font-size: 13px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        font-size: 14px;
         cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
       }
-      .ctrl-btn.primary {
-        background: #3b82f6;
+      .ctrl-btn:hover { border-color: #3b82f6; }
+      .ctrl-btn.primary { 
+        background: #3b82f6; 
         border-color: #3b82f6;
         flex: 1;
         font-weight: 600;
       }
-      .ctrl-btn.stop {
+      .ctrl-btn.danger { 
         background: rgba(127, 29, 29, 0.9);
         border-color: #991b1b;
       }
-      .ctrl-btn.muted {
-        background: rgba(239, 68, 68, 0.3);
-        border-color: #dc2626;
-      }
+      .ctrl-btn.muted { opacity: 0.5; }
       
-      /* Footer */
-      .assess-footer {
+      /* ========== COMPLETION ========== */
+      .complete-screen {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.98);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 80;
+      }
+      .complete-icon { font-size: 64px; margin-bottom: 16px; }
+      .complete-title { 
+        font-size: 26px; 
+        font-weight: 700; 
+        color: #22c55e;
+        margin-bottom: 8px;
+      }
+      .complete-subtitle { 
+        font-size: 14px; 
+        color: #666;
+        margin-bottom: 24px;
+      }
+      .stats-card {
+        background: #111;
+        border: 1px solid #222;
+        border-radius: 16px;
+        padding: 20px 28px;
+        margin-bottom: 24px;
+        min-width: 280px;
+      }
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        font-size: 14px;
+        border-bottom: 1px solid #1a1a1a;
+      }
+      .stat-item:last-child { border-bottom: none; }
+      .stat-label { color: #888; }
+      .stat-value { color: #fff; font-weight: 600; }
+      .stat-item.alert .stat-value { color: #ef4444; }
+      
+      /* ========== FOOTER ========== */
+      .footer {
         background: #0a0a0a;
         padding: 12px 16px;
         display: flex;
-        gap: 10px;
+        gap: 12px;
         border-top: 1px solid #1a1a1a;
       }
       .footer-btn {
@@ -2138,885 +2467,1016 @@ app.get('/doctor/joints', (c) => {
         font-weight: 600;
         cursor: pointer;
         border: none;
+        transition: all 0.2s;
       }
       .footer-btn.secondary { background: #1a1a1a; color: #666; }
       .footer-btn.primary { background: #3b82f6; color: #fff; }
-      .footer-btn:disabled { opacity: 0.5; }
+      .footer-btn:disabled { opacity: 0.5; cursor: not-allowed; }
       
-      /* Completion Screen */
-      .complete-overlay {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.95);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 80;
-        padding: 20px;
-      }
-      .complete-icon {
-        font-size: 60px;
-        margin-bottom: 16px;
-      }
-      .complete-title {
-        font-size: 24px;
-        font-weight: 700;
-        color: #22c55e;
-        margin-bottom: 8px;
-      }
-      .complete-subtitle {
-        font-size: 14px;
-        color: #666;
-        margin-bottom: 24px;
-      }
-      .complete-stats {
-        background: #111;
-        border-radius: 12px;
-        padding: 16px 24px;
-        margin-bottom: 24px;
-        min-width: 250px;
-      }
-      .stat-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid #222;
-        font-size: 13px;
-      }
-      .stat-row:last-child { border-bottom: none; }
-      .stat-row .label { color: #888; }
-      .stat-row .value { color: #fff; font-weight: 600; }
-      .stat-row.flag .value { color: #ef4444; }
-      
+      /* ========== RESPONSIVE ========== */
       @media (min-width: 768px) {
-        .assess-page { max-width: 500px; margin: 0 auto; }
+        .app { max-width: 480px; margin: 0 auto; box-shadow: 0 0 60px rgba(0,0,0,0.5); }
       }
     </style>
     
-    <div class="assess-page">
+    <div class="app">
       <!-- Header -->
-      <div class="assess-header">
-        <a href="/doctor" class="back-link">← Back</a>
-        <span class="header-title">Guided MSK Assessment</span>
-        <div class="mic-status">
+      <div class="header">
+        <a href="/doctor" class="back-btn">← Back</a>
+        <span class="title">MSK Assessment</span>
+        <div class="mic-indicator">
           <div class="mic-dot" id="micDot"></div>
-          <span id="micText">MIC</span>
+          <span id="micLabel">MIC</span>
         </div>
       </div>
       
-      <!-- Exercise Bar -->
-      <div class="exercise-bar">
-        <div class="exercise-progress" id="progressDots"></div>
-        <div class="exercise-name" id="exerciseName">Ready to Start</div>
-        <div class="exercise-instruction" id="exerciseInstruction">Click Start to begin the guided assessment</div>
+      <!-- Exercise Info -->
+      <div class="exercise-info">
+        <div class="progress-track" id="progressTrack"></div>
+        <div class="exercise-title" id="exerciseTitle">Ready to Begin</div>
+        <div class="exercise-desc" id="exerciseDesc">Press Start to begin your guided assessment</div>
       </div>
       
-      <!-- Camera -->
-      <div class="camera-wrap">
-        <video id="videoElement" autoplay playsinline muted></video>
-        <canvas id="canvasElement"></canvas>
+      <!-- Camera Container -->
+      <div class="camera-container">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
         
         <!-- Rep Counter -->
-        <div class="rep-counter" id="repCounter" style="display:none;">
+        <div class="rep-display" id="repDisplay" style="display:none">
           <div class="rep-label">REPS</div>
-          <div class="rep-value" id="repValue">0</div>
+          <div class="rep-num" id="repNum">0</div>
           <div class="rep-target" id="repTarget">/ 5</div>
           <div class="rep-bar"><div class="rep-fill" id="repFill"></div></div>
         </div>
         
         <!-- Angles Panel -->
-        <div class="angles-panel" id="anglesPanel" style="display:none;">
-          <div class="angles-title">LIVE TRACKING</div>
+        <div class="angles-panel" id="anglesPanel" style="display:none">
+          <div class="angles-header">
+            <div class="live-dot"></div>
+            <span class="angles-title">Live Tracking</span>
+          </div>
           <div id="anglesList"></div>
         </div>
         
-        <!-- Red Flags -->
-        <div class="flags-panel" id="flagsPanel"></div>
+        <!-- Alerts -->
+        <div class="alerts-container" id="alertsContainer"></div>
         
-        <!-- Voice Status -->
-        <div class="voice-status" id="voiceStatus">🔊 Speaking...</div>
+        <!-- Speaking Indicator -->
+        <div class="speaking-indicator" id="speakingIndicator">
+          <div class="speaking-waves">
+            <div class="speaking-wave"></div>
+            <div class="speaking-wave"></div>
+            <div class="speaking-wave"></div>
+          </div>
+          <span>Speaking...</span>
+        </div>
         
         <!-- Start Screen -->
         <div class="start-screen" id="startScreen">
           <div class="start-icon">🏥</div>
-          <div class="start-title">Guided MSK Assessment</div>
+          <div class="start-title">Guided Assessment</div>
           <div class="start-subtitle">
-            Voice-guided exercises with<br>
-            real-time joint tracking & auto-counting
+            Voice-guided exercises with real-time<br>
+            joint tracking and automatic counting
           </div>
           
-          <div class="camera-select-wrap">
+          <div class="camera-selector">
             <label>Select Camera</label>
-            <select class="camera-select" id="cameraSelect">
+            <select id="cameraSelect">
               <option value="">Detecting cameras...</option>
             </select>
           </div>
           
-          <button class="start-btn" id="startBtn">
+          <button class="start-btn" id="startBtn" disabled>
             🎬 Start Assessment
           </button>
           
-          <div class="start-note" id="startNote">
+          <div class="start-note">
             📹 Camera + 🎤 Microphone required<br>
-            Voice instructions will guide you
+            Voice will guide you through each exercise
           </div>
           
-          <div class="error-box" id="errorBox" style="display:none;">
-            <div id="errorMsg"></div>
-          </div>
+          <div class="error-display" id="errorDisplay" style="display:none"></div>
         </div>
         
         <!-- Loading -->
-        <div class="loading-overlay" id="loadingOverlay" style="display:none;">
-          <div class="loading-spinner"></div>
-          <div class="loading-text" id="loadingText">Loading...</div>
-          <div class="loading-sub" id="loadingSub"></div>
+        <div class="loading-screen" id="loadingScreen" style="display:none">
+          <div class="loader"></div>
+          <div class="loading-text" id="loadingText">Loading AI...</div>
+          <div class="loading-sub" id="loadingSub">Please wait</div>
         </div>
         
         <!-- Completion -->
-        <div class="complete-overlay" id="completeOverlay" style="display:none;">
+        <div class="complete-screen" id="completeScreen" style="display:none">
           <div class="complete-icon">✅</div>
           <div class="complete-title">Assessment Complete!</div>
           <div class="complete-subtitle">All exercises finished</div>
-          <div class="complete-stats" id="completeStats"></div>
-          <button class="start-btn" id="generateReportBtn" style="max-width:280px;">
-            📋 Generate Medical Report
-          </button>
+          <div class="stats-card" id="statsCard"></div>
+          <button class="start-btn" id="generateBtn">📋 Generate Report</button>
         </div>
         
         <!-- Bottom Controls -->
-        <div class="bottom-controls" id="bottomControls" style="display:none;">
-          <div class="ctrl-row">
+        <div class="bottom-controls" id="bottomControls" style="display:none">
+          <div class="controls-row">
             <button class="ctrl-btn" id="muteBtn">🔊</button>
             <button class="ctrl-btn" id="skipBtn">Skip →</button>
-            <button class="ctrl-btn primary" id="nextBtn">Next Exercise</button>
-            <button class="ctrl-btn stop" id="stopBtn">⏹</button>
+            <button class="ctrl-btn primary" id="nextBtn">Next</button>
+            <button class="ctrl-btn danger" id="stopBtn">⏹</button>
           </div>
         </div>
       </div>
       
       <!-- Footer -->
-      <div class="assess-footer">
+      <div class="footer">
         <button class="footer-btn secondary" id="restartBtn">Restart</button>
         <button class="footer-btn primary" id="reportBtn" disabled>Generate Report</button>
       </div>
     </div>
     
-    <!-- MediaPipe -->
+    <!-- MediaPipe CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
     
     <script>
-      // ============================================================
-      // GUIDED MSK ASSESSMENT v7.0
-      // Voice + Tracking + Auto-Count + Mic Recording + Red Flags
-      // ============================================================
+    (function() {
+      'use strict';
       
-      console.log('[Assessment] v7.0 Initializing...');
+      // ================================================================
+      // ERROR HANDLING UTILITY - Fails Silently
+      // ================================================================
+      const ErrorLogger = {
+        log: function(type, message, context) {
+          try {
+            console.error('[MSK Error]', type, message, context);
+            
+            // Send to server (async, non-blocking)
+            fetch('/api/log-error', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type,
+                message,
+                url: window.location.href,
+                context,
+                timestamp: new Date().toISOString()
+              })
+            }).catch(() => {}); // Fail silently
+            
+          } catch (e) {
+            // Never crash due to logging
+          }
+        },
+        
+        wrap: function(fn, context) {
+          return function(...args) {
+            try {
+              return fn.apply(this, args);
+            } catch (e) {
+              ErrorLogger.log('error', e.message, { context, stack: e.stack });
+              return null;
+            }
+          };
+        }
+      };
       
-      // ==================== STATE ====================
-      let holistic = null;
-      let stream = null;
-      let isRunning = false;
-      let selectedDeviceId = null;
-      let availableCameras = [];
+      // Global error handler
+      window.onerror = function(msg, url, line, col, error) {
+        ErrorLogger.log('uncaught', msg, { url, line, col, stack: error?.stack });
+        return false;
+      };
       
-      // Exercise state
-      let currentExerciseIdx = 0;
-      let currentReps = 0;
-      let repState = 'neutral'; // neutral, down, up
-      let lastAngles = {};
+      window.onunhandledrejection = function(event) {
+        ErrorLogger.log('promise', event.reason?.message || 'Promise rejected', {
+          stack: event.reason?.stack
+        });
+      };
       
-      // Speech
-      let speechSynth = window.speechSynthesis;
-      let isMuted = false;
-      let isSpeaking = false;
+      // ================================================================
+      // TEXT-TO-SPEECH UTILITY
+      // ================================================================
+      const TTS = {
+        synth: window.speechSynthesis,
+        muted: false,
+        speaking: false,
+        
+        speak: function(text, onEnd) {
+          if (this.muted || !this.synth) {
+            if (onEnd) setTimeout(onEnd, 100);
+            return;
+          }
+          
+          try {
+            this.synth.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.95;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            utterance.onstart = () => {
+              this.speaking = true;
+              document.getElementById('speakingIndicator')?.classList.add('active');
+            };
+            
+            utterance.onend = () => {
+              this.speaking = false;
+              document.getElementById('speakingIndicator')?.classList.remove('active');
+              if (onEnd) onEnd();
+            };
+            
+            utterance.onerror = () => {
+              this.speaking = false;
+              document.getElementById('speakingIndicator')?.classList.remove('active');
+              if (onEnd) onEnd();
+            };
+            
+            this.synth.speak(utterance);
+            
+          } catch (e) {
+            ErrorLogger.log('warning', 'TTS failed', { text });
+            if (onEnd) onEnd();
+          }
+        },
+        
+        toggle: function() {
+          this.muted = !this.muted;
+          if (this.muted && this.synth) this.synth.cancel();
+          return this.muted;
+        },
+        
+        stop: function() {
+          try {
+            if (this.synth) this.synth.cancel();
+            this.speaking = false;
+          } catch (e) {}
+        }
+      };
       
-      // Microphone & Speech Recognition
-      let recognition = null;
-      let micStream = null;
-      let transcript = '';
-      let redFlags = [];
+      // ================================================================
+      // SPEECH RECOGNITION UTILITY
+      // ================================================================
+      const SpeechRecognizer = {
+        recognition: null,
+        active: false,
+        transcript: '',
+        onResult: null,
+        
+        init: function() {
+          try {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+              console.warn('Speech recognition not supported');
+              return false;
+            }
+            
+            this.recognition = new SR();
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            this.recognition.lang = 'en-US';
+            
+            this.recognition.onresult = (event) => {
+              for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                  const text = event.results[i][0].transcript;
+                  this.transcript += text + ' ';
+                  if (this.onResult) this.onResult(text);
+                }
+              }
+            };
+            
+            this.recognition.onerror = (e) => {
+              if (e.error !== 'no-speech' && this.active) {
+                setTimeout(() => this.start(), 1000);
+              }
+            };
+            
+            this.recognition.onend = () => {
+              if (this.active) {
+                setTimeout(() => this.start(), 500);
+              }
+            };
+            
+            return true;
+            
+          } catch (e) {
+            ErrorLogger.log('warning', 'Speech recognition init failed', { error: e.message });
+            return false;
+          }
+        },
+        
+        start: function() {
+          if (!this.recognition || this.active) return;
+          try {
+            this.recognition.start();
+            this.active = true;
+            document.getElementById('micDot')?.classList.add('active');
+            document.getElementById('micLabel').textContent = 'REC';
+          } catch (e) {}
+        },
+        
+        stop: function() {
+          this.active = false;
+          try {
+            if (this.recognition) this.recognition.stop();
+          } catch (e) {}
+          document.getElementById('micDot')?.classList.remove('active');
+          document.getElementById('micLabel').textContent = 'MIC';
+        },
+        
+        getTranscript: function() {
+          return this.transcript;
+        },
+        
+        clear: function() {
+          this.transcript = '';
+        }
+      };
       
-      // Results
-      let assessmentResults = [];
-      let startTime = null;
+      // ================================================================
+      // RED FLAG DETECTOR
+      // ================================================================
+      const RedFlagDetector = {
+        flags: [],
+        keywords: {
+          'PAIN': ['pain', 'painful', 'hurts', 'hurt', 'ache', 'aching', 'sore', 'ouch'],
+          'FALL_RISK': ['fall', 'fell', 'falling', 'stumble', 'trip', 'balance'],
+          'DIZZINESS': ['dizzy', 'dizziness', 'lightheaded', 'faint', 'vertigo', 'spinning'],
+          'NUMBNESS': ['numb', 'numbness', 'tingling', 'pins and needles', 'cant feel'],
+          'WEAKNESS': ['weak', 'weakness', 'cant move', 'hard to move', 'difficult'],
+          'ACUTE': ['sharp', 'shooting', 'stabbing', 'burning', 'severe'],
+          'SWELLING': ['swollen', 'swelling', 'inflamed', 'puffy']
+        },
+        icons: {
+          'PAIN': '⚠️', 'FALL_RISK': '🚨', 'DIZZINESS': '💫', 
+          'NUMBNESS': '🔴', 'WEAKNESS': '⚡', 'ACUTE': '🔥', 'SWELLING': '🫀'
+        },
+        
+        check: function(text, exercise) {
+          const lower = text.toLowerCase();
+          
+          for (const [type, words] of Object.entries(this.keywords)) {
+            for (const word of words) {
+              if (lower.includes(word)) {
+                this.addFlag(type, text, exercise);
+                return { detected: true, type, icon: this.icons[type] };
+              }
+            }
+          }
+          return { detected: false };
+        },
+        
+        addFlag: function(type, context, exercise) {
+          const flag = {
+            id: Date.now(),
+            type,
+            icon: this.icons[type],
+            context,
+            exercise,
+            time: new Date().toLocaleTimeString()
+          };
+          
+          this.flags.push(flag);
+          this.showAlert(flag);
+          this.logToServer(flag);
+          
+          // Announce
+          TTS.speak('I noticed you mentioned ' + type.toLowerCase().replace('_', ' ') + '. I will note this.');
+        },
+        
+        showAlert: function(flag) {
+          const container = document.getElementById('alertsContainer');
+          if (!container) return;
+          
+          const div = document.createElement('div');
+          div.className = 'alert-item';
+          div.innerHTML = 
+            '<span class="alert-icon">' + flag.icon + '</span>' +
+            '<div class="alert-content">' +
+              '<div class="alert-type">' + flag.type.replace('_', ' ') + ' Detected</div>' +
+              '<div class="alert-detail">' + flag.exercise + '</div>' +
+            '</div>' +
+            '<span class="alert-time">' + flag.time + '</span>';
+          
+          container.appendChild(div);
+          
+          // Auto-remove
+          setTimeout(() => div.remove(), 6000);
+        },
+        
+        logToServer: function(flag) {
+          fetch('/api/red-flag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: flag.type,
+              severity: flag.type === 'FALL_RISK' || flag.type === 'ACUTE' ? 'high' : 'medium',
+              context: flag.context
+            })
+          }).catch(() => {});
+        },
+        
+        getFlags: function() {
+          return this.flags;
+        },
+        
+        clear: function() {
+          this.flags = [];
+        }
+      };
       
-      // ==================== EXERCISES ====================
-      const exercises = [
+      // ================================================================
+      // EXERCISES CONFIGURATION
+      // ================================================================
+      const EXERCISES = [
         {
           name: 'Deep Squat',
-          instruction: 'Stand with feet shoulder-width apart. Squat down as low as comfortable, keeping heels on the ground. Rise back up.',
-          voicePrompt: 'Exercise 1: Deep Squat. Stand with feet shoulder-width apart. Squat down as low as you can, then stand back up. Complete 5 repetitions.',
+          desc: 'Squat down keeping heels on ground, then stand up',
+          voice: 'Exercise 1: Deep Squat. Stand with feet shoulder width apart. Squat down as low as comfortable, then stand back up. Complete 5 repetitions.',
           reps: 5,
-          trackJoint: 'knee',
-          downThreshold: 100, // knee angle when squatting
-          upThreshold: 160,   // knee angle when standing
-          joints: ['knee', 'hip', 'ankle']
+          joint: 'knee',
+          downAngle: 100,
+          upAngle: 160,
+          track: ['knee', 'hip']
         },
         {
           name: 'Shoulder Raise',
-          instruction: 'Raise both arms overhead as high as possible, then lower them back down.',
-          voicePrompt: 'Exercise 2: Shoulder Raise. Raise both arms straight up overhead, then lower them. Complete 5 repetitions.',
+          desc: 'Raise both arms overhead, then lower them',
+          voice: 'Exercise 2: Shoulder Raise. Raise both arms straight up overhead, then lower them back down. Complete 5 repetitions.',
           reps: 5,
-          trackJoint: 'shoulder',
-          downThreshold: 50,
-          upThreshold: 150,
-          joints: ['shoulder', 'elbow']
+          joint: 'shoulder',
+          downAngle: 50,
+          upAngle: 140,
+          track: ['shoulder', 'elbow']
         },
         {
           name: 'Hip Hinge',
-          instruction: 'Bend forward at the hips, keeping your back straight. Return to standing.',
-          voicePrompt: 'Exercise 3: Hip Hinge. Bend forward at your hips, keeping your back straight, then stand up. Complete 5 repetitions.',
+          desc: 'Bend forward at hips keeping back straight',
+          voice: 'Exercise 3: Hip Hinge. Bend forward at your hips while keeping your back straight, then stand up. Complete 5 repetitions.',
           reps: 5,
-          trackJoint: 'hip',
-          downThreshold: 100,
-          upThreshold: 160,
-          joints: ['hip', 'knee']
+          joint: 'hip',
+          downAngle: 100,
+          upAngle: 165,
+          track: ['hip', 'knee']
         },
         {
           name: 'Arm Curl',
-          instruction: 'Bend your elbows to curl your hands toward your shoulders, then extend.',
-          voicePrompt: 'Exercise 4: Arm Curl. Bend your elbows to bring your hands to your shoulders, then straighten. Complete 5 repetitions.',
+          desc: 'Bend elbows to bring hands to shoulders',
+          voice: 'Exercise 4: Arm Curl. Bend your elbows to bring your hands toward your shoulders, then straighten. Complete 5 repetitions.',
           reps: 5,
-          trackJoint: 'elbow',
-          downThreshold: 60,
-          upThreshold: 140,
-          joints: ['elbow', 'shoulder']
+          joint: 'elbow',
+          downAngle: 50,
+          upAngle: 140,
+          track: ['elbow', 'shoulder']
         },
         {
-          name: 'Side Step',
-          instruction: 'Step to the right, then back to center. Step to the left, then back to center.',
-          voicePrompt: 'Exercise 5: Side Step. Step to your right, return to center, then step to your left and return. Complete 4 repetitions each side.',
+          name: 'Trunk Rotation',
+          desc: 'Rotate upper body left, then right',
+          voice: 'Exercise 5: Trunk Rotation. Rotate your upper body to the left, return to center, then rotate right. Complete 4 repetitions each side.',
           reps: 4,
-          trackJoint: 'hip',
-          downThreshold: 140,
-          upThreshold: 170,
-          joints: ['hip', 'knee', 'ankle']
+          joint: 'hip',
+          downAngle: 150,
+          upAngle: 175,
+          track: ['hip', 'shoulder']
         },
         {
-          name: 'Single Leg Balance',
-          instruction: 'Stand on one leg for 3 seconds, then switch. Keep your arms out for balance.',
-          voicePrompt: 'Exercise 6: Single Leg Balance. Lift one foot off the ground and balance for 3 seconds, then switch legs. Complete 3 repetitions each side.',
+          name: 'Single Leg Stand',
+          desc: 'Stand on one leg for 3 seconds',
+          voice: 'Exercise 6: Single Leg Stand. Lift one foot off the ground and balance for 3 seconds, then switch legs. Complete 3 repetitions each side.',
           reps: 3,
-          trackJoint: 'hip',
-          downThreshold: 150,
-          upThreshold: 175,
-          joints: ['hip', 'knee']
+          joint: 'hip',
+          downAngle: 150,
+          upAngle: 175,
+          track: ['hip', 'knee']
         }
       ];
       
-      // ==================== RED FLAG KEYWORDS ====================
-      const redFlagKeywords = [
-        { words: ['pain', 'painful', 'hurts', 'hurt', 'ache', 'aching', 'sore'], type: 'PAIN', icon: '⚠️' },
-        { words: ['fall', 'fell', 'falling', 'fallen', 'stumble', 'trip'], type: 'FALL RISK', icon: '🚨' },
-        { words: ['dizzy', 'dizziness', 'lightheaded', 'faint', 'vertigo'], type: 'DIZZINESS', icon: '💫' },
-        { words: ['numb', 'numbness', 'tingling', 'pins and needles'], type: 'NUMBNESS', icon: '🔴' },
-        { words: ['weak', 'weakness', 'cant move', 'cannot move'], type: 'WEAKNESS', icon: '⚡' },
-        { words: ['sharp', 'shooting', 'stabbing', 'burning'], type: 'ACUTE PAIN', icon: '🔥' },
-        { words: ['swollen', 'swelling', 'inflamed'], type: 'INFLAMMATION', icon: '🫀' }
-      ];
-      
-      // ==================== DOM ELEMENTS ====================
-      const videoElement = document.getElementById('videoElement');
-      const canvasElement = document.getElementById('canvasElement');
-      const ctx = canvasElement.getContext('2d');
-      
-      // ==================== CAMERA ====================
-      async function enumerateCameras() {
-        const select = document.getElementById('cameraSelect');
-        const startBtn = document.getElementById('startBtn');
+      // ================================================================
+      // MAIN APPLICATION STATE
+      // ================================================================
+      const App = {
+        holistic: null,
+        stream: null,
+        running: false,
+        cameras: [],
+        selectedCamera: null,
         
-        try {
-          const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          tempStream.getTracks().forEach(t => t.stop());
+        // Exercise state
+        currentIdx: 0,
+        reps: 0,
+        repState: 'neutral',
+        angles: {},
+        results: [],
+        startTime: null,
+        
+        // DOM
+        video: null,
+        canvas: null,
+        ctx: null,
+        
+        // ============== INITIALIZATION ==============
+        init: async function() {
+          console.log('[MSK] Initializing v8.0...');
           
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          availableCameras = devices.filter(d => d.kind === 'videoinput');
+          this.video = document.getElementById('video');
+          this.canvas = document.getElementById('canvas');
+          this.ctx = this.canvas.getContext('2d');
           
-          if (availableCameras.length === 0) throw new Error('No cameras found');
+          // Attach event listeners
+          this.attachListeners();
           
-          select.innerHTML = availableCameras.map((cam, i) => 
-            '<option value="' + cam.deviceId + '">' + (cam.label || 'Camera ' + (i+1)) + '</option>'
-          ).join('');
-          
-          selectedDeviceId = availableCameras[0].deviceId;
-          startBtn.disabled = false;
-          
-        } catch (err) {
-          console.error('[Assessment] Camera error:', err);
-          document.getElementById('errorMsg').textContent = err.message;
-          document.getElementById('errorBox').style.display = 'block';
-          startBtn.disabled = true;
-        }
-      }
-      
-      // ==================== HOLISTIC INIT ====================
-      async function initHolistic() {
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = document.getElementById('loadingText');
-        const loadingSub = document.getElementById('loadingSub');
-        
-        loadingOverlay.style.display = 'flex';
-        loadingText.textContent = 'Loading AI tracking...';
-        loadingSub.textContent = 'Body + Face + Hands';
-        
-        try {
-          holistic = new Holistic({
-            locateFile: (file) => 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file
-          });
-          
-          holistic.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            refineFaceLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-          });
-          
-          holistic.onResults(onResults);
-          
-          loadingText.textContent = 'AI ready!';
-          return true;
-          
-        } catch (err) {
-          console.error('[Assessment] Holistic error:', err);
-          loadingText.textContent = 'Failed to load AI';
-          loadingSub.textContent = err.message;
-          return false;
-        }
-      }
-      
-      // ==================== SPEECH SYNTHESIS (TTS) ====================
-      function speak(text, onEnd = null) {
-        if (isMuted || !speechSynth) return;
-        
-        speechSynth.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-        
-        utterance.onstart = () => {
-          isSpeaking = true;
-          document.getElementById('voiceStatus').classList.add('speaking');
-        };
-        
-        utterance.onend = () => {
-          isSpeaking = false;
-          document.getElementById('voiceStatus').classList.remove('speaking');
-          if (onEnd) onEnd();
-        };
-        
-        speechSynth.speak(utterance);
-      }
-      
-      function toggleMute() {
-        isMuted = !isMuted;
-        document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
-        document.getElementById('muteBtn').classList.toggle('muted', isMuted);
-        if (isMuted) speechSynth.cancel();
-      }
-      
-      // ==================== SPEECH RECOGNITION (MIC) ====================
-      function initSpeechRecognition() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-          console.warn('[Assessment] Speech recognition not supported');
-          return;
-        }
-        
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-        
-        recognition.onresult = (event) => {
-          let interimTranscript = '';
-          
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const result = event.results[i];
-            if (result.isFinal) {
-              transcript += result[0].transcript + ' ';
-              checkForRedFlags(result[0].transcript);
-            } else {
-              interimTranscript += result[0].transcript;
-            }
-          }
-        };
-        
-        recognition.onerror = (err) => {
-          console.warn('[Assessment] Speech recognition error:', err.error);
-          // Restart on error
-          if (isRunning && err.error !== 'no-speech') {
-            setTimeout(() => {
-              try { recognition.start(); } catch(e) {}
-            }, 1000);
-          }
-        };
-        
-        recognition.onend = () => {
-          // Restart if still running
-          if (isRunning) {
-            try { recognition.start(); } catch(e) {}
-          }
-        };
-      }
-      
-      function startMicRecording() {
-        document.getElementById('micDot').classList.add('recording');
-        document.getElementById('micText').textContent = 'REC';
-        
-        if (recognition) {
-          try { recognition.start(); } catch(e) {}
-        }
-      }
-      
-      function stopMicRecording() {
-        document.getElementById('micDot').classList.remove('recording');
-        document.getElementById('micText').textContent = 'MIC';
-        
-        if (recognition) {
-          try { recognition.stop(); } catch(e) {}
-        }
-      }
-      
-      // ==================== RED FLAG DETECTION ====================
-      function checkForRedFlags(text) {
-        const lowerText = text.toLowerCase();
-        
-        for (const flagGroup of redFlagKeywords) {
-          for (const word of flagGroup.words) {
-            if (lowerText.includes(word)) {
-              addRedFlag(flagGroup.type, flagGroup.icon, text);
-              return;
-            }
-          }
-        }
-      }
-      
-      function addRedFlag(type, icon, context) {
-        const flag = {
-          type,
-          icon,
-          context,
-          time: new Date().toLocaleTimeString(),
-          exercise: exercises[currentExerciseIdx]?.name || 'General'
-        };
-        
-        redFlags.push(flag);
-        
-        // Show alert
-        const panel = document.getElementById('flagsPanel');
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'flag-alert';
-        alertDiv.innerHTML = 
-          '<span class="flag-icon">' + icon + '</span>' +
-          '<span class="flag-text">' + type + ' detected</span>' +
-          '<span class="flag-time">' + flag.time + '</span>';
-        panel.appendChild(alertDiv);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => alertDiv.remove(), 5000);
-        
-        // Announce
-        if (!isMuted) {
-          speak('I noticed you mentioned ' + type.toLowerCase() + '. I will note this in your report.');
-        }
-      }
-      
-      // ==================== EXERCISE FLOW ====================
-      function startExercise(idx) {
-        if (idx >= exercises.length) {
-          completeAssessment();
-          return;
-        }
-        
-        currentExerciseIdx = idx;
-        currentReps = 0;
-        repState = 'neutral';
-        
-        const exercise = exercises[idx];
-        
-        // Update UI
-        document.getElementById('exerciseName').textContent = (idx + 1) + '. ' + exercise.name;
-        document.getElementById('exerciseInstruction').textContent = exercise.instruction;
-        document.getElementById('repValue').textContent = '0';
-        document.getElementById('repTarget').textContent = '/ ' + exercise.reps;
-        document.getElementById('repFill').style.width = '0%';
-        
-        updateProgressDots();
-        
-        // Speak instructions
-        speak(exercise.voicePrompt, () => {
-          speak('Begin now.');
-        });
-      }
-      
-      function updateProgressDots() {
-        const dotsHtml = exercises.map((_, i) => {
-          let cls = 'progress-dot';
-          if (i < currentExerciseIdx) cls += ' done';
-          else if (i === currentExerciseIdx) cls += ' active';
-          return '<div class="' + cls + '"></div>';
-        }).join('');
-        document.getElementById('progressDots').innerHTML = dotsHtml;
-      }
-      
-      function completeRep() {
-        currentReps++;
-        const exercise = exercises[currentExerciseIdx];
-        
-        document.getElementById('repValue').textContent = currentReps;
-        document.getElementById('repFill').style.width = (currentReps / exercise.reps * 100) + '%';
-        
-        // Speak rep count
-        if (currentReps < exercise.reps) {
-          speak(currentReps + '');
-        }
-        
-        // Check if exercise complete
-        if (currentReps >= exercise.reps) {
-          // Save result
-          assessmentResults.push({
-            exercise: exercise.name,
-            reps: currentReps,
-            target: exercise.reps,
-            maxAngles: { ...lastAngles },
-            score: currentReps >= exercise.reps ? 3 : (currentReps >= exercise.reps/2 ? 2 : 1)
-          });
-          
-          // Move to next
-          speak('Good job! Moving to next exercise.', () => {
-            setTimeout(() => startExercise(currentExerciseIdx + 1), 1000);
-          });
-        }
-      }
-      
-      function skipExercise() {
-        const exercise = exercises[currentExerciseIdx];
-        
-        assessmentResults.push({
-          exercise: exercise.name,
-          reps: currentReps,
-          target: exercise.reps,
-          maxAngles: { ...lastAngles },
-          score: currentReps > 0 ? 1 : 0,
-          skipped: true
-        });
-        
-        speak('Skipping to next exercise.');
-        startExercise(currentExerciseIdx + 1);
-      }
-      
-      function completeAssessment() {
-        isRunning = false;
-        stopMicRecording();
-        
-        // Show completion screen
-        document.getElementById('bottomControls').style.display = 'none';
-        document.getElementById('anglesPanel').style.display = 'none';
-        document.getElementById('repCounter').style.display = 'none';
-        
-        const overlay = document.getElementById('completeOverlay');
-        overlay.style.display = 'flex';
-        
-        // Build stats
-        const totalReps = assessmentResults.reduce((sum, r) => sum + r.reps, 0);
-        const totalTarget = assessmentResults.reduce((sum, r) => sum + r.target, 0);
-        const duration = Math.round((Date.now() - startTime) / 1000);
-        
-        let statsHtml = 
-          '<div class="stat-row"><span class="label">Exercises</span><span class="value">' + assessmentResults.length + '/' + exercises.length + '</span></div>' +
-          '<div class="stat-row"><span class="label">Total Reps</span><span class="value">' + totalReps + '/' + totalTarget + '</span></div>' +
-          '<div class="stat-row"><span class="label">Duration</span><span class="value">' + Math.floor(duration/60) + 'm ' + (duration%60) + 's</span></div>';
-        
-        if (redFlags.length > 0) {
-          statsHtml += '<div class="stat-row flag"><span class="label">Red Flags</span><span class="value">' + redFlags.length + ' detected</span></div>';
-        }
-        
-        document.getElementById('completeStats').innerHTML = statsHtml;
-        document.getElementById('reportBtn').disabled = false;
-        
-        speak('Assessment complete! You completed ' + assessmentResults.length + ' exercises. ' + 
-              (redFlags.length > 0 ? 'I noted ' + redFlags.length + ' concerns during the session.' : ''));
-      }
-      
-      // ==================== JOINT TRACKING ====================
-      function onResults(results) {
-        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        
-        if (results.poseLandmarks) {
-          // Draw pose skeleton (blue)
-          drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#3b82f6', lineWidth: 3 });
-          drawLandmarks(ctx, results.poseLandmarks, { color: '#93c5fd', fillColor: '#3b82f6', radius: 4 });
-          
-          // Calculate and display angles
-          calculateAngles(results.poseLandmarks);
-          
-          // Check for rep completion
-          detectRep();
-        }
-        
-        // Draw face (cyan)
-        if (results.faceLandmarks) {
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, { color: 'rgba(6, 182, 212, 0.2)', lineWidth: 1 });
-          drawConnectors(ctx, results.faceLandmarks, FACEMESH_FACE_OVAL, { color: '#06b6d4', lineWidth: 2 });
-        }
-        
-        // Draw hands (purple)
-        if (results.leftHandLandmarks) {
-          drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
-          drawLandmarks(ctx, results.leftHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
-        }
-        if (results.rightHandLandmarks) {
-          drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
-          drawLandmarks(ctx, results.rightHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
-        }
-      }
-      
-      function calculateAngles(landmarks) {
-        if (!landmarks || landmarks.length < 33) return;
-        
-        const L_SHOULDER = 11, R_SHOULDER = 12;
-        const L_ELBOW = 13, R_ELBOW = 14;
-        const L_WRIST = 15, R_WRIST = 16;
-        const L_HIP = 23, R_HIP = 24;
-        const L_KNEE = 25, R_KNEE = 26;
-        const L_ANKLE = 27, R_ANKLE = 28;
-        
-        function angle(a, b, c) {
-          const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-          let deg = Math.abs(rad * 180 / Math.PI);
-          if (deg > 180) deg = 360 - deg;
-          return Math.round(deg);
-        }
-        
-        // Calculate all angles
-        const kneeL = angle(landmarks[L_HIP], landmarks[L_KNEE], landmarks[L_ANKLE]);
-        const kneeR = angle(landmarks[R_HIP], landmarks[R_KNEE], landmarks[R_ANKLE]);
-        const hipL = angle(landmarks[L_SHOULDER], landmarks[L_HIP], landmarks[L_KNEE]);
-        const hipR = angle(landmarks[R_SHOULDER], landmarks[R_HIP], landmarks[R_KNEE]);
-        const shoulderL = angle(landmarks[L_ELBOW], landmarks[L_SHOULDER], landmarks[L_HIP]);
-        const shoulderR = angle(landmarks[R_ELBOW], landmarks[R_SHOULDER], landmarks[R_HIP]);
-        const elbowL = angle(landmarks[L_SHOULDER], landmarks[L_ELBOW], landmarks[L_WRIST]);
-        const elbowR = angle(landmarks[R_SHOULDER], landmarks[R_ELBOW], landmarks[R_WRIST]);
-        
-        lastAngles = {
-          knee: Math.round((kneeL + kneeR) / 2),
-          hip: Math.round((hipL + hipR) / 2),
-          shoulder: Math.round((shoulderL + shoulderR) / 2),
-          elbow: Math.round((elbowL + elbowR) / 2)
-        };
-        
-        // Update angles panel
-        const exercise = exercises[currentExerciseIdx];
-        if (exercise) {
-          let html = '';
-          exercise.joints.forEach(joint => {
-            const val = lastAngles[joint] || 0;
-            const isTracking = joint === exercise.trackJoint;
-            html += '<div class="angle-row ' + (isTracking ? 'tracking' : '') + '">' +
-                    '<span>' + joint.charAt(0).toUpperCase() + joint.slice(1) + '</span>' +
-                    '<span class="val">' + val + '°</span></div>';
-          });
-          document.getElementById('anglesList').innerHTML = html;
-        }
-      }
-      
-      function detectRep() {
-        const exercise = exercises[currentExerciseIdx];
-        if (!exercise) return;
-        
-        const angle = lastAngles[exercise.trackJoint];
-        if (!angle) return;
-        
-        // State machine for rep detection
-        if (repState === 'neutral' || repState === 'up') {
-          if (angle <= exercise.downThreshold) {
-            repState = 'down';
-          }
-        } else if (repState === 'down') {
-          if (angle >= exercise.upThreshold) {
-            repState = 'up';
-            completeRep();
-          }
-        }
-      }
-      
-      // ==================== MAIN FLOW ====================
-      async function startAssessment() {
-        const startBtn = document.getElementById('startBtn');
-        startBtn.disabled = true;
-        startBtn.textContent = 'Starting...';
-        
-        try {
-          // Init holistic
-          if (!holistic) {
-            const success = await initHolistic();
-            if (!success) {
-              startBtn.disabled = false;
-              startBtn.textContent = 'Retry';
-              return;
-            }
-          }
-          
-          // Get camera
-          const constraints = {
-            video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
-            audio: false
+          // Init speech recognition
+          SpeechRecognizer.init();
+          SpeechRecognizer.onResult = (text) => {
+            RedFlagDetector.check(text, EXERCISES[this.currentIdx]?.name || 'General');
           };
           
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-          videoElement.srcObject = stream;
+          // Enumerate cameras
+          await this.enumerateCameras();
           
-          await new Promise(resolve => {
-            videoElement.onloadedmetadata = () => videoElement.play().then(resolve);
-          });
+          // Render initial progress
+          this.renderProgress();
           
-          canvasElement.width = videoElement.videoWidth;
-          canvasElement.height = videoElement.videoHeight;
-          
-          // Hide loading, show UI
-          document.getElementById('loadingOverlay').style.display = 'none';
-          document.getElementById('startScreen').style.display = 'none';
-          document.getElementById('repCounter').style.display = 'block';
-          document.getElementById('anglesPanel').style.display = 'block';
-          document.getElementById('bottomControls').style.display = 'block';
-          
-          isRunning = true;
-          startTime = Date.now();
-          
-          // Start mic recording
-          startMicRecording();
-          
-          // Start processing
-          processFrame();
-          
-          // Start first exercise with intro
-          speak('Welcome to the guided musculoskeletal assessment. I will guide you through ' + exercises.length + ' exercises. Please follow the voice instructions. Let me know if you experience any pain or discomfort.', () => {
-            startExercise(0);
-          });
-          
-        } catch (err) {
-          console.error('[Assessment] Start error:', err);
-          document.getElementById('errorMsg').textContent = err.message;
-          document.getElementById('errorBox').style.display = 'block';
-          document.getElementById('loadingOverlay').style.display = 'none';
-          startBtn.disabled = false;
-          startBtn.textContent = 'Try Again';
-        }
-      }
-      
-      async function processFrame() {
-        if (!isRunning) return;
-        await holistic.send({ image: videoElement });
-        requestAnimationFrame(processFrame);
-      }
-      
-      function stopAssessment() {
-        isRunning = false;
-        stopMicRecording();
-        speechSynth.cancel();
+          console.log('[MSK] Ready');
+        },
         
-        if (stream) {
-          stream.getTracks().forEach(t => t.stop());
-          stream = null;
-        }
+        attachListeners: function() {
+          document.getElementById('startBtn').onclick = () => this.start();
+          document.getElementById('muteBtn').onclick = () => this.toggleMute();
+          document.getElementById('skipBtn').onclick = () => this.skipExercise();
+          document.getElementById('nextBtn').onclick = () => this.nextExercise();
+          document.getElementById('stopBtn').onclick = () => this.stop();
+          document.getElementById('restartBtn').onclick = () => this.restart();
+          document.getElementById('reportBtn').onclick = () => this.generateReport();
+          document.getElementById('generateBtn').onclick = () => this.generateReport();
+          document.getElementById('cameraSelect').onchange = (e) => {
+            this.selectedCamera = e.target.value;
+          };
+        },
         
-        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        
-        document.getElementById('startScreen').style.display = 'flex';
-        document.getElementById('repCounter').style.display = 'none';
-        document.getElementById('anglesPanel').style.display = 'none';
-        document.getElementById('bottomControls').style.display = 'none';
-        document.getElementById('completeOverlay').style.display = 'none';
-        
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('startBtn').textContent = 'Resume Assessment';
-      }
-      
-      function restartAssessment() {
-        stopAssessment();
-        
-        currentExerciseIdx = 0;
-        currentReps = 0;
-        repState = 'neutral';
-        assessmentResults = [];
-        redFlags = [];
-        transcript = '';
-        
-        document.getElementById('exerciseName').textContent = 'Ready to Start';
-        document.getElementById('exerciseInstruction').textContent = 'Click Start to begin the guided assessment';
-        document.getElementById('flagsPanel').innerHTML = '';
-        document.getElementById('reportBtn').disabled = true;
-        
-        updateProgressDots();
-      }
-      
-      function generateReport() {
-        const reportData = {
-          date: new Date().toISOString(),
-          duration: Math.round((Date.now() - startTime) / 1000),
-          exercises: assessmentResults,
-          redFlags: redFlags,
-          transcript: transcript,
-          summary: {
-            totalExercises: exercises.length,
-            completedExercises: assessmentResults.filter(r => r.reps >= r.target).length,
-            totalReps: assessmentResults.reduce((s, r) => s + r.reps, 0),
-            flagCount: redFlags.length
+        // ============== CAMERA ==============
+        enumerateCameras: async function() {
+          const select = document.getElementById('cameraSelect');
+          const startBtn = document.getElementById('startBtn');
+          const errorDisplay = document.getElementById('errorDisplay');
+          
+          try {
+            // Request permission
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            tempStream.getTracks().forEach(t => t.stop());
+            
+            // Enumerate
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            this.cameras = devices.filter(d => d.kind === 'videoinput');
+            
+            if (this.cameras.length === 0) {
+              throw new Error('No cameras found');
+            }
+            
+            // Populate select
+            select.innerHTML = this.cameras.map((cam, i) => 
+              '<option value="' + cam.deviceId + '">' + (cam.label || 'Camera ' + (i+1)) + '</option>'
+            ).join('');
+            
+            this.selectedCamera = this.cameras[0].deviceId;
+            startBtn.disabled = false;
+            errorDisplay.style.display = 'none';
+            
+          } catch (e) {
+            ErrorLogger.log('error', 'Camera enumeration failed', { error: e.message });
+            errorDisplay.textContent = 'Camera access required: ' + e.message;
+            errorDisplay.style.display = 'block';
+            startBtn.disabled = true;
           }
-        };
+        },
         
-        sessionStorage.setItem('mskAssessment', JSON.stringify(reportData));
-        sessionStorage.setItem('jointAnalysis', JSON.stringify(assessmentResults));
-        sessionStorage.setItem('redFlags', JSON.stringify(redFlags));
+        // ============== HOLISTIC ==============
+        initHolistic: async function() {
+          const loadingScreen = document.getElementById('loadingScreen');
+          const loadingText = document.getElementById('loadingText');
+          const loadingSub = document.getElementById('loadingSub');
+          
+          loadingScreen.style.display = 'flex';
+          loadingText.textContent = 'Loading AI tracking...';
+          loadingSub.textContent = 'Body + Face + Hands detection';
+          
+          try {
+            this.holistic = new Holistic({
+              locateFile: (file) => 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file
+            });
+            
+            this.holistic.setOptions({
+              modelComplexity: 1,
+              smoothLandmarks: true,
+              refineFaceLandmarks: true,
+              minDetectionConfidence: 0.5,
+              minTrackingConfidence: 0.5
+            });
+            
+            this.holistic.onResults((results) => this.onResults(results));
+            
+            loadingText.textContent = 'AI ready!';
+            return true;
+            
+          } catch (e) {
+            ErrorLogger.log('error', 'Holistic init failed', { error: e.message });
+            loadingText.textContent = 'Failed to load AI';
+            loadingSub.textContent = e.message;
+            return false;
+          }
+        },
         
-        window.location.href = '/doctor/notes';
+        // ============== START ==============
+        start: async function() {
+          const startBtn = document.getElementById('startBtn');
+          startBtn.disabled = true;
+          startBtn.textContent = 'Starting...';
+          
+          try {
+            // Init holistic if needed
+            if (!this.holistic) {
+              const ok = await this.initHolistic();
+              if (!ok) {
+                startBtn.disabled = false;
+                startBtn.textContent = 'Try Again';
+                return;
+              }
+            }
+            
+            // Get camera stream
+            const constraints = {
+              video: this.selectedCamera ? { deviceId: { exact: this.selectedCamera } } : true,
+              audio: false
+            };
+            
+            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            this.video.srcObject = this.stream;
+            
+            await new Promise((resolve) => {
+              this.video.onloadedmetadata = () => this.video.play().then(resolve);
+            });
+            
+            this.canvas.width = this.video.videoWidth;
+            this.canvas.height = this.video.videoHeight;
+            
+            // Update UI
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('repDisplay').style.display = 'block';
+            document.getElementById('anglesPanel').style.display = 'block';
+            document.getElementById('bottomControls').style.display = 'block';
+            
+            this.running = true;
+            this.startTime = Date.now();
+            
+            // Start mic recording
+            SpeechRecognizer.start();
+            
+            // Start processing
+            this.processFrame();
+            
+            // Welcome message
+            TTS.speak('Welcome to the guided assessment. I will guide you through ' + EXERCISES.length + ' exercises. Let me know if you feel any pain or discomfort.', () => {
+              this.startExercise(0);
+            });
+            
+          } catch (e) {
+            ErrorLogger.log('error', 'Start failed', { error: e.message });
+            document.getElementById('errorDisplay').textContent = e.message;
+            document.getElementById('errorDisplay').style.display = 'block';
+            document.getElementById('loadingScreen').style.display = 'none';
+            startBtn.disabled = false;
+            startBtn.textContent = 'Try Again';
+          }
+        },
+        
+        // ============== FRAME PROCESSING ==============
+        processFrame: async function() {
+          if (!this.running) return;
+          
+          try {
+            await this.holistic.send({ image: this.video });
+          } catch (e) {
+            ErrorLogger.log('warning', 'Frame processing error', { error: e.message });
+          }
+          
+          requestAnimationFrame(() => this.processFrame());
+        },
+        
+        onResults: function(results) {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          
+          // Draw pose
+          if (results.poseLandmarks) {
+            drawConnectors(this.ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#3b82f6', lineWidth: 3 });
+            drawLandmarks(this.ctx, results.poseLandmarks, { color: '#93c5fd', fillColor: '#3b82f6', radius: 4 });
+            
+            this.calculateAngles(results.poseLandmarks);
+            this.detectRep();
+          }
+          
+          // Draw face
+          if (results.faceLandmarks) {
+            drawConnectors(this.ctx, results.faceLandmarks, FACEMESH_TESSELATION, { color: 'rgba(6, 182, 212, 0.15)', lineWidth: 1 });
+            drawConnectors(this.ctx, results.faceLandmarks, FACEMESH_FACE_OVAL, { color: '#06b6d4', lineWidth: 2 });
+          }
+          
+          // Draw hands
+          if (results.leftHandLandmarks) {
+            drawConnectors(this.ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
+            drawLandmarks(this.ctx, results.leftHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
+          }
+          if (results.rightHandLandmarks) {
+            drawConnectors(this.ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
+            drawLandmarks(this.ctx, results.rightHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
+          }
+        },
+        
+        // ============== ANGLE CALCULATION ==============
+        calculateAngles: function(lm) {
+          if (!lm || lm.length < 33) return;
+          
+          const angle = (a, b, c) => {
+            const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let deg = Math.abs(rad * 180 / Math.PI);
+            if (deg > 180) deg = 360 - deg;
+            return Math.round(deg);
+          };
+          
+          // Indices
+          const LS=11, RS=12, LE=13, RE=14, LW=15, RW=16, LH=23, RH=24, LK=25, RK=26, LA=27, RA=28;
+          
+          this.angles = {
+            knee: Math.round((angle(lm[LH], lm[LK], lm[LA]) + angle(lm[RH], lm[RK], lm[RA])) / 2),
+            hip: Math.round((angle(lm[LS], lm[LH], lm[LK]) + angle(lm[RS], lm[RH], lm[RK])) / 2),
+            shoulder: Math.round((angle(lm[LE], lm[LS], lm[LH]) + angle(lm[RE], lm[RS], lm[RH])) / 2),
+            elbow: Math.round((angle(lm[LS], lm[LE], lm[LW]) + angle(lm[RS], lm[RE], lm[RW])) / 2)
+          };
+          
+          this.updateAnglesUI();
+        },
+        
+        updateAnglesUI: function() {
+          const exercise = EXERCISES[this.currentIdx];
+          if (!exercise) return;
+          
+          let html = '';
+          exercise.track.forEach((joint, i) => {
+            const val = this.angles[joint] || 0;
+            const isPrimary = joint === exercise.joint;
+            html += '<div class="angle-item ' + (isPrimary ? 'primary' : '') + '">' +
+                    '<span class="angle-label">' + joint.charAt(0).toUpperCase() + joint.slice(1) + '</span>' +
+                    '<span class="angle-value">' + val + '°</span></div>';
+          });
+          
+          document.getElementById('anglesList').innerHTML = html;
+        },
+        
+        // ============== REP DETECTION ==============
+        detectRep: function() {
+          const ex = EXERCISES[this.currentIdx];
+          if (!ex) return;
+          
+          const angle = this.angles[ex.joint];
+          if (!angle) return;
+          
+          if (this.repState === 'neutral' || this.repState === 'up') {
+            if (angle <= ex.downAngle) {
+              this.repState = 'down';
+            }
+          } else if (this.repState === 'down') {
+            if (angle >= ex.upAngle) {
+              this.repState = 'up';
+              this.completeRep();
+            }
+          }
+        },
+        
+        completeRep: function() {
+          this.reps++;
+          const ex = EXERCISES[this.currentIdx];
+          
+          document.getElementById('repNum').textContent = this.reps;
+          document.getElementById('repFill').style.width = (this.reps / ex.reps * 100) + '%';
+          
+          if (this.reps < ex.reps) {
+            TTS.speak(String(this.reps));
+          }
+          
+          if (this.reps >= ex.reps) {
+            this.results.push({
+              name: ex.name,
+              reps: this.reps,
+              target: ex.reps,
+              score: 3,
+              maxAngles: { ...this.angles }
+            });
+            
+            TTS.speak('Excellent! Moving to next exercise.', () => {
+              setTimeout(() => this.startExercise(this.currentIdx + 1), 1000);
+            });
+          }
+        },
+        
+        // ============== EXERCISE FLOW ==============
+        startExercise: function(idx) {
+          if (idx >= EXERCISES.length) {
+            this.complete();
+            return;
+          }
+          
+          this.currentIdx = idx;
+          this.reps = 0;
+          this.repState = 'neutral';
+          
+          const ex = EXERCISES[idx];
+          
+          document.getElementById('exerciseTitle').textContent = (idx + 1) + '. ' + ex.name;
+          document.getElementById('exerciseDesc').textContent = ex.desc;
+          document.getElementById('repNum').textContent = '0';
+          document.getElementById('repTarget').textContent = '/ ' + ex.reps;
+          document.getElementById('repFill').style.width = '0%';
+          
+          this.renderProgress();
+          
+          TTS.speak(ex.voice, () => {
+            TTS.speak('Begin now.');
+          });
+        },
+        
+        skipExercise: function() {
+          const ex = EXERCISES[this.currentIdx];
+          this.results.push({
+            name: ex.name,
+            reps: this.reps,
+            target: ex.reps,
+            score: this.reps > 0 ? 1 : 0,
+            skipped: true,
+            maxAngles: { ...this.angles }
+          });
+          
+          TTS.speak('Skipping to next exercise.');
+          this.startExercise(this.currentIdx + 1);
+        },
+        
+        nextExercise: function() {
+          const ex = EXERCISES[this.currentIdx];
+          this.results.push({
+            name: ex.name,
+            reps: this.reps,
+            target: ex.reps,
+            score: this.reps >= ex.reps ? 3 : (this.reps > 0 ? 2 : 1),
+            maxAngles: { ...this.angles }
+          });
+          
+          this.startExercise(this.currentIdx + 1);
+        },
+        
+        renderProgress: function() {
+          const html = EXERCISES.map((_, i) => {
+            let cls = 'progress-step';
+            if (i < this.currentIdx) cls += ' done';
+            else if (i === this.currentIdx) cls += ' active';
+            return '<div class="' + cls + '"></div>';
+          }).join('');
+          
+          document.getElementById('progressTrack').innerHTML = html;
+        },
+        
+        // ============== COMPLETION ==============
+        complete: function() {
+          this.running = false;
+          SpeechRecognizer.stop();
+          
+          document.getElementById('bottomControls').style.display = 'none';
+          document.getElementById('anglesPanel').style.display = 'none';
+          document.getElementById('repDisplay').style.display = 'none';
+          
+          const duration = Math.round((Date.now() - this.startTime) / 1000);
+          const totalReps = this.results.reduce((s, r) => s + r.reps, 0);
+          const flags = RedFlagDetector.getFlags();
+          
+          let statsHtml = 
+            '<div class="stat-item"><span class="stat-label">Exercises</span><span class="stat-value">' + this.results.length + '/' + EXERCISES.length + '</span></div>' +
+            '<div class="stat-item"><span class="stat-label">Total Reps</span><span class="stat-value">' + totalReps + '</span></div>' +
+            '<div class="stat-item"><span class="stat-label">Duration</span><span class="stat-value">' + Math.floor(duration/60) + 'm ' + (duration%60) + 's</span></div>';
+          
+          if (flags.length > 0) {
+            statsHtml += '<div class="stat-item alert"><span class="stat-label">Red Flags</span><span class="stat-value">' + flags.length + ' detected</span></div>';
+          }
+          
+          document.getElementById('statsCard').innerHTML = statsHtml;
+          document.getElementById('completeScreen').style.display = 'flex';
+          document.getElementById('reportBtn').disabled = false;
+          
+          TTS.speak('Assessment complete! You finished ' + this.results.length + ' exercises.' + 
+                    (flags.length > 0 ? ' I noted ' + flags.length + ' concerns.' : ''));
+          
+          // Log to server
+          this.logAssessment();
+        },
+        
+        logAssessment: function() {
+          const duration = Math.round((Date.now() - this.startTime) / 1000);
+          const flags = RedFlagDetector.getFlags();
+          
+          fetch('/api/assessment/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              duration,
+              exercises: this.results,
+              redFlags: flags,
+              transcript: SpeechRecognizer.getTranscript(),
+              summary: {
+                totalExercises: EXERCISES.length,
+                completedExercises: this.results.filter(r => r.reps >= r.target).length,
+                totalReps: this.results.reduce((s, r) => s + r.reps, 0),
+                flagCount: flags.length,
+                overallScore: Math.round(this.results.reduce((s, r) => s + r.score, 0) / this.results.length * 10) / 10
+              }
+            })
+          }).catch(() => {});
+        },
+        
+        // ============== CONTROLS ==============
+        toggleMute: function() {
+          const muted = TTS.toggle();
+          document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+          document.getElementById('muteBtn').classList.toggle('muted', muted);
+        },
+        
+        stop: function() {
+          this.running = false;
+          SpeechRecognizer.stop();
+          TTS.stop();
+          
+          if (this.stream) {
+            this.stream.getTracks().forEach(t => t.stop());
+            this.stream = null;
+          }
+          
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          
+          document.getElementById('startScreen').style.display = 'flex';
+          document.getElementById('repDisplay').style.display = 'none';
+          document.getElementById('anglesPanel').style.display = 'none';
+          document.getElementById('bottomControls').style.display = 'none';
+          document.getElementById('completeScreen').style.display = 'none';
+          
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('startBtn').textContent = 'Resume';
+        },
+        
+        restart: function() {
+          this.stop();
+          
+          this.currentIdx = 0;
+          this.reps = 0;
+          this.repState = 'neutral';
+          this.results = [];
+          RedFlagDetector.clear();
+          SpeechRecognizer.clear();
+          
+          document.getElementById('exerciseTitle').textContent = 'Ready to Begin';
+          document.getElementById('exerciseDesc').textContent = 'Press Start to begin your guided assessment';
+          document.getElementById('alertsContainer').innerHTML = '';
+          document.getElementById('reportBtn').disabled = true;
+          document.getElementById('startBtn').textContent = '🎬 Start Assessment';
+          
+          this.renderProgress();
+        },
+        
+        generateReport: function() {
+          const duration = Math.round((Date.now() - this.startTime) / 1000);
+          const flags = RedFlagDetector.getFlags();
+          
+          sessionStorage.setItem('mskAssessment', JSON.stringify({
+            date: new Date().toISOString(),
+            duration,
+            exercises: this.results,
+            redFlags: flags,
+            transcript: SpeechRecognizer.getTranscript()
+          }));
+          
+          sessionStorage.setItem('jointAnalysis', JSON.stringify(this.results));
+          sessionStorage.setItem('redFlags', JSON.stringify(flags));
+          
+          window.location.href = '/doctor/notes';
+        }
+      };
+      
+      // ============== INIT ON DOM READY ==============
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => App.init());
+      } else {
+        App.init();
       }
       
-      // ==================== INIT ====================
-      document.addEventListener('DOMContentLoaded', async () => {
-        console.log('[Assessment] DOM ready');
-        
-        // Event listeners
-        document.getElementById('startBtn').addEventListener('click', startAssessment);
-        document.getElementById('muteBtn').addEventListener('click', toggleMute);
-        document.getElementById('skipBtn').addEventListener('click', skipExercise);
-        document.getElementById('nextBtn').addEventListener('click', () => {
-          assessmentResults.push({
-            exercise: exercises[currentExerciseIdx].name,
-            reps: currentReps,
-            target: exercises[currentExerciseIdx].reps,
-            maxAngles: { ...lastAngles },
-            score: currentReps >= exercises[currentExerciseIdx].reps ? 3 : 1
-          });
-          startExercise(currentExerciseIdx + 1);
-        });
-        document.getElementById('stopBtn').addEventListener('click', stopAssessment);
-        document.getElementById('restartBtn').addEventListener('click', restartAssessment);
-        document.getElementById('reportBtn').addEventListener('click', generateReport);
-        document.getElementById('generateReportBtn').addEventListener('click', generateReport);
-        
-        // Init speech recognition
-        initSpeechRecognition();
-        
-        // Enumerate cameras
-        if (navigator.mediaDevices) {
-          await enumerateCameras();
-        } else {
-          document.getElementById('errorMsg').textContent = 'Camera API not available';
-          document.getElementById('errorBox').style.display = 'block';
-        }
-        
-        updateProgressDots();
-      });
+    })();
     </script>
-  `, 'Guided MSK Assessment - Thrive Ortho EHR'))
+  `, 'MSK Assessment - Thrive Ortho EHR'))
 })
 
 
