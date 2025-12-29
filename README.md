@@ -1,221 +1,108 @@
-# Thrive Ortho EHR - AI-Powered MSK Assessment Platform
+# Thrive Ortho EHR v3.0
+
+## Professional MSK Assessment Platform
+
+Ultra-minimal, medical-grade EHR platform with Gemini AI integration for musculoskeletal assessment, voice analysis, and comprehensive medical documentation.
 
 ## Live Demo
 
-**URL**: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
+**Production URL**: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 
-### Skip Login - Demo Mode (4 Roles)
+### Quick Access (Skip Login Demo)
 
 | Role | URL | Description |
 |------|-----|-------------|
-| **Patient** | `/patient` | Complete intake, view exercises, track progress |
-| **Doctor** | `/doctor` | Clinical evaluation, FMS assessment, medical notes |
-| **Coach** | `/coach` | Movement specialist, training programs |
-| **Administrator** | `/admin` | System management, user management |
+| **Login** | `/login` | Role selection page |
+| **Doctor** | `/doctor` | Provider dashboard with patient management |
+| **Patient** | `/patient` | Patient portal with exercises and appointments |
+| **Coach** | `/coach` | Coach dashboard with client management |
+| **Admin** | `/admin` | System administration and analytics |
 
-### Key Pages
+### Doctor Workflow
 
-| Page | URL | Description |
-|------|-----|-------------|
-| **Login** | `/login` | Role selector with skip login buttons |
-| **Voice Intake** | `/doctor/intake` | AI-powered voice medical history |
-| **FMS Assessment** | `/doctor/assessment` | 10-movement screen with AI analysis |
-| **Medical Notes** | `/doctor/notes` | AI-generated comprehensive notes |
+1. `/doctor/intake` - Voice Medical Intake (AI pain flag detection)
+2. `/doctor/assessment` - MSK Movement Assessment (10 movements)
+3. `/doctor/notes` - Medical Note Generator (DX/CPT codes)
+4. `/doctor/video` - Telemedicine (HIPAA compliant)
+5. `/doctor/tasks` - Task management (To-do list)
 
----
+## Key Features
 
-## Project Overview
+### Design System
+- **Ultra-minimal UI**: Monochrome base with single teal accent
+- **Dashboard on RIGHT**: Professional panel layout
+- **Typography**: Inter font family
+- **Professional colors**: Gray scale + medical teal (#0d9488)
 
-- **Name**: Thrive Ortho EHR
-- **Goal**: Comprehensive EHR platform with AI-powered MSK assessment
-- **Reference**: KinetiSense-style visual movement analysis
-- **Validation**: FMS (Functional Movement Systems) + AMA Guidelines
+### MSK Assessment (FMS + AMA)
+- **10 validated movements**:
+  - FMS (1-7): Deep Squat, Hurdle Step, Inline Lunge, Shoulder Mobility, ASLR, Trunk Stability Push-Up, Rotary Stability
+  - AMA (8-10): Cervical ROM, Lumbar ROM, Gait Analysis
+- **Scoring**: 0-3 scale (0=Pain, 1=Unable, 2=Compensation, 3=Perfect)
+- **Risk stratification**: High (≤11), Moderate (12-14), Low (≥15)
 
-## Core Features
+### Gemini AI Integration
+- **Real-time joint tracking**: Camera-based movement analysis
+- **Joint angle measurement**: Hip, knee, ankle, trunk, shoulder
+- **Compensation detection**: AI identifies movement compensations
+- **Confidence scoring**: Percentage-based accuracy
 
-### 1. Skip Login Demonstration
-- **4 User Roles**: Patient, Doctor, Coach, Administrator
-- **One-Click Access**: Skip login buttons for instant demo
-- **Role-Based Dashboards**: Tailored UI for each user type
+### Voice Analysis
+- **Web Speech API**: Real-time transcription
+- **Pain flag detection**: Red flags (serious), Yellow flags (psychosocial)
+- **Voice cue analysis**: Hesitation, breathing patterns
+- **Gemini AI analysis**: Potential diagnoses with ICD-10 codes
 
-### 2. Voice-Powered Medical Intake
-- **Microphone Integration**: Web Speech API for voice recording
-- **8 Intake Categories**: Demographics, Chief Complaint, Pain Assessment, Location, Aggravating Factors, Medical History, Medications, Functional Impact
-- **Real-Time Transcription**: Live text display as patient speaks
-- **Progress Tracking**: Visual step-by-step intake process
+### Medical Notes
+- **Comprehensive documentation**: SOAP-style format
+- **ICD-10 codes**: M54.5, M54.16, M62.838, M99.03
+- **CPT codes**: 97161, 97162, 97163, 97110, 97140, 97530
+- **Exercise prescription**: 12 evidence-based exercises
+- **HIPAA compliant**: Professional formatting
 
-### 3. FMS 7-Movement Screen (Validated)
-| # | Movement | Purpose |
-|---|----------|---------|
-| 1 | **Deep Squat** | Hip/knee/ankle mobility, core stability |
-| 2 | **Hurdle Step** | Stride mechanics, single-leg stability |
-| 3 | **Inline Lunge** | Deceleration, directional change |
-| 4 | **Shoulder Mobility** | Scapular mobility, thoracic extension |
-| 5 | **Active Straight Leg Raise** | Hamstring flexibility, pelvic stability |
-| 6 | **Trunk Stability Push-Up** | Core stability in sagittal plane |
-| 7 | **Rotary Stability** | Multi-plane trunk stability |
-
-### 4. AMA ROM Assessment (3 Additional)
-| # | Movement | Purpose |
-|---|----------|---------|
-| 8 | **Cervical ROM** | Neck flexion, extension, rotation |
-| 9 | **Lumbar ROM** | Lower back mobility |
-| 10 | **Gait Analysis** | Walking pattern, symmetry |
-
-### 5. AI-Powered Medical Note Generation
-- **Comprehensive Documentation**: SOAP-style notes
-- **FMS Results Integration**: Scores with interpretation
-- **AMA ROM Data**: Range of motion measurements
-- **ICD-10 Coding**: Suggested diagnosis codes
-- **Exercise Prescription**: Tailored corrective exercises
-- **Risk Assessment**: Injury risk based on FMS score
-
-### 6. KinetiSense-Style Visual Analysis
-- **Video Feed Interface**: Camera placeholder for AI analysis
-- **Real-Time Scoring**: 0-3 scale per movement
-- **Movement Compensation Detection**: AI identifies dysfunctions
-- **Total Score Tracking**: FMS score out of 21
-- **Risk Stratification**: High (≤11), Moderate (12-14), Low (≥15)
-
----
-
-## EHR Dashboard Features
-
-### Patient Dashboard
-- Next appointment display
-- Exercise completion tracking
-- FMS score history
-- Recovery progress metrics
-- Care team information
-
-### Doctor Dashboard
-- Patient queue with FMS scores
-- Quick action buttons (Intake, Assessment, Notes)
-- AI insights and priority alerts
-- Appointment schedule
-
-### Coach Dashboard
-- Client list with programs
-- FMS score tracking
-- Progress monitoring
-- Exercise assignment tools
-
-### Admin Dashboard
-- User management (CRUD)
-- System status monitoring
-- Analytics overview
-- Audit logs access
-
----
-
-## Technology Stack
-
-| Category | Technology |
-|----------|------------|
-| **Backend** | Hono Framework |
-| **Runtime** | Cloudflare Workers |
-| **Frontend** | Vanilla HTML/CSS/JS |
-| **Styling** | Custom CSS (Medical Teal theme) |
-| **Typography** | Inter + Plus Jakarta Sans |
-| **Icons** | Font Awesome 6.5 |
-| **Voice** | Web Speech API |
-| **Build** | Vite |
-
----
-
-## Design System
-
-### Color Palette
-
-```css
-/* Primary - Medical Teal */
---primary-500: #14b8a6;
---primary-600: #0d9488;
-
-/* Role Colors */
---role-patient: #8b5cf6;  /* Purple */
---role-doctor: #0ea5e9;   /* Blue */
---role-coach: #22c55e;    /* Green */
---role-admin: #f59e0b;    /* Amber */
-```
-
-### Typography
-- **Display**: Plus Jakarta Sans (700-800)
-- **Body**: Inter (400-600)
-
----
+### Task Management
+- **Priority levels**: High, Medium, Low
+- **Status tracking**: Pending, In Progress, Completed
+- **Patient context**: Tasks linked to patients
+- **Due date management**: Today, Tomorrow, This week
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/users` | Demo user profiles |
-| GET | `/api/movements` | All 10 movements |
-| GET | `/api/fms` | FMS 7 movements only |
-| GET | `/api/intake-questions` | Voice intake questions |
-| GET | `/api/patients` | Patient records |
-| POST | `/api/ai/generate-note` | Generate medical note |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check |
+| `/api/ai/analyze-joints` | POST | Gemini joint analysis |
+| `/api/ai/analyze-voice` | POST | Voice pain flag detection |
+| `/api/ai/generate-note` | POST | Generate medical note |
+| `/api/tasks` | GET | Get task list |
+| `/api/exercises` | GET | Get exercise library |
+| `/api/movements` | GET | Get movement protocol |
 
----
+## Technology Stack
 
-## Data Models
+- **Backend**: Hono framework
+- **Runtime**: Cloudflare Workers
+- **Frontend**: HTML/CSS/JavaScript + TailwindCSS
+- **Build**: Vite
+- **AI**: Google Gemini API (gemini-2.0-flash)
+- **Deploy**: Cloudflare Pages
 
-### FMS Movement
-```typescript
-{
-  id: string;
-  name: string;
-  description: string;
-  purpose: string;
-  instructions: string[];
-  scoring: { 0: string, 1: string, 2: string, 3: string };
-  compensations: string[];
-  targetAreas: string[];
-  videoUrl: string;
-  duration: number;
-}
+## Environment Variables
+
+```bash
+# Required for AI features
+GEMINI_API_KEY=your_gemini_api_key
+
+# Optional
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-### Patient Record
-```typescript
-{
-  id: string;
-  patientName: string;
-  age: number;
-  gender: string;
-  chiefComplaint: string;
-  icd10: string[];
-  painLevel: number;
-  fmsScore: number;
-  status: 'active' | 'urgent' | 'completed';
-  assignedDoctor: string;
-  assignedCoach: string;
-}
-```
+### Get Gemini API Key
+1. Visit: https://aistudio.google.com/app/apikey
+2. Create new API key
+3. Add to environment variables
 
----
-
-## Project Structure
-
-```
-webapp/
-├── src/
-│   └── index.tsx          # Main application (104KB)
-├── migrations/
-│   └── 0001_initial_schema.sql
-├── dist/                  # Build output
-├── ARCHITECTURE.md        # System architecture
-├── README.md             # This file
-├── package.json
-├── vite.config.ts
-├── wrangler.jsonc
-└── ecosystem.config.cjs
-```
-
----
-
-## Running Locally
+## Local Development
 
 ```bash
 # Install dependencies
@@ -224,68 +111,83 @@ npm install
 # Build
 npm run build
 
-# Start with PM2
-pm2 start ecosystem.config.cjs
-
-# Or direct
+# Start development server
 npm run dev:sandbox
+
+# Or with PM2
+pm2 start ecosystem.config.cjs
 ```
 
+## Deployment
+
+### Cloudflare Pages
+
+```bash
+# Configure Cloudflare API
+setup_cloudflare_api_key
+
+# Deploy
+npm run build
+npx wrangler pages deploy dist --project-name sobeairehab
+```
+
+### With D1 Database
+
+```bash
+# Create database
+npx wrangler d1 create telemed-ai-db
+
+# Apply migrations
+npx wrangler d1 migrations apply telemed-ai-db --local
+
+# Start with D1
+npm run dev:d1
+```
+
+## Project Structure
+
+```
+webapp/
+├── src/
+│   └── index.tsx          # Main application
+├── migrations/
+│   └── 0001_initial_schema.sql
+├── public/                # Static assets
+├── dist/                  # Build output
+├── ecosystem.config.cjs   # PM2 configuration
+├── wrangler.jsonc         # Cloudflare configuration
+├── vite.config.ts         # Vite configuration
+├── package.json           # Dependencies
+└── README.md              # This file
+```
+
+## Exercise Library
+
+| ID | Name | Target | Difficulty |
+|----|------|--------|------------|
+| E001 | Hip Flexor Stretch | Hip | Beginner |
+| E002 | Piriformis Stretch | Hip | Beginner |
+| E003 | Dead Bug | Core | Intermediate |
+| E004 | Bird Dog | Core | Beginner |
+| E005 | Cat-Cow Stretch | Spine | Beginner |
+| E006 | Cervical Retraction | Cervical | Beginner |
+| E007 | Shoulder ER/IR | Shoulder | Intermediate |
+| E008 | Clamshells | Hip | Beginner |
+| E009 | Ankle Alphabet | Ankle | Beginner |
+| E010 | McKenzie Extension | Lumbar | Beginner |
+| E011 | Glute Bridge | Hip | Beginner |
+| E012 | Side Plank | Core | Intermediate |
+
+## Version History
+
+- **v3.0** (Current): Ultra-minimal UI, Gemini AI integration, comprehensive medical notes
+- **v2.0**: Glass morphism UI, voice intake, FMS assessment
+- **v1.0**: Initial MVP with basic dashboards
+
+## License
+
+Proprietary - Thrive Ortho
+
 ---
 
-## Workflow
-
-### Standard Patient Flow
-1. **Login** → Select role or skip login
-2. **Voice Intake** → Answer medical history questions
-3. **FMS Assessment** → Complete 10-movement screen
-4. **AI Analysis** → Review movement dysfunctions
-5. **Medical Note** → Generate comprehensive documentation
-6. **Exercise Prescription** → Assign corrective exercises
-
-### Scoring Guide
-| Score | Meaning |
-|-------|---------|
-| **3** | Perfect movement pattern |
-| **2** | Compensation observed |
-| **1** | Unable to complete movement |
-| **0** | Pain during movement |
-
-### Risk Stratification
-| FMS Score | Risk Level | Action |
-|-----------|------------|--------|
-| ≤ 11 | HIGH | Immediate intervention |
-| 12-14 | MODERATE | Corrective exercise program |
-| ≥ 15 | LOW | Maintenance program |
-
----
-
-## References
-
-- **FMS**: Functional Movement Systems - [functionalmovement.com](https://www.functionalmovement.com)
-- **KinetiSense**: 3D Motion Capture - [kinetisense.com](https://www.kinetisense.com)
-- **AMA Guides**: 6th Edition MSK Assessment Guidelines
-
----
-
-## Next Steps
-
-### Immediate
-- [ ] Deploy to Cloudflare Pages
-- [ ] Connect real OpenAI API for AI analysis
-- [ ] Add exercise video library
-
-### Short-term
-- [ ] Real-time pose estimation (TensorFlow.js)
-- [ ] PDF export for medical notes
-- [ ] Patient scheduling system
-
-### Long-term
-- [ ] Mobile app (React Native)
-- [ ] EHR integrations (Epic, Cerner)
-- [ ] Insurance verification
-
----
-
-*Version: 2.0.0 - Thrive Ortho EHR*  
-*Last Updated: December 2025*
+**Last Updated**: December 2025
