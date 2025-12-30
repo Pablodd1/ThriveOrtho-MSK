@@ -2165,109 +2165,132 @@ app.get('/doctor', (c) => {
 app.get('/doctor/joints', (c) => {
   return c.html(html(`
     <style>
-      /* ========== RESET & BASE ========== */
+      /* ========== DESKTOP MSK ASSESSMENT v9.0 ========== */
       * { margin: 0; padding: 0; box-sizing: border-box; }
+      
       body { 
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-        background: #000; 
+        background: #0a0a0f; 
         color: #fff; 
         overflow: hidden;
-        -webkit-tap-highlight-color: transparent;
       }
       
-      .app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+      .app {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        grid-template-rows: 60px 1fr;
+        gap: 0;
+      }
       
       /* ========== HEADER ========== */
       .header {
-        background: linear-gradient(180deg, #0d0d0d 0%, #0a0a0a 100%);
-        padding: 10px 16px;
+        grid-column: 1 / -1;
+        background: linear-gradient(180deg, #111 0%, #0d0d0d 100%);
+        padding: 0 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #1a1a1a;
-        z-index: 100;
+        border-bottom: 1px solid #222;
       }
-      .back-btn { 
-        color: #666; 
-        text-decoration: none; 
-        font-size: 13px;
-        padding: 6px 10px;
-        border-radius: 6px;
-        background: #111;
-        border: 1px solid #222;
+      
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      
+      .back-btn {
+        color: #888;
+        text-decoration: none;
+        font-size: 14px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #1a1a1a;
+        border: 1px solid #333;
         transition: all 0.2s;
       }
       .back-btn:hover { border-color: #3b82f6; color: #3b82f6; }
-      .title { font-size: 14px; font-weight: 600; color: #3b82f6; }
-      .mic-indicator {
+      
+      .logo {
+        font-size: 18px;
+        font-weight: 700;
+        color: #3b82f6;
+      }
+      
+      .header-center {
         display: flex;
         align-items: center;
+        gap: 12px;
+      }
+      
+      .exercise-badge {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      
+      .progress-pills {
+        display: flex;
         gap: 6px;
-        font-size: 10px;
-        color: #666;
+      }
+      .progress-pill {
+        width: 32px;
+        height: 8px;
+        background: #333;
+        border-radius: 4px;
+        transition: all 0.3s;
+      }
+      .progress-pill.done { background: #22c55e; }
+      .progress-pill.active { background: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+      
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      
+      .mic-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: #1a1a1a;
+        border-radius: 20px;
+        font-size: 12px;
+        color: #888;
       }
       .mic-dot {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         background: #333;
-        transition: all 0.3s;
       }
       .mic-dot.active {
         background: #ef4444;
-        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
         animation: pulse 1s infinite;
       }
       @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
       }
       
-      /* ========== EXERCISE INFO ========== */
-      .exercise-info {
-        background: #0a0a0a;
-        padding: 12px 16px;
-        border-bottom: 1px solid #1a1a1a;
-      }
-      .progress-track {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 10px;
-      }
-      .progress-step {
-        flex: 1;
-        height: 4px;
-        background: #222;
-        border-radius: 2px;
-        transition: background 0.3s;
-      }
-      .progress-step.done { background: #22c55e; }
-      .progress-step.active { background: #3b82f6; }
-      .exercise-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #fff;
-        margin-bottom: 4px;
-      }
-      .exercise-desc {
-        font-size: 13px;
-        color: #3b82f6;
-        line-height: 1.4;
-      }
-      
-      /* ========== CAMERA VIEW ========== */
-      .camera-container {
-        flex: 1;
+      /* ========== CAMERA SECTION ========== */
+      .camera-section {
         position: relative;
         background: #000;
         overflow: hidden;
       }
+      
       #video {
         width: 100%;
         height: 100%;
         object-fit: cover;
         transform: scaleX(-1);
       }
+      
       #canvas {
         position: absolute;
         top: 0;
@@ -2278,1383 +2301,1159 @@ app.get('/doctor/joints', (c) => {
         transform: scaleX(-1);
       }
       
-      /* ========== REP COUNTER ========== */
-      .rep-display {
+      /* ========== REP COUNTER OVERLAY ========== */
+      .rep-overlay {
         position: absolute;
-        top: 16px;
-        right: 16px;
-        background: rgba(0,0,0,0.9);
-        border: 2px solid #3b82f6;
-        border-radius: 16px;
-        padding: 16px 24px;
+        top: 24px;
+        left: 24px;
+        background: rgba(0,0,0,0.85);
+        border: 3px solid #3b82f6;
+        border-radius: 20px;
+        padding: 20px 32px;
         text-align: center;
-        z-index: 50;
-        min-width: 100px;
+        min-width: 140px;
       }
+      
       .rep-label {
-        font-size: 11px;
-        color: #666;
+        font-size: 12px;
+        color: #888;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
       }
-      .rep-num {
-        font-size: 56px;
+      
+      .rep-count {
+        font-size: 72px;
         font-weight: 800;
         color: #3b82f6;
         line-height: 1;
         font-variant-numeric: tabular-nums;
       }
+      
       .rep-target {
-        font-size: 16px;
-        color: #444;
+        font-size: 24px;
+        color: #555;
+        margin-top: 4px;
       }
+      
       .rep-bar {
         width: 100%;
-        height: 6px;
-        background: #1a1a1a;
-        border-radius: 3px;
-        margin-top: 10px;
+        height: 8px;
+        background: #222;
+        border-radius: 4px;
+        margin-top: 12px;
         overflow: hidden;
       }
+      
       .rep-fill {
         height: 100%;
         background: linear-gradient(90deg, #3b82f6, #60a5fa);
-        border-radius: 3px;
+        border-radius: 4px;
         transition: width 0.3s ease-out;
       }
       
-      /* ========== ANGLES PANEL ========== */
-      .angles-panel {
+      /* ========== EXERCISE INSTRUCTIONS ========== */
+      .instruction-overlay {
         position: absolute;
-        top: 16px;
-        left: 16px;
-        background: rgba(0,0,0,0.9);
-        border: 1px solid #222;
-        border-radius: 12px;
-        padding: 12px 14px;
-        min-width: 140px;
-        z-index: 50;
+        bottom: 24px;
+        left: 24px;
+        right: 24px;
+        background: rgba(0,0,0,0.85);
+        border: 1px solid #333;
+        border-radius: 16px;
+        padding: 16px 24px;
       }
-      .angles-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #222;
-      }
-      .live-dot {
-        width: 8px;
-        height: 8px;
-        background: #22c55e;
-        border-radius: 50%;
-        animation: blink 0.6s infinite;
-      }
-      @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-      }
-      .angles-title {
-        font-size: 10px;
-        font-weight: 600;
-        color: #3b82f6;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .angle-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 4px 0;
-        font-size: 12px;
-      }
-      .angle-label { color: #888; }
-      .angle-value { 
-        color: #fff; 
-        font-weight: 600;
-        font-family: 'SF Mono', Monaco, monospace;
-      }
-      .angle-item.primary .angle-value { color: #3b82f6; font-size: 14px; }
-      .angle-item.good .angle-value { color: #22c55e; }
-      .angle-item.warn .angle-value { color: #f59e0b; }
       
-      /* ========== RED FLAG ALERTS ========== */
-      .alerts-container {
-        position: absolute;
-        bottom: 90px;
-        left: 16px;
-        right: 16px;
-        z-index: 55;
+      .instruction-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 6px;
+      }
+      
+      .instruction-desc {
+        font-size: 16px;
+        color: #3b82f6;
+      }
+      
+      /* ========== ANGLES DASHBOARD (RIGHT PANEL) ========== */
+      .dashboard {
+        background: linear-gradient(180deg, #111 0%, #0d0d0d 100%);
+        border-left: 1px solid #222;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .dashboard-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #222;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .dashboard-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #3b82f6;
+      }
+      
+      .fps-badge {
+        background: #1a1a1a;
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        color: #888;
+      }
+      .fps-badge.good { color: #22c55e; }
+      .fps-badge.ok { color: #f59e0b; }
+      .fps-badge.bad { color: #ef4444; }
+      
+      /* ========== LARGE ANGLE DISPLAYS ========== */
+      .angles-grid {
+        flex: 1;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        overflow-y: auto;
+      }
+      
+      .angle-card {
+        background: #1a1a1a;
+        border: 2px solid #333;
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        min-height: 140px;
+      }
+      
+      .angle-card.primary {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
+        border-color: #3b82f6;
+        min-height: 180px;
+      }
+      
+      .angle-card.highlight {
+        border-color: #22c55e;
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+      }
+      
+      .angle-name {
+        font-size: 14px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+      
+      .angle-card.primary .angle-name {
+        color: #93c5fd;
+        font-size: 16px;
+      }
+      
+      .angle-value {
+        font-size: 56px;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      
+      .angle-card.primary .angle-value {
+        font-size: 80px;
+        color: #3b82f6;
+      }
+      
+      .angle-unit {
+        font-size: 24px;
+        color: #666;
+        margin-left: 4px;
+      }
+      
+      .angle-card.primary .angle-unit {
+        font-size: 32px;
+        color: #60a5fa;
+      }
+      
+      .angle-lr {
+        display: flex;
+        gap: 16px;
+        margin-top: 8px;
+        font-size: 14px;
+        color: #666;
+      }
+      
+      .angle-lr span {
+        padding: 4px 8px;
+        background: #0a0a0a;
+        border-radius: 6px;
+      }
+      
+      .angle-delta {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+      .angle-delta.ok { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+      .angle-delta.warn { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+      
+      .angle-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 12px;
+        color: #666;
+      }
+      
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .status-dot.stable { background: #22c55e; }
+      .status-dot.moving { background: #f59e0b; }
+      
+      /* ========== CONTROLS ========== */
+      .controls {
+        padding: 16px 24px;
+        border-top: 1px solid #222;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .control-row {
+        display: flex;
+        gap: 12px;
+      }
+      
+      .btn {
+        flex: 1;
+        padding: 14px 20px;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         gap: 8px;
       }
-      .alert-item {
-        background: rgba(239, 68, 68, 0.95);
-        border-radius: 10px;
-        padding: 12px 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        animation: slideUp 0.3s ease-out;
-      }
-      @keyframes slideUp {
-        from { transform: translateY(20px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-      }
-      .alert-icon { font-size: 20px; }
-      .alert-content { flex: 1; }
-      .alert-type { font-size: 12px; font-weight: 600; }
-      .alert-detail { font-size: 11px; opacity: 0.8; margin-top: 2px; }
-      .alert-time { font-size: 10px; opacity: 0.7; }
       
-      /* ========== SPEAKING INDICATOR ========== */
-      .speaking-indicator {
-        position: absolute;
-        bottom: 90px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(59, 130, 246, 0.95);
-        padding: 10px 20px;
-        border-radius: 25px;
-        font-size: 13px;
-        font-weight: 500;
-        display: none;
-        z-index: 55;
+      .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
       }
-      .speaking-indicator.active { display: flex; align-items: center; gap: 8px; }
-      .speaking-waves {
-        display: flex;
-        gap: 2px;
-        align-items: center;
+      .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+      .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+      
+      .btn-secondary {
+        background: #222;
+        color: #888;
+        border: 1px solid #333;
       }
-      .speaking-wave {
-        width: 3px;
-        height: 12px;
-        background: #fff;
-        border-radius: 2px;
-        animation: wave 0.5s ease-in-out infinite;
+      .btn-secondary:hover { border-color: #3b82f6; color: #3b82f6; }
+      
+      .btn-success {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
       }
-      .speaking-wave:nth-child(2) { animation-delay: 0.1s; height: 16px; }
-      .speaking-wave:nth-child(3) { animation-delay: 0.2s; }
-      @keyframes wave {
-        0%, 100% { transform: scaleY(0.5); }
-        50% { transform: scaleY(1); }
+      
+      .btn-danger {
+        background: #dc2626;
+        color: #fff;
       }
+      
+      select {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid #333;
+        border-radius: 12px;
+        background: #1a1a1a;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      select:focus { outline: none; border-color: #3b82f6; }
       
       /* ========== START SCREEN ========== */
       .start-screen {
         position: absolute;
-        inset: 0;
-        background: rgba(0,0,0,0.98);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-        z-index: 60;
-      }
-      .start-icon {
-        width: 90px;
-        height: 90px;
-        border: 3px solid #3b82f6;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 40px;
-        margin-bottom: 24px;
-        animation: glow 2s infinite;
-      }
-      @keyframes glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-        50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
-      }
-      .start-title {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
-      .start-subtitle {
-        font-size: 14px;
-        color: #666;
-        text-align: center;
-        line-height: 1.5;
-        margin-bottom: 32px;
-        max-width: 300px;
-      }
-      .camera-selector {
-        width: 100%;
-        max-width: 320px;
-        margin-bottom: 16px;
-      }
-      .camera-selector label {
-        display: block;
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 8px;
-      }
-      .camera-selector select {
-        width: 100%;
-        background: #111;
-        border: 1px solid #333;
-        color: #fff;
-        padding: 14px;
-        border-radius: 10px;
-        font-size: 14px;
-      }
-      .start-btn {
-        width: 100%;
-        max-width: 320px;
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
-        color: #fff;
-        border: none;
-        padding: 18px;
-        border-radius: 12px;
-        font-size: 17px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-      }
-      .start-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
-      }
-      .start-btn:disabled { 
-        background: #333; 
-        color: #666; 
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-      .start-note {
-        font-size: 12px;
-        color: #444;
-        margin-top: 20px;
-        text-align: center;
-      }
-      .error-display {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid #dc2626;
-        color: #fca5a5;
-        padding: 14px;
-        border-radius: 10px;
-        font-size: 12px;
-        margin-top: 16px;
-        max-width: 320px;
-        line-height: 1.5;
-      }
-      
-      /* ========== LOADING ========== */
-      .loading-screen {
-        position: absolute;
-        inset: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         background: rgba(0,0,0,0.95);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 70;
+        z-index: 100;
       }
-      .loader {
-        width: 60px;
-        height: 60px;
-        border: 4px solid #1a1a1a;
-        border-top-color: #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
-      }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .loading-text { font-size: 15px; color: #888; }
-      .loading-sub { font-size: 12px; color: #555; margin-top: 8px; }
       
-      /* ========== BOTTOM CONTROLS ========== */
-      .bottom-controls {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(transparent, rgba(0,0,0,0.98));
-        padding: 24px 16px 16px;
-        z-index: 50;
+      .start-icon {
+        font-size: 80px;
+        margin-bottom: 24px;
       }
-      .controls-row {
-        display: flex;
-        gap: 10px;
-      }
-      .ctrl-btn {
-        background: rgba(26,26,26,0.95);
-        border: 1px solid #333;
-        color: #fff;
-        padding: 14px 18px;
-        border-radius: 12px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-      }
-      .ctrl-btn:hover { border-color: #3b82f6; }
-      .ctrl-btn.primary { 
-        background: #3b82f6; 
-        border-color: #3b82f6;
-        flex: 1;
-        font-weight: 600;
-      }
-      .ctrl-btn.danger { 
-        background: rgba(127, 29, 29, 0.9);
-        border-color: #991b1b;
-      }
-      .ctrl-btn.muted { opacity: 0.5; }
       
-      /* ========== COMPLETION ========== */
+      .start-title {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      
+      .start-desc {
+        font-size: 16px;
+        color: #888;
+        max-width: 400px;
+        text-align: center;
+        line-height: 1.6;
+      }
+      
+      /* ========== COMPLETE SCREEN ========== */
       .complete-screen {
         position: absolute;
-        inset: 0;
-        background: rgba(0,0,0,0.98);
-        display: flex;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.95);
+        display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 24px;
-        z-index: 80;
+        z-index: 100;
       }
-      .complete-icon { font-size: 64px; margin-bottom: 16px; }
-      .complete-title { 
-        font-size: 26px; 
-        font-weight: 700; 
-        color: #22c55e;
-        margin-bottom: 8px;
-      }
-      .complete-subtitle { 
-        font-size: 14px; 
-        color: #666;
-        margin-bottom: 24px;
-      }
-      .stats-card {
-        background: #111;
-        border: 1px solid #222;
-        border-radius: 16px;
-        padding: 20px 28px;
-        margin-bottom: 24px;
-        min-width: 280px;
-      }
-      .stat-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        font-size: 14px;
-        border-bottom: 1px solid #1a1a1a;
-      }
-      .stat-item:last-child { border-bottom: none; }
-      .stat-label { color: #888; }
-      .stat-value { color: #fff; font-weight: 600; }
-      .stat-item.alert .stat-value { color: #ef4444; }
       
-      /* ========== FOOTER ========== */
-      .footer {
-        background: #0a0a0a;
+      .complete-icon {
+        font-size: 80px;
+        margin-bottom: 24px;
+      }
+      
+      .complete-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #22c55e;
+        margin-bottom: 24px;
+      }
+      
+      .complete-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+      
+      .stat-box {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 16px;
+        padding: 20px 32px;
+        text-align: center;
+      }
+      
+      .stat-value {
+        font-size: 36px;
+        font-weight: 800;
+        color: #3b82f6;
+      }
+      
+      .stat-label {
+        font-size: 12px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 4px;
+      }
+      
+      /* ========== ALERTS ========== */
+      .alerts-container {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 50;
+      }
+      
+      .alert-item {
+        background: rgba(239, 68, 68, 0.9);
+        border: 1px solid #ef4444;
+        border-radius: 12px;
         padding: 12px 16px;
         display: flex;
+        align-items: center;
         gap: 12px;
-        border-top: 1px solid #1a1a1a;
+        animation: slideIn 0.3s ease-out;
       }
-      .footer-btn {
-        flex: 1;
-        padding: 14px;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s;
-      }
-      .footer-btn.secondary { background: #1a1a1a; color: #666; }
-      .footer-btn.primary { background: #3b82f6; color: #fff; }
-      .footer-btn:disabled { opacity: 0.5; cursor: not-allowed; }
       
-      /* ========== RESPONSIVE ========== */
-      @media (min-width: 768px) {
-        .app { max-width: 480px; margin: 0 auto; box-shadow: 0 0 60px rgba(0,0,0,0.5); }
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
+      
+      .alert-icon { font-size: 20px; }
+      .alert-text { flex: 1; font-size: 13px; }
+      
+      /* ========== ERROR DISPLAY ========== */
+      .error-display {
+        background: rgba(220, 38, 38, 0.2);
+        border: 1px solid #dc2626;
+        color: #fca5a5;
+        padding: 16px 24px;
+        border-radius: 12px;
+        margin: 16px;
+        display: none;
+      }
+      
+      /* ========== HIDDEN ========== */
+      .hidden { display: none !important; }
     </style>
     
     <div class="app">
-      <!-- Header -->
-      <div class="header">
-        <a href="/doctor" class="back-btn">← Back</a>
-        <span class="title">MSK Assessment</span>
-        <div class="mic-indicator">
-          <div class="mic-dot" id="micDot"></div>
-          <span id="micLabel">MIC</span>
+      <!-- HEADER -->
+      <header class="header">
+        <div class="header-left">
+          <a href="/doctor" class="back-btn">← Back</a>
+          <div class="logo">🦴 MSK Assessment</div>
         </div>
-      </div>
+        
+        <div class="header-center">
+          <div class="exercise-badge" id="exerciseBadge">Ready</div>
+          <div class="progress-pills" id="progressPills">
+            <div class="progress-pill"></div>
+            <div class="progress-pill"></div>
+            <div class="progress-pill"></div>
+            <div class="progress-pill"></div>
+            <div class="progress-pill"></div>
+            <div class="progress-pill"></div>
+          </div>
+        </div>
+        
+        <div class="header-right">
+          <div class="mic-status">
+            <div class="mic-dot" id="micDot"></div>
+            <span id="micLabel">MIC OFF</span>
+          </div>
+        </div>
+      </header>
       
-      <!-- Exercise Info -->
-      <div class="exercise-info">
-        <div class="progress-track" id="progressTrack"></div>
-        <div class="exercise-title" id="exerciseTitle">Ready to Begin</div>
-        <div class="exercise-desc" id="exerciseDesc">Press Start to begin your guided assessment</div>
-      </div>
-      
-      <!-- Camera Container -->
-      <div class="camera-container">
+      <!-- CAMERA SECTION -->
+      <section class="camera-section">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas"></canvas>
         
         <!-- Rep Counter -->
-        <div class="rep-display" id="repDisplay" style="display:none">
+        <div class="rep-overlay" id="repOverlay" style="display:none;">
           <div class="rep-label">REPS</div>
-          <div class="rep-num" id="repNum">0</div>
+          <div class="rep-count" id="repCount">0</div>
           <div class="rep-target" id="repTarget">/ 5</div>
-          <div class="rep-bar"><div class="rep-fill" id="repFill"></div></div>
+          <div class="rep-bar">
+            <div class="rep-fill" id="repFill" style="width:0%"></div>
+          </div>
         </div>
         
-        <!-- Angles Panel -->
-        <div class="angles-panel" id="anglesPanel" style="display:none">
-          <div class="angles-header">
-            <div class="live-dot"></div>
-            <span class="angles-title">Live Tracking</span>
-          </div>
-          <div id="anglesList"></div>
+        <!-- Instructions -->
+        <div class="instruction-overlay" id="instructionOverlay" style="display:none;">
+          <div class="instruction-title" id="instructionTitle">Deep Squat</div>
+          <div class="instruction-desc" id="instructionDesc">Squat down keeping heels on ground, then stand up</div>
         </div>
         
         <!-- Alerts -->
         <div class="alerts-container" id="alertsContainer"></div>
         
-        <!-- Speaking Indicator -->
-        <div class="speaking-indicator" id="speakingIndicator">
-          <div class="speaking-waves">
-            <div class="speaking-wave"></div>
-            <div class="speaking-wave"></div>
-            <div class="speaking-wave"></div>
-          </div>
-          <span>Speaking...</span>
-        </div>
-        
         <!-- Start Screen -->
         <div class="start-screen" id="startScreen">
-          <div class="start-icon">🏥</div>
-          <div class="start-title">Guided Assessment</div>
-          <div class="start-subtitle">
-            Voice-guided exercises with real-time<br>
-            joint tracking and automatic counting
+          <div class="start-icon">🎯</div>
+          <div class="start-title">MSK Assessment</div>
+          <div class="start-desc">
+            6 guided exercises with real-time joint tracking.
+            Voice instructions will guide you through each movement.
           </div>
-          
-          <div class="camera-selector">
-            <label>Select Camera</label>
-            <select id="cameraSelect">
-              <option value="">Detecting cameras...</option>
-            </select>
-          </div>
-          
-          <button class="start-btn" id="startBtn" disabled>
-            🎬 Start Assessment
-          </button>
-          
-          <div class="start-note">
-            📹 Camera + 🎤 Microphone required<br>
-            Voice will guide you through each exercise
-          </div>
-          
-          <div class="error-display" id="errorDisplay" style="display:none"></div>
         </div>
         
-        <!-- Loading -->
-        <div class="loading-screen" id="loadingScreen" style="display:none">
-          <div class="loader"></div>
-          <div class="loading-text" id="loadingText">Loading AI...</div>
-          <div class="loading-sub" id="loadingSub">Please wait</div>
-        </div>
-        
-        <!-- Completion -->
-        <div class="complete-screen" id="completeScreen" style="display:none">
+        <!-- Complete Screen -->
+        <div class="complete-screen" id="completeScreen">
           <div class="complete-icon">✅</div>
           <div class="complete-title">Assessment Complete!</div>
-          <div class="complete-subtitle">All exercises finished</div>
-          <div class="stats-card" id="statsCard"></div>
-          <button class="start-btn" id="generateBtn">📋 Generate Report</button>
+          <div class="complete-stats">
+            <div class="stat-box">
+              <div class="stat-value" id="statExercises">0</div>
+              <div class="stat-label">Exercises</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" id="statReps">0</div>
+              <div class="stat-label">Total Reps</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" id="statFlags">0</div>
+              <div class="stat-label">Red Flags</div>
+            </div>
+          </div>
+          <button class="btn btn-success" id="generateBtn" style="width:300px;">
+            📋 Generate Medical Report
+          </button>
+        </div>
+      </section>
+      
+      <!-- ANGLES DASHBOARD -->
+      <aside class="dashboard">
+        <div class="dashboard-header">
+          <div class="dashboard-title">📊 Joint Angles</div>
+          <div class="fps-badge" id="fpsBadge">-- FPS</div>
         </div>
         
-        <!-- Bottom Controls -->
-        <div class="bottom-controls" id="bottomControls" style="display:none">
-          <div class="controls-row">
-            <button class="ctrl-btn" id="muteBtn">🔊</button>
-            <button class="ctrl-btn" id="skipBtn">Skip →</button>
-            <button class="ctrl-btn primary" id="nextBtn">Next</button>
-            <button class="ctrl-btn danger" id="stopBtn">⏹</button>
+        <div class="angles-grid" id="anglesGrid">
+          <!-- Primary tracked joint (large) -->
+          <div class="angle-card primary" id="primaryAngle">
+            <div class="angle-name" id="primaryName">KNEE</div>
+            <div>
+              <span class="angle-value" id="primaryValue">--</span>
+              <span class="angle-unit">°</span>
+            </div>
+            <div class="angle-lr">
+              <span id="primaryL">L: --°</span>
+              <span id="primaryR">R: --°</span>
+              <span class="angle-delta ok" id="primaryDelta">Δ 0°</span>
+            </div>
+            <div class="angle-status">
+              <div class="status-dot stable" id="primaryStatus"></div>
+              <span id="primaryStatusText">Stable</span>
+            </div>
+          </div>
+          
+          <!-- Secondary joints -->
+          <div class="angle-card" id="kneeCard">
+            <div class="angle-name">KNEE</div>
+            <div>
+              <span class="angle-value" id="kneeValue">--</span>
+              <span class="angle-unit">°</span>
+            </div>
+          </div>
+          
+          <div class="angle-card" id="hipCard">
+            <div class="angle-name">HIP</div>
+            <div>
+              <span class="angle-value" id="hipValue">--</span>
+              <span class="angle-unit">°</span>
+            </div>
+          </div>
+          
+          <div class="angle-card" id="shoulderCard">
+            <div class="angle-name">SHOULDER</div>
+            <div>
+              <span class="angle-value" id="shoulderValue">--</span>
+              <span class="angle-unit">°</span>
+            </div>
+          </div>
+          
+          <div class="angle-card" id="elbowCard">
+            <div class="angle-name">ELBOW</div>
+            <div>
+              <span class="angle-value" id="elbowValue">--</span>
+              <span class="angle-unit">°</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <!-- Footer -->
-      <div class="footer">
-        <button class="footer-btn secondary" id="restartBtn">Restart</button>
-        <button class="footer-btn primary" id="reportBtn" disabled>Generate Report</button>
-      </div>
+        
+        <div class="controls">
+          <div class="error-display" id="errorDisplay"></div>
+          
+          <select id="cameraSelect">
+            <option value="">Loading cameras...</option>
+          </select>
+          
+          <div class="control-row">
+            <button class="btn btn-primary" id="startBtn" disabled>
+              🎬 Start Assessment
+            </button>
+          </div>
+          
+          <div class="control-row" id="activeControls" style="display:none;">
+            <button class="btn btn-secondary" id="skipBtn">⏭ Skip</button>
+            <button class="btn btn-secondary" id="muteBtn">🔊 Mute</button>
+            <button class="btn btn-danger" id="stopBtn">⏹ Stop</button>
+          </div>
+          
+          <div class="control-row" id="completeControls" style="display:none;">
+            <button class="btn btn-secondary" id="restartBtn">🔄 Restart</button>
+            <button class="btn btn-success" id="reportBtn">📋 Report</button>
+          </div>
+        </div>
+      </aside>
     </div>
     
-    <!-- MediaPipe CDN -->
+    <!-- MediaPipe Holistic -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
     
     <script>
-    (function() {
-      'use strict';
-      
       // ================================================================
-      // ERROR HANDLING UTILITY - Fails Silently
-      // ================================================================
-      const ErrorLogger = {
-        log: function(type, message, context) {
-          try {
-            console.error('[MSK Error]', type, message, context);
-            
-            // Send to server (async, non-blocking)
-            fetch('/api/log-error', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type,
-                message,
-                url: window.location.href,
-                context,
-                timestamp: new Date().toISOString()
-              })
-            }).catch(() => {}); // Fail silently
-            
-          } catch (e) {
-            // Never crash due to logging
-          }
-        },
-        
-        wrap: function(fn, context) {
-          return function(...args) {
-            try {
-              return fn.apply(this, args);
-            } catch (e) {
-              ErrorLogger.log('error', e.message, { context, stack: e.stack });
-              return null;
-            }
-          };
-        }
-      };
-      
-      // Global error handler
-      window.onerror = function(msg, url, line, col, error) {
-        ErrorLogger.log('uncaught', msg, { url, line, col, stack: error?.stack });
-        return false;
-      };
-      
-      window.onunhandledrejection = function(event) {
-        ErrorLogger.log('promise', event.reason?.message || 'Promise rejected', {
-          stack: event.reason?.stack
-        });
-      };
-      
-      // ================================================================
-      // TEXT-TO-SPEECH UTILITY
-      // ================================================================
-      const TTS = {
-        synth: window.speechSynthesis,
-        muted: false,
-        speaking: false,
-        
-        speak: function(text, onEnd) {
-          if (this.muted || !this.synth) {
-            if (onEnd) setTimeout(onEnd, 100);
-            return;
-          }
-          
-          try {
-            this.synth.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.95;
-            utterance.pitch = 1;
-            utterance.volume = 1;
-            
-            utterance.onstart = () => {
-              this.speaking = true;
-              document.getElementById('speakingIndicator')?.classList.add('active');
-            };
-            
-            utterance.onend = () => {
-              this.speaking = false;
-              document.getElementById('speakingIndicator')?.classList.remove('active');
-              if (onEnd) onEnd();
-            };
-            
-            utterance.onerror = () => {
-              this.speaking = false;
-              document.getElementById('speakingIndicator')?.classList.remove('active');
-              if (onEnd) onEnd();
-            };
-            
-            this.synth.speak(utterance);
-            
-          } catch (e) {
-            ErrorLogger.log('warning', 'TTS failed', { text });
-            if (onEnd) onEnd();
-          }
-        },
-        
-        toggle: function() {
-          this.muted = !this.muted;
-          if (this.muted && this.synth) this.synth.cancel();
-          return this.muted;
-        },
-        
-        stop: function() {
-          try {
-            if (this.synth) this.synth.cancel();
-            this.speaking = false;
-          } catch (e) {}
-        }
-      };
-      
-      // ================================================================
-      // SPEECH RECOGNITION UTILITY
-      // ================================================================
-      const SpeechRecognizer = {
-        recognition: null,
-        active: false,
-        transcript: '',
-        onResult: null,
-        
-        init: function() {
-          try {
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SR) {
-              console.warn('Speech recognition not supported');
-              return false;
-            }
-            
-            this.recognition = new SR();
-            this.recognition.continuous = true;
-            this.recognition.interimResults = true;
-            this.recognition.lang = 'en-US';
-            
-            this.recognition.onresult = (event) => {
-              for (let i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) {
-                  const text = event.results[i][0].transcript;
-                  this.transcript += text + ' ';
-                  if (this.onResult) this.onResult(text);
-                }
-              }
-            };
-            
-            this.recognition.onerror = (e) => {
-              if (e.error !== 'no-speech' && this.active) {
-                setTimeout(() => this.start(), 1000);
-              }
-            };
-            
-            this.recognition.onend = () => {
-              if (this.active) {
-                setTimeout(() => this.start(), 500);
-              }
-            };
-            
-            return true;
-            
-          } catch (e) {
-            ErrorLogger.log('warning', 'Speech recognition init failed', { error: e.message });
-            return false;
-          }
-        },
-        
-        start: function() {
-          if (!this.recognition || this.active) return;
-          try {
-            this.recognition.start();
-            this.active = true;
-            document.getElementById('micDot')?.classList.add('active');
-            document.getElementById('micLabel').textContent = 'REC';
-          } catch (e) {}
-        },
-        
-        stop: function() {
-          this.active = false;
-          try {
-            if (this.recognition) this.recognition.stop();
-          } catch (e) {}
-          document.getElementById('micDot')?.classList.remove('active');
-          document.getElementById('micLabel').textContent = 'MIC';
-        },
-        
-        getTranscript: function() {
-          return this.transcript;
-        },
-        
-        clear: function() {
-          this.transcript = '';
-        }
-      };
-      
-      // ================================================================
-      // RED FLAG DETECTOR
-      // ================================================================
-      const RedFlagDetector = {
-        flags: [],
-        keywords: {
-          'PAIN': ['pain', 'painful', 'hurts', 'hurt', 'ache', 'aching', 'sore', 'ouch'],
-          'FALL_RISK': ['fall', 'fell', 'falling', 'stumble', 'trip', 'balance'],
-          'DIZZINESS': ['dizzy', 'dizziness', 'lightheaded', 'faint', 'vertigo', 'spinning'],
-          'NUMBNESS': ['numb', 'numbness', 'tingling', 'pins and needles', 'cant feel'],
-          'WEAKNESS': ['weak', 'weakness', 'cant move', 'hard to move', 'difficult'],
-          'ACUTE': ['sharp', 'shooting', 'stabbing', 'burning', 'severe'],
-          'SWELLING': ['swollen', 'swelling', 'inflamed', 'puffy']
-        },
-        icons: {
-          'PAIN': '⚠️', 'FALL_RISK': '🚨', 'DIZZINESS': '💫', 
-          'NUMBNESS': '🔴', 'WEAKNESS': '⚡', 'ACUTE': '🔥', 'SWELLING': '🫀'
-        },
-        
-        check: function(text, exercise) {
-          const lower = text.toLowerCase();
-          
-          for (const [type, words] of Object.entries(this.keywords)) {
-            for (const word of words) {
-              if (lower.includes(word)) {
-                this.addFlag(type, text, exercise);
-                return { detected: true, type, icon: this.icons[type] };
-              }
-            }
-          }
-          return { detected: false };
-        },
-        
-        addFlag: function(type, context, exercise) {
-          const flag = {
-            id: Date.now(),
-            type,
-            icon: this.icons[type],
-            context,
-            exercise,
-            time: new Date().toLocaleTimeString()
-          };
-          
-          this.flags.push(flag);
-          this.showAlert(flag);
-          this.logToServer(flag);
-          
-          // Announce
-          TTS.speak('I noticed you mentioned ' + type.toLowerCase().replace('_', ' ') + '. I will note this.');
-        },
-        
-        showAlert: function(flag) {
-          const container = document.getElementById('alertsContainer');
-          if (!container) return;
-          
-          const div = document.createElement('div');
-          div.className = 'alert-item';
-          div.innerHTML = 
-            '<span class="alert-icon">' + flag.icon + '</span>' +
-            '<div class="alert-content">' +
-              '<div class="alert-type">' + flag.type.replace('_', ' ') + ' Detected</div>' +
-              '<div class="alert-detail">' + flag.exercise + '</div>' +
-            '</div>' +
-            '<span class="alert-time">' + flag.time + '</span>';
-          
-          container.appendChild(div);
-          
-          // Auto-remove
-          setTimeout(() => div.remove(), 6000);
-        },
-        
-        logToServer: function(flag) {
-          fetch('/api/red-flag', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: flag.type,
-              severity: flag.type === 'FALL_RISK' || flag.type === 'ACUTE' ? 'high' : 'medium',
-              context: flag.context
-            })
-          }).catch(() => {});
-        },
-        
-        getFlags: function() {
-          return this.flags;
-        },
-        
-        clear: function() {
-          this.flags = [];
-        }
-      };
-      
-      // ================================================================
-      // EXERCISES CONFIGURATION
+      // EXERCISES CONFIGURATION - Rep-based with auto-advance
       // ================================================================
       const EXERCISES = [
         {
           name: 'Deep Squat',
-          desc: 'Squat down keeping heels on ground, then stand up',
+          desc: 'Squat down until knees bend past 90°, then stand up straight',
           voice: 'Exercise 1: Deep Squat. Stand with feet shoulder width apart. Squat down as low as comfortable, then stand back up. Complete 5 repetitions.',
           reps: 5,
           joint: 'knee',
-          downAngle: 100,
-          upAngle: 160,
+          downThreshold: 110,  // Angle when "down" (knee bent)
+          upThreshold: 155,    // Angle when "up" (standing)
           track: ['knee', 'hip']
         },
         {
           name: 'Shoulder Raise',
-          desc: 'Raise both arms overhead, then lower them',
+          desc: 'Raise both arms straight up overhead, then lower',
           voice: 'Exercise 2: Shoulder Raise. Raise both arms straight up overhead, then lower them back down. Complete 5 repetitions.',
           reps: 5,
           joint: 'shoulder',
-          downAngle: 50,
-          upAngle: 140,
+          downThreshold: 60,   // Arms down
+          upThreshold: 140,    // Arms up
           track: ['shoulder', 'elbow']
         },
         {
           name: 'Hip Hinge',
-          desc: 'Bend forward at hips keeping back straight',
+          desc: 'Bend forward at hips keeping back straight, then stand',
           voice: 'Exercise 3: Hip Hinge. Bend forward at your hips while keeping your back straight, then stand up. Complete 5 repetitions.',
           reps: 5,
           joint: 'hip',
-          downAngle: 100,
-          upAngle: 165,
+          downThreshold: 110,  // Bent forward
+          upThreshold: 160,    // Standing straight
           track: ['hip', 'knee']
         },
         {
           name: 'Arm Curl',
-          desc: 'Bend elbows to bring hands to shoulders',
+          desc: 'Bend elbows to bring hands to shoulders, then straighten',
           voice: 'Exercise 4: Arm Curl. Bend your elbows to bring your hands toward your shoulders, then straighten. Complete 5 repetitions.',
           reps: 5,
           joint: 'elbow',
-          downAngle: 50,
-          upAngle: 140,
+          downThreshold: 60,   // Elbow bent (curled)
+          upThreshold: 140,    // Arms straight
           track: ['elbow', 'shoulder']
         },
         {
           name: 'Trunk Rotation',
-          desc: 'Rotate upper body left, then right',
-          voice: 'Exercise 5: Trunk Rotation. Rotate your upper body to the left, return to center, then rotate right. Complete 4 repetitions each side.',
+          desc: 'Rotate upper body left and right with arms extended',
+          voice: 'Exercise 5: Trunk Rotation. Extend arms and rotate your upper body left, then right. Complete 4 repetitions each direction.',
           reps: 4,
           joint: 'hip',
-          downAngle: 150,
-          upAngle: 175,
+          downThreshold: 155,  // Rotated
+          upThreshold: 170,    // Centered
           track: ['hip', 'shoulder']
         },
         {
-          name: 'Single Leg Stand',
-          desc: 'Stand on one leg for 3 seconds',
-          voice: 'Exercise 6: Single Leg Stand. Lift one foot off the ground and balance for 3 seconds, then switch legs. Complete 3 repetitions each side.',
+          name: 'Balance Check',
+          desc: 'Stand on one leg for 3 seconds, then switch',
+          voice: 'Exercise 6: Balance Check. Lift one foot off the ground and balance for 3 seconds. Complete 3 repetitions each leg.',
           reps: 3,
           joint: 'hip',
-          downAngle: 150,
-          upAngle: 175,
+          downThreshold: 155,
+          upThreshold: 170,
           track: ['hip', 'knee']
         }
       ];
       
       // ================================================================
-      // TEMPORAL SMOOTHING - Exponential Moving Average Filter
-      // Reduces jitter and provides stable angle measurements
+      // TEMPORAL SMOOTHING
       // ================================================================
-      const TemporalSmoother = {
-        // History buffers for each joint
-        history: {
-          knee: [],
-          hip: [],
-          shoulder: [],
-          elbow: [],
-          knee_L: [],
-          knee_R: [],
-          hip_L: [],
-          hip_R: [],
-          shoulder_L: [],
-          shoulder_R: [],
-          elbow_L: [],
-          elbow_R: []
-        },
+      const Smoother = {
+        history: {},
+        config: { windowSize: 5, alpha: 0.3, outlierThreshold: 30 },
         
-        // Configuration
-        config: {
-          windowSize: 5,      // Number of frames to average
-          alpha: 0.3,         // EMA smoothing factor (0.1=smooth, 0.5=responsive)
-          outlierThreshold: 30, // Reject angles that change more than this per frame
-          minConfidence: 0.5   // Minimum landmark confidence to include
-        },
-        
-        // Apply smoothing to an angle value
-        smooth: function(joint, rawValue, confidence = 1.0) {
-          if (!this.history[joint]) {
-            this.history[joint] = [];
-          }
-          
+        smooth: function(joint, value) {
+          if (!this.history[joint]) this.history[joint] = [];
           const hist = this.history[joint];
           
-          // Skip low confidence readings
-          if (confidence < this.config.minConfidence) {
-            return hist.length > 0 ? hist[hist.length - 1].smoothed : rawValue;
-          }
-          
-          // Outlier rejection - if value jumps too much, likely tracking error
+          // Outlier rejection
           if (hist.length > 0) {
-            const lastValue = hist[hist.length - 1].smoothed;
-            if (Math.abs(rawValue - lastValue) > this.config.outlierThreshold) {
-              // Likely a tracking glitch - use EMA with higher smoothing
-              rawValue = lastValue + (rawValue - lastValue) * 0.1;
+            const last = hist[hist.length - 1];
+            if (Math.abs(value - last) > this.config.outlierThreshold) {
+              value = last + (value - last) * 0.1;
             }
           }
           
-          // Calculate EMA (Exponential Moving Average)
-          let ema;
-          if (hist.length === 0) {
-            ema = rawValue;
-          } else {
-            const lastEma = hist[hist.length - 1].smoothed;
-            ema = this.config.alpha * rawValue + (1 - this.config.alpha) * lastEma;
-          }
-          
-          // Add to history
-          hist.push({
-            raw: rawValue,
-            smoothed: Math.round(ema),
-            timestamp: Date.now()
-          });
-          
-          // Keep history limited
-          if (hist.length > this.config.windowSize * 2) {
-            hist.shift();
-          }
+          // EMA
+          let ema = hist.length === 0 ? value : this.config.alpha * value + (1 - this.config.alpha) * hist[hist.length - 1];
+          hist.push(ema);
+          if (hist.length > this.config.windowSize * 2) hist.shift();
           
           return Math.round(ema);
         },
         
-        // Get smoothed value with Simple Moving Average fallback
-        getSMA: function(joint) {
-          const hist = this.history[joint];
-          if (!hist || hist.length === 0) return 0;
-          
-          const recent = hist.slice(-this.config.windowSize);
-          const sum = recent.reduce((a, b) => a + b.smoothed, 0);
-          return Math.round(sum / recent.length);
-        },
-        
-        // Get velocity (rate of change per second)
         getVelocity: function(joint) {
           const hist = this.history[joint];
-          if (!hist || hist.length < 2) return 0;
-          
-          const recent = hist.slice(-3);
-          if (recent.length < 2) return 0;
-          
-          const first = recent[0];
-          const last = recent[recent.length - 1];
-          const dt = (last.timestamp - first.timestamp) / 1000; // seconds
-          
-          if (dt === 0) return 0;
-          return Math.round((last.smoothed - first.smoothed) / dt);
+          if (!hist || hist.length < 3) return 0;
+          return Math.abs(hist[hist.length - 1] - hist[hist.length - 3]);
         },
         
-        // Check if movement is stable (low velocity)
-        isStable: function(joint, threshold = 5) {
-          return Math.abs(this.getVelocity(joint)) < threshold;
+        isStable: function(joint) {
+          return this.getVelocity(joint) < 5;
         },
         
-        // Reset history for a joint or all joints
-        reset: function(joint = null) {
-          if (joint && this.history[joint]) {
-            this.history[joint] = [];
-          } else {
-            Object.keys(this.history).forEach(k => this.history[k] = []);
-          }
-        },
-        
-        // Get statistics for debugging
-        getStats: function(joint) {
-          const hist = this.history[joint];
-          if (!hist || hist.length === 0) return null;
-          
-          const values = hist.map(h => h.smoothed);
-          const min = Math.min(...values);
-          const max = Math.max(...values);
-          const avg = values.reduce((a, b) => a + b, 0) / values.length;
-          const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / values.length;
-          
-          return {
-            count: hist.length,
-            min: Math.round(min),
-            max: Math.round(max),
-            avg: Math.round(avg),
-            stdDev: Math.round(Math.sqrt(variance)),
-            velocity: this.getVelocity(joint),
-            stable: this.isStable(joint)
-          };
+        reset: function() {
+          this.history = {};
         }
       };
       
       // ================================================================
-      // MAIN APPLICATION STATE
+      // TEXT TO SPEECH
+      // ================================================================
+      const TTS = {
+        muted: false,
+        speaking: false,
+        
+        speak: function(text, onEnd) {
+          if (this.muted || !window.speechSynthesis) {
+            if (onEnd) setTimeout(onEnd, 500);
+            return;
+          }
+          
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 1.0;
+          utterance.pitch = 1.0;
+          utterance.onend = () => {
+            this.speaking = false;
+            if (onEnd) onEnd();
+          };
+          
+          this.speaking = true;
+          speechSynthesis.cancel();
+          speechSynthesis.speak(utterance);
+        },
+        
+        stop: function() {
+          speechSynthesis.cancel();
+          this.speaking = false;
+        },
+        
+        toggle: function() {
+          this.muted = !this.muted;
+          if (this.muted) this.stop();
+          return this.muted;
+        }
+      };
+      
+      // ================================================================
+      // SPEECH RECOGNITION
+      // ================================================================
+      const SpeechRecognizer = {
+        recognition: null,
+        transcript: '',
+        active: false,
+        
+        init: function() {
+          const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SR) return;
+          
+          this.recognition = new SR();
+          this.recognition.continuous = true;
+          this.recognition.interimResults = true;
+          
+          this.recognition.onresult = (e) => {
+            let text = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+              text += e.results[i][0].transcript;
+            }
+            this.transcript += text + ' ';
+            
+            // Check for red flags
+            RedFlags.check(text.toLowerCase());
+          };
+          
+          this.recognition.onerror = () => {};
+          this.recognition.onend = () => {
+            if (this.active) {
+              try { this.recognition.start(); } catch(e) {}
+            }
+          };
+        },
+        
+        start: function() {
+          if (!this.recognition) return;
+          this.active = true;
+          try { this.recognition.start(); } catch(e) {}
+          document.getElementById('micDot').classList.add('active');
+          document.getElementById('micLabel').textContent = 'RECORDING';
+        },
+        
+        stop: function() {
+          this.active = false;
+          if (this.recognition) this.recognition.stop();
+          document.getElementById('micDot').classList.remove('active');
+          document.getElementById('micLabel').textContent = 'MIC OFF';
+        },
+        
+        getTranscript: function() { return this.transcript; },
+        clear: function() { this.transcript = ''; }
+      };
+      
+      // ================================================================
+      // RED FLAG DETECTION
+      // ================================================================
+      const RedFlags = {
+        flags: [],
+        keywords: {
+          pain: ['pain', 'hurt', 'ache', 'sore', 'ouch', 'ow'],
+          fall_risk: ['dizzy', 'unsteady', 'falling', 'balance', 'wobbly'],
+          acute: ['sharp', 'severe', 'intense', 'worst', 'stabbing'],
+          numbness: ['numb', 'tingling', 'pins', 'needles'],
+          weakness: ['weak', 'cant', 'unable', 'give out']
+        },
+        
+        check: function(text) {
+          for (const [type, words] of Object.entries(this.keywords)) {
+            for (const word of words) {
+              if (text.includes(word)) {
+                this.add(type, text);
+                return;
+              }
+            }
+          }
+        },
+        
+        add: function(type, context) {
+          const flag = {
+            type,
+            context,
+            time: new Date().toLocaleTimeString(),
+            exercise: EXERCISES[App.currentIdx]?.name || 'General'
+          };
+          this.flags.push(flag);
+          this.showAlert(flag);
+          
+          // Log to server
+          fetch('/api/red-flag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, severity: type === 'acute' ? 'high' : 'medium', context })
+          }).catch(() => {});
+        },
+        
+        showAlert: function(flag) {
+          const container = document.getElementById('alertsContainer');
+          const div = document.createElement('div');
+          div.className = 'alert-item';
+          div.innerHTML = '<span class="alert-icon">⚠️</span><span class="alert-text"><strong>' + 
+            flag.type.replace('_', ' ').toUpperCase() + '</strong><br>' + flag.exercise + '</span>';
+          container.appendChild(div);
+          setTimeout(() => div.remove(), 5000);
+        },
+        
+        getFlags: function() { return this.flags; },
+        clear: function() { this.flags = []; }
+      };
+      
+      // ================================================================
+      // MAIN APPLICATION
       // ================================================================
       const App = {
         holistic: null,
+        video: null,
+        canvas: null,
+        ctx: null,
         stream: null,
         running: false,
-        cameras: [],
-        selectedCamera: null,
         
         // Exercise state
         currentIdx: 0,
         reps: 0,
-        repState: 'neutral',
-        angles: {},
-        rawAngles: {},  // Unsmoothed angles for debugging
+        repState: 'neutral', // 'neutral', 'down', 'up'
         results: [],
         startTime: null,
+        
+        // Tracking
+        angles: {},
         frameCount: 0,
-        lastFps: 0,
+        lastFpsTime: Date.now(),
+        fps: 0,
         
-        // DOM
-        video: null,
-        canvas: null,
-        ctx: null,
-        
-        // ============== INITIALIZATION ==============
+        // ============== INIT ==============
         init: async function() {
-          console.log('[MSK] Initializing v8.0...');
+          console.log('[MSK v9] Initializing desktop view...');
           
           this.video = document.getElementById('video');
           this.canvas = document.getElementById('canvas');
           this.ctx = this.canvas.getContext('2d');
           
-          // Attach event listeners
-          this.attachListeners();
+          // Attach listeners
+          document.getElementById('startBtn').onclick = () => this.start();
+          document.getElementById('skipBtn').onclick = () => this.skipExercise();
+          document.getElementById('stopBtn').onclick = () => this.stop();
+          document.getElementById('restartBtn').onclick = () => this.restart();
+          document.getElementById('muteBtn').onclick = () => this.toggleMute();
+          document.getElementById('reportBtn').onclick = () => this.generateReport();
+          document.getElementById('generateBtn').onclick = () => this.generateReport();
+          document.getElementById('cameraSelect').onchange = (e) => this.selectedCamera = e.target.value;
           
-          // Init speech recognition
+          // Init speech
           SpeechRecognizer.init();
-          SpeechRecognizer.onResult = (text) => {
-            RedFlagDetector.check(text, EXERCISES[this.currentIdx]?.name || 'General');
-          };
           
           // Enumerate cameras
           await this.enumerateCameras();
           
-          // Render initial progress
-          this.renderProgress();
-          
-          console.log('[MSK] Ready');
+          console.log('[MSK v9] Ready');
         },
         
-        attachListeners: function() {
-          document.getElementById('startBtn').onclick = () => this.start();
-          document.getElementById('muteBtn').onclick = () => this.toggleMute();
-          document.getElementById('skipBtn').onclick = () => this.skipExercise();
-          document.getElementById('nextBtn').onclick = () => this.nextExercise();
-          document.getElementById('stopBtn').onclick = () => this.stop();
-          document.getElementById('restartBtn').onclick = () => this.restart();
-          document.getElementById('reportBtn').onclick = () => this.generateReport();
-          document.getElementById('generateBtn').onclick = () => this.generateReport();
-          document.getElementById('cameraSelect').onchange = (e) => {
-            this.selectedCamera = e.target.value;
-          };
-        },
-        
-        // ============== CAMERA ==============
         enumerateCameras: async function() {
           const select = document.getElementById('cameraSelect');
           const startBtn = document.getElementById('startBtn');
-          const errorDisplay = document.getElementById('errorDisplay');
           
           try {
-            // Request permission
             const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             tempStream.getTracks().forEach(t => t.stop());
             
-            // Enumerate
             const devices = await navigator.mediaDevices.enumerateDevices();
-            this.cameras = devices.filter(d => d.kind === 'videoinput');
+            const cameras = devices.filter(d => d.kind === 'videoinput');
             
-            if (this.cameras.length === 0) {
-              throw new Error('No cameras found');
-            }
+            if (cameras.length === 0) throw new Error('No cameras found');
             
-            // Populate select
-            select.innerHTML = this.cameras.map((cam, i) => 
+            select.innerHTML = cameras.map((cam, i) =>
               '<option value="' + cam.deviceId + '">' + (cam.label || 'Camera ' + (i+1)) + '</option>'
             ).join('');
             
-            this.selectedCamera = this.cameras[0].deviceId;
+            this.selectedCamera = cameras[0].deviceId;
             startBtn.disabled = false;
-            errorDisplay.style.display = 'none';
             
           } catch (e) {
-            ErrorLogger.log('error', 'Camera enumeration failed', { error: e.message });
-            errorDisplay.textContent = 'Camera access required: ' + e.message;
-            errorDisplay.style.display = 'block';
-            startBtn.disabled = true;
-          }
-        },
-        
-        // ============== HOLISTIC ==============
-        initHolistic: async function() {
-          const loadingScreen = document.getElementById('loadingScreen');
-          const loadingText = document.getElementById('loadingText');
-          const loadingSub = document.getElementById('loadingSub');
-          
-          loadingScreen.style.display = 'flex';
-          loadingText.textContent = 'Loading AI tracking...';
-          loadingSub.textContent = 'Body + Face + Hands detection';
-          
-          try {
-            this.holistic = new Holistic({
-              locateFile: (file) => 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file
-            });
-            
-            this.holistic.setOptions({
-              modelComplexity: 1,
-              smoothLandmarks: true,
-              refineFaceLandmarks: true,
-              minDetectionConfidence: 0.5,
-              minTrackingConfidence: 0.5
-            });
-            
-            this.holistic.onResults((results) => this.onResults(results));
-            
-            loadingText.textContent = 'AI ready!';
-            return true;
-            
-          } catch (e) {
-            ErrorLogger.log('error', 'Holistic init failed', { error: e.message });
-            loadingText.textContent = 'Failed to load AI';
-            loadingSub.textContent = e.message;
-            return false;
+            document.getElementById('errorDisplay').textContent = 'Camera access required: ' + e.message;
+            document.getElementById('errorDisplay').style.display = 'block';
           }
         },
         
         // ============== START ==============
         start: async function() {
-          const startBtn = document.getElementById('startBtn');
-          startBtn.disabled = true;
-          startBtn.textContent = 'Starting...';
+          console.log('[MSK v9] Starting assessment...');
+          
+          document.getElementById('startBtn').disabled = true;
+          document.getElementById('startBtn').textContent = 'Loading...';
           
           try {
-            // Init holistic if needed
-            if (!this.holistic) {
-              const ok = await this.initHolistic();
-              if (!ok) {
-                startBtn.disabled = false;
-                startBtn.textContent = 'Try Again';
-                return;
-              }
-            }
-            
-            // Get camera stream
-            const constraints = {
-              video: this.selectedCamera ? { deviceId: { exact: this.selectedCamera } } : true,
+            // Start camera
+            this.stream = await navigator.mediaDevices.getUserMedia({
+              video: { deviceId: this.selectedCamera, width: 1280, height: 720 },
               audio: false
-            };
-            
-            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-            this.video.srcObject = this.stream;
-            
-            await new Promise((resolve) => {
-              this.video.onloadedmetadata = () => this.video.play().then(resolve);
             });
+            this.video.srcObject = this.stream;
+            await this.video.play();
             
+            // Resize canvas
             this.canvas.width = this.video.videoWidth;
             this.canvas.height = this.video.videoHeight;
             
-            // Update UI
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('startScreen').style.display = 'none';
-            document.getElementById('repDisplay').style.display = 'block';
-            document.getElementById('anglesPanel').style.display = 'block';
-            document.getElementById('bottomControls').style.display = 'block';
+            // Init Holistic
+            if (!this.holistic) {
+              this.holistic = new Holistic({
+                locateFile: (file) => 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/' + file
+              });
+              
+              this.holistic.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                refineFaceLandmarks: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+              });
+              
+              this.holistic.onResults((r) => this.onResults(r));
+            }
             
+            // Start
             this.running = true;
             this.startTime = Date.now();
+            this.currentIdx = 0;
+            this.reps = 0;
+            this.repState = 'neutral';
+            this.results = [];
+            Smoother.reset();
             
-            // Start mic recording
+            // UI
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('repOverlay').style.display = 'block';
+            document.getElementById('instructionOverlay').style.display = 'block';
+            document.getElementById('activeControls').style.display = 'flex';
+            document.getElementById('startBtn').style.display = 'none';
+            
+            // Start speech recognition
             SpeechRecognizer.start();
+            
+            // Start first exercise
+            this.startExercise(0);
             
             // Start processing
             this.processFrame();
             
-            // Welcome message
-            TTS.speak('Welcome to the guided assessment. I will guide you through ' + EXERCISES.length + ' exercises. Let me know if you feel any pain or discomfort.', () => {
-              this.startExercise(0);
-            });
-            
           } catch (e) {
-            ErrorLogger.log('error', 'Start failed', { error: e.message });
-            document.getElementById('errorDisplay').textContent = e.message;
+            console.error('[MSK v9] Start failed:', e);
+            document.getElementById('errorDisplay').textContent = 'Failed to start: ' + e.message;
             document.getElementById('errorDisplay').style.display = 'block';
-            document.getElementById('loadingScreen').style.display = 'none';
-            startBtn.disabled = false;
-            startBtn.textContent = 'Try Again';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = '🎬 Start Assessment';
           }
         },
         
-        // ============== FRAME PROCESSING ==============
         processFrame: async function() {
           if (!this.running) return;
           
           try {
             await this.holistic.send({ image: this.video });
-          } catch (e) {
-            ErrorLogger.log('warning', 'Frame processing error', { error: e.message });
-          }
+          } catch (e) {}
           
           requestAnimationFrame(() => this.processFrame());
         },
         
+        // ============== RESULTS HANDLER ==============
         onResults: function(results) {
+          // Clear canvas
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
           
           // Draw pose
           if (results.poseLandmarks) {
-            drawConnectors(this.ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#3b82f6', lineWidth: 3 });
-            drawLandmarks(this.ctx, results.poseLandmarks, { color: '#93c5fd', fillColor: '#3b82f6', radius: 4 });
+            // Draw skeleton in BLUE
+            drawConnectors(this.ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#3b82f6', lineWidth: 4 });
+            drawLandmarks(this.ctx, results.poseLandmarks, { color: '#93c5fd', fillColor: '#3b82f6', radius: 6 });
             
+            // Calculate angles
             this.calculateAngles(results.poseLandmarks);
+            
+            // Detect reps
             this.detectRep();
           }
           
-          // Draw face
+          // Draw face (subtle)
           if (results.faceLandmarks) {
-            drawConnectors(this.ctx, results.faceLandmarks, FACEMESH_TESSELATION, { color: 'rgba(6, 182, 212, 0.15)', lineWidth: 1 });
-            drawConnectors(this.ctx, results.faceLandmarks, FACEMESH_FACE_OVAL, { color: '#06b6d4', lineWidth: 2 });
+            drawConnectors(this.ctx, results.faceLandmarks, FACEMESH_TESSELATION, { color: 'rgba(6, 182, 212, 0.1)', lineWidth: 1 });
           }
           
           // Draw hands
           if (results.leftHandLandmarks) {
             drawConnectors(this.ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
-            drawLandmarks(this.ctx, results.leftHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
           }
           if (results.rightHandLandmarks) {
             drawConnectors(this.ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#8b5cf6', lineWidth: 2 });
-            drawLandmarks(this.ctx, results.rightHandLandmarks, { color: '#c4b5fd', fillColor: '#8b5cf6', radius: 3 });
+          }
+          
+          // Update FPS
+          this.frameCount++;
+          const now = Date.now();
+          if (now - this.lastFpsTime >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.lastFpsTime = now;
+            this.updateFPS();
           }
         },
         
-        // ============== ANGLE CALCULATION WITH TEMPORAL SMOOTHING ==============
+        // ============== ANGLE CALCULATION ==============
         calculateAngles: function(lm) {
           if (!lm || lm.length < 33) return;
           
-          // Calculate angle between three points with confidence
-          const angleWithConf = (a, b, c) => {
+          const angle = (a, b, c) => {
             const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
             let deg = Math.abs(rad * 180 / Math.PI);
             if (deg > 180) deg = 360 - deg;
-            
-            // Average confidence of the three landmarks
-            const conf = ((a.visibility || 0) + (b.visibility || 0) + (c.visibility || 0)) / 3;
-            
-            return { angle: deg, confidence: conf };
+            return deg;
           };
           
-          // Landmark indices (MediaPipe Pose)
+          // Landmarks
           const LS=11, RS=12, LE=13, RE=14, LW=15, RW=16, LH=23, RH=24, LK=25, RK=26, LA=27, RA=28;
           
-          // Calculate raw angles for each joint (left and right separately)
-          const rawKneeL = angleWithConf(lm[LH], lm[LK], lm[LA]);
-          const rawKneeR = angleWithConf(lm[RH], lm[RK], lm[RA]);
-          const rawHipL = angleWithConf(lm[LS], lm[LH], lm[LK]);
-          const rawHipR = angleWithConf(lm[RS], lm[RH], lm[RK]);
-          const rawShoulderL = angleWithConf(lm[LE], lm[LS], lm[LH]);
-          const rawShoulderR = angleWithConf(lm[RE], lm[RS], lm[RH]);
-          const rawElbowL = angleWithConf(lm[LS], lm[LE], lm[LW]);
-          const rawElbowR = angleWithConf(lm[RS], lm[RE], lm[RW]);
+          // Raw angles (bilateral)
+          const rawKneeL = angle(lm[LH], lm[LK], lm[LA]);
+          const rawKneeR = angle(lm[RH], lm[RK], lm[RA]);
+          const rawHipL = angle(lm[LS], lm[LH], lm[LK]);
+          const rawHipR = angle(lm[RS], lm[RH], lm[RK]);
+          const rawShoulderL = angle(lm[LE], lm[LS], lm[LH]);
+          const rawShoulderR = angle(lm[RE], lm[RS], lm[RH]);
+          const rawElbowL = angle(lm[LS], lm[LE], lm[LW]);
+          const rawElbowR = angle(lm[RS], lm[RE], lm[RW]);
           
-          // Store raw angles for debugging
-          this.rawAngles = {
-            knee_L: Math.round(rawKneeL.angle),
-            knee_R: Math.round(rawKneeR.angle),
-            hip_L: Math.round(rawHipL.angle),
-            hip_R: Math.round(rawHipR.angle),
-            shoulder_L: Math.round(rawShoulderL.angle),
-            shoulder_R: Math.round(rawShoulderR.angle),
-            elbow_L: Math.round(rawElbowL.angle),
-            elbow_R: Math.round(rawElbowR.angle)
-          };
+          // Smooth bilateral
+          const kneeL = Smoother.smooth('knee_L', rawKneeL);
+          const kneeR = Smoother.smooth('knee_R', rawKneeR);
+          const hipL = Smoother.smooth('hip_L', rawHipL);
+          const hipR = Smoother.smooth('hip_R', rawHipR);
+          const shoulderL = Smoother.smooth('shoulder_L', rawShoulderL);
+          const shoulderR = Smoother.smooth('shoulder_R', rawShoulderR);
+          const elbowL = Smoother.smooth('elbow_L', rawElbowL);
+          const elbowR = Smoother.smooth('elbow_R', rawElbowR);
           
-          // Apply temporal smoothing to individual joints
-          const smoothedKneeL = TemporalSmoother.smooth('knee_L', rawKneeL.angle, rawKneeL.confidence);
-          const smoothedKneeR = TemporalSmoother.smooth('knee_R', rawKneeR.angle, rawKneeR.confidence);
-          const smoothedHipL = TemporalSmoother.smooth('hip_L', rawHipL.angle, rawHipL.confidence);
-          const smoothedHipR = TemporalSmoother.smooth('hip_R', rawHipR.angle, rawHipR.confidence);
-          const smoothedShoulderL = TemporalSmoother.smooth('shoulder_L', rawShoulderL.angle, rawShoulderL.confidence);
-          const smoothedShoulderR = TemporalSmoother.smooth('shoulder_R', rawShoulderR.angle, rawShoulderR.confidence);
-          const smoothedElbowL = TemporalSmoother.smooth('elbow_L', rawElbowL.angle, rawElbowL.confidence);
-          const smoothedElbowR = TemporalSmoother.smooth('elbow_R', rawElbowR.angle, rawElbowR.confidence);
-          
-          // Average left and right for bilateral angles
-          const avgKnee = Math.round((smoothedKneeL + smoothedKneeR) / 2);
-          const avgHip = Math.round((smoothedHipL + smoothedHipR) / 2);
-          const avgShoulder = Math.round((smoothedShoulderL + smoothedShoulderR) / 2);
-          const avgElbow = Math.round((smoothedElbowL + smoothedElbowR) / 2);
-          
-          // Apply final smoothing to averaged values
+          // Average
           this.angles = {
-            knee: TemporalSmoother.smooth('knee', avgKnee),
-            hip: TemporalSmoother.smooth('hip', avgHip),
-            shoulder: TemporalSmoother.smooth('shoulder', avgShoulder),
-            elbow: TemporalSmoother.smooth('elbow', avgElbow),
-            // Also store individual side angles (smoothed)
-            knee_L: smoothedKneeL,
-            knee_R: smoothedKneeR,
-            hip_L: smoothedHipL,
-            hip_R: smoothedHipR,
-            shoulder_L: smoothedShoulderL,
-            shoulder_R: smoothedShoulderR,
-            elbow_L: smoothedElbowL,
-            elbow_R: smoothedElbowR
+            knee: Smoother.smooth('knee', (kneeL + kneeR) / 2),
+            hip: Smoother.smooth('hip', (hipL + hipR) / 2),
+            shoulder: Smoother.smooth('shoulder', (shoulderL + shoulderR) / 2),
+            elbow: Smoother.smooth('elbow', (elbowL + elbowR) / 2),
+            knee_L: kneeL, knee_R: kneeR,
+            hip_L: hipL, hip_R: hipR,
+            shoulder_L: shoulderL, shoulder_R: shoulderR,
+            elbow_L: elbowL, elbow_R: elbowR
           };
-          
-          // Track frame count for FPS
-          this.frameCount++;
           
           this.updateAnglesUI();
         },
         
+        // ============== UPDATE UI ==============
         updateAnglesUI: function() {
-          const exercise = EXERCISES[this.currentIdx];
-          if (!exercise) return;
+          const ex = EXERCISES[this.currentIdx];
+          if (!ex) return;
           
-          let html = '';
-          exercise.track.forEach((joint, i) => {
-            const val = this.angles[joint] || 0;
-            const isPrimary = joint === exercise.joint;
-            const stats = TemporalSmoother.getStats(joint);
-            const velocity = stats ? stats.velocity : 0;
-            const isStable = stats ? stats.stable : true;
-            
-            // Stability indicator
-            const stabilityIcon = isStable ? '●' : '◐';
-            const stabilityColor = isStable ? '#22c55e' : '#f59e0b';
-            
-            // Show L/R breakdown for bilateral joints
-            const leftVal = this.angles[joint + '_L'];
-            const rightVal = this.angles[joint + '_R'];
-            const hasLR = leftVal !== undefined && rightVal !== undefined;
-            
-            html += '<div class="angle-item ' + (isPrimary ? 'primary' : '') + '">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-                    '<span class="angle-label">' + joint.charAt(0).toUpperCase() + joint.slice(1) + 
-                    ' <span style="color:' + stabilityColor + ';font-size:8px;">' + stabilityIcon + '</span></span>' +
-                    '<span class="angle-value">' + val + '°</span></div>';
-            
-            // Show L/R if tracking primary joint
-            if (hasLR && isPrimary) {
-              html += '<div style="font-size:9px;color:#666;margin-top:2px;display:flex;justify-content:space-between;">' +
-                      '<span>L:' + leftVal + '°</span><span>R:' + rightVal + '°</span>' +
-                      '<span style="color:' + (Math.abs(leftVal - rightVal) > 10 ? '#f59e0b' : '#22c55e') + '">' +
-                      'Δ' + Math.abs(leftVal - rightVal) + '°</span></div>';
+          const primaryJoint = ex.joint;
+          const primaryVal = this.angles[primaryJoint] || 0;
+          const primaryL = this.angles[primaryJoint + '_L'] || 0;
+          const primaryR = this.angles[primaryJoint + '_R'] || 0;
+          const delta = Math.abs(primaryL - primaryR);
+          const isStable = Smoother.isStable(primaryJoint);
+          
+          // Primary angle card
+          document.getElementById('primaryName').textContent = primaryJoint.toUpperCase();
+          document.getElementById('primaryValue').textContent = primaryVal;
+          document.getElementById('primaryL').textContent = 'L: ' + primaryL + '°';
+          document.getElementById('primaryR').textContent = 'R: ' + primaryR + '°';
+          
+          const deltaEl = document.getElementById('primaryDelta');
+          deltaEl.textContent = 'Δ ' + delta + '°';
+          deltaEl.className = 'angle-delta ' + (delta > 10 ? 'warn' : 'ok');
+          
+          const statusDot = document.getElementById('primaryStatus');
+          const statusText = document.getElementById('primaryStatusText');
+          statusDot.className = 'status-dot ' + (isStable ? 'stable' : 'moving');
+          statusText.textContent = isStable ? 'Stable' : 'Moving';
+          
+          // Secondary cards
+          document.getElementById('kneeValue').textContent = this.angles.knee || '--';
+          document.getElementById('hipValue').textContent = this.angles.hip || '--';
+          document.getElementById('shoulderValue').textContent = this.angles.shoulder || '--';
+          document.getElementById('elbowValue').textContent = this.angles.elbow || '--';
+          
+          // Highlight tracked joints
+          ['knee', 'hip', 'shoulder', 'elbow'].forEach(j => {
+            const card = document.getElementById(j + 'Card');
+            if (ex.track.includes(j)) {
+              card.classList.add('highlight');
+            } else {
+              card.classList.remove('highlight');
             }
-            
-            html += '</div>';
           });
-          
-          document.getElementById('anglesList').innerHTML = html;
+        },
+        
+        updateFPS: function() {
+          const badge = document.getElementById('fpsBadge');
+          badge.textContent = this.fps + ' FPS';
+          badge.className = 'fps-badge ' + (this.fps >= 20 ? 'good' : this.fps >= 10 ? 'ok' : 'bad');
         },
         
         // ============== REP DETECTION ==============
@@ -3665,14 +3464,19 @@ app.get('/doctor/joints', (c) => {
           const angle = this.angles[ex.joint];
           if (!angle) return;
           
+          // State machine: neutral -> down -> up (= 1 rep)
           if (this.repState === 'neutral' || this.repState === 'up') {
-            if (angle <= ex.downAngle) {
+            // Waiting to go DOWN (angle decreases below threshold)
+            if (angle <= ex.downThreshold) {
               this.repState = 'down';
+              console.log('[REP] Down detected:', angle, '<=', ex.downThreshold);
             }
           } else if (this.repState === 'down') {
-            if (angle >= ex.upAngle) {
+            // Waiting to come UP (angle increases above threshold)
+            if (angle >= ex.upThreshold) {
               this.repState = 'up';
               this.completeRep();
+              console.log('[REP] Up detected:', angle, '>=', ex.upThreshold);
             }
           }
         },
@@ -3681,24 +3485,30 @@ app.get('/doctor/joints', (c) => {
           this.reps++;
           const ex = EXERCISES[this.currentIdx];
           
-          document.getElementById('repNum').textContent = this.reps;
+          // Update UI
+          document.getElementById('repCount').textContent = this.reps;
           document.getElementById('repFill').style.width = (this.reps / ex.reps * 100) + '%';
           
+          // Voice feedback
           if (this.reps < ex.reps) {
             TTS.speak(String(this.reps));
           }
           
+          // Check if exercise complete
           if (this.reps >= ex.reps) {
+            // Save result
             this.results.push({
               name: ex.name,
               reps: this.reps,
               target: ex.reps,
-              score: 3,
-              maxAngles: { ...this.angles }
+              score: 3, // Full score
+              maxAngles: { ...this.angles },
+              skipped: false
             });
             
-            TTS.speak('Excellent! Moving to next exercise.', () => {
-              setTimeout(() => this.startExercise(this.currentIdx + 1), 1000);
+            // Move to next exercise
+            TTS.speak('Excellent! Exercise complete.', () => {
+              setTimeout(() => this.startExercise(this.currentIdx + 1), 1500);
             });
           }
         },
@@ -3713,130 +3523,74 @@ app.get('/doctor/joints', (c) => {
           this.currentIdx = idx;
           this.reps = 0;
           this.repState = 'neutral';
-          this.frameCount = 0;
-          
-          // Reset temporal smoother for fresh tracking on new exercise
-          TemporalSmoother.reset();
+          Smoother.reset();
           
           const ex = EXERCISES[idx];
           
-          document.getElementById('exerciseTitle').textContent = (idx + 1) + '. ' + ex.name;
-          document.getElementById('exerciseDesc').textContent = ex.desc;
-          document.getElementById('repNum').textContent = '0';
+          // Update UI
+          document.getElementById('exerciseBadge').textContent = (idx + 1) + '/' + EXERCISES.length + ' ' + ex.name;
+          document.getElementById('instructionTitle').textContent = ex.name;
+          document.getElementById('instructionDesc').textContent = ex.desc;
+          document.getElementById('repCount').textContent = '0';
           document.getElementById('repTarget').textContent = '/ ' + ex.reps;
           document.getElementById('repFill').style.width = '0%';
           
-          this.renderProgress();
-          
-          console.log('[MSK] Starting exercise:', ex.name, '- tracking:', ex.track.join(', '));
-          
-          TTS.speak(ex.voice, () => {
-            TTS.speak('Begin now.');
+          // Update progress pills
+          const pills = document.querySelectorAll('.progress-pill');
+          pills.forEach((pill, i) => {
+            pill.classList.remove('done', 'active');
+            if (i < idx) pill.classList.add('done');
+            if (i === idx) pill.classList.add('active');
           });
+          
+          console.log('[MSK v9] Starting exercise:', ex.name);
+          
+          // Voice instructions
+          TTS.speak(ex.voice);
         },
         
         skipExercise: function() {
           const ex = EXERCISES[this.currentIdx];
+          
           this.results.push({
             name: ex.name,
             reps: this.reps,
             target: ex.reps,
             score: this.reps > 0 ? 1 : 0,
-            skipped: true,
-            maxAngles: { ...this.angles }
+            maxAngles: { ...this.angles },
+            skipped: true
           });
           
           TTS.speak('Skipping to next exercise.');
           this.startExercise(this.currentIdx + 1);
         },
         
-        nextExercise: function() {
-          const ex = EXERCISES[this.currentIdx];
-          this.results.push({
-            name: ex.name,
-            reps: this.reps,
-            target: ex.reps,
-            score: this.reps >= ex.reps ? 3 : (this.reps > 0 ? 2 : 1),
-            maxAngles: { ...this.angles }
-          });
-          
-          this.startExercise(this.currentIdx + 1);
-        },
-        
-        renderProgress: function() {
-          const html = EXERCISES.map((_, i) => {
-            let cls = 'progress-step';
-            if (i < this.currentIdx) cls += ' done';
-            else if (i === this.currentIdx) cls += ' active';
-            return '<div class="' + cls + '"></div>';
-          }).join('');
-          
-          document.getElementById('progressTrack').innerHTML = html;
-        },
-        
-        // ============== COMPLETION ==============
+        // ============== COMPLETE ==============
         complete: function() {
+          console.log('[MSK v9] Assessment complete');
+          
           this.running = false;
           SpeechRecognizer.stop();
+          TTS.speak('Assessment complete. Great job!');
           
-          document.getElementById('bottomControls').style.display = 'none';
-          document.getElementById('anglesPanel').style.display = 'none';
-          document.getElementById('repDisplay').style.display = 'none';
+          // Calculate stats
+          const totalReps = this.results.reduce((sum, r) => sum + r.reps, 0);
+          const completedEx = this.results.filter(r => !r.skipped && r.reps >= r.target).length;
           
-          const duration = Math.round((Date.now() - this.startTime) / 1000);
-          const totalReps = this.results.reduce((s, r) => s + r.reps, 0);
-          const flags = RedFlagDetector.getFlags();
+          // Update complete screen
+          document.getElementById('statExercises').textContent = completedEx + '/' + EXERCISES.length;
+          document.getElementById('statReps').textContent = totalReps;
+          document.getElementById('statFlags').textContent = RedFlags.getFlags().length;
           
-          let statsHtml = 
-            '<div class="stat-item"><span class="stat-label">Exercises</span><span class="stat-value">' + this.results.length + '/' + EXERCISES.length + '</span></div>' +
-            '<div class="stat-item"><span class="stat-label">Total Reps</span><span class="stat-value">' + totalReps + '</span></div>' +
-            '<div class="stat-item"><span class="stat-label">Duration</span><span class="stat-value">' + Math.floor(duration/60) + 'm ' + (duration%60) + 's</span></div>';
-          
-          if (flags.length > 0) {
-            statsHtml += '<div class="stat-item alert"><span class="stat-label">Red Flags</span><span class="stat-value">' + flags.length + ' detected</span></div>';
-          }
-          
-          document.getElementById('statsCard').innerHTML = statsHtml;
+          // Show complete screen
+          document.getElementById('repOverlay').style.display = 'none';
+          document.getElementById('instructionOverlay').style.display = 'none';
           document.getElementById('completeScreen').style.display = 'flex';
-          document.getElementById('reportBtn').disabled = false;
-          
-          TTS.speak('Assessment complete! You finished ' + this.results.length + ' exercises.' + 
-                    (flags.length > 0 ? ' I noted ' + flags.length + ' concerns.' : ''));
-          
-          // Log to server
-          this.logAssessment();
-        },
-        
-        logAssessment: function() {
-          const duration = Math.round((Date.now() - this.startTime) / 1000);
-          const flags = RedFlagDetector.getFlags();
-          
-          fetch('/api/assessment/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              duration,
-              exercises: this.results,
-              redFlags: flags,
-              transcript: SpeechRecognizer.getTranscript(),
-              summary: {
-                totalExercises: EXERCISES.length,
-                completedExercises: this.results.filter(r => r.reps >= r.target).length,
-                totalReps: this.results.reduce((s, r) => s + r.reps, 0),
-                flagCount: flags.length,
-                overallScore: Math.round(this.results.reduce((s, r) => s + r.score, 0) / this.results.length * 10) / 10
-              }
-            })
-          }).catch(() => {});
+          document.getElementById('activeControls').style.display = 'none';
+          document.getElementById('completeControls').style.display = 'flex';
         },
         
         // ============== CONTROLS ==============
-        toggleMute: function() {
-          const muted = TTS.toggle();
-          document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
-          document.getElementById('muteBtn').classList.toggle('muted', muted);
-        },
-        
         stop: function() {
           this.running = false;
           SpeechRecognizer.stop();
@@ -3844,19 +3598,17 @@ app.get('/doctor/joints', (c) => {
           
           if (this.stream) {
             this.stream.getTracks().forEach(t => t.stop());
-            this.stream = null;
           }
           
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
           
           document.getElementById('startScreen').style.display = 'flex';
-          document.getElementById('repDisplay').style.display = 'none';
-          document.getElementById('anglesPanel').style.display = 'none';
-          document.getElementById('bottomControls').style.display = 'none';
-          document.getElementById('completeScreen').style.display = 'none';
-          
+          document.getElementById('repOverlay').style.display = 'none';
+          document.getElementById('instructionOverlay').style.display = 'none';
+          document.getElementById('activeControls').style.display = 'none';
+          document.getElementById('startBtn').style.display = 'block';
           document.getElementById('startBtn').disabled = false;
-          document.getElementById('startBtn').textContent = 'Resume';
+          document.getElementById('startBtn').textContent = '🎬 Resume';
         },
         
         restart: function() {
@@ -3866,29 +3618,30 @@ app.get('/doctor/joints', (c) => {
           this.reps = 0;
           this.repState = 'neutral';
           this.results = [];
-          this.frameCount = 0;
-          this.angles = {};
-          this.rawAngles = {};
-          
-          // Reset all modules
-          RedFlagDetector.clear();
+          RedFlags.clear();
           SpeechRecognizer.clear();
-          TemporalSmoother.reset();
+          Smoother.reset();
           
-          document.getElementById('exerciseTitle').textContent = 'Ready to Begin';
-          document.getElementById('exerciseDesc').textContent = 'Press Start to begin your guided assessment';
+          document.getElementById('exerciseBadge').textContent = 'Ready';
+          document.getElementById('completeScreen').style.display = 'none';
+          document.getElementById('completeControls').style.display = 'none';
           document.getElementById('alertsContainer').innerHTML = '';
-          document.getElementById('reportBtn').disabled = true;
           document.getElementById('startBtn').textContent = '🎬 Start Assessment';
           
-          console.log('[MSK] Assessment restarted');
-          this.renderProgress();
+          // Reset progress pills
+          document.querySelectorAll('.progress-pill').forEach(p => p.classList.remove('done', 'active'));
+        },
+        
+        toggleMute: function() {
+          const muted = TTS.toggle();
+          document.getElementById('muteBtn').textContent = muted ? '🔇 Unmute' : '🔊 Mute';
         },
         
         generateReport: function() {
           const duration = Math.round((Date.now() - this.startTime) / 1000);
-          const flags = RedFlagDetector.getFlags();
+          const flags = RedFlags.getFlags();
           
+          // Save to session storage for notes page
           sessionStorage.setItem('mskAssessment', JSON.stringify({
             date: new Date().toISOString(),
             duration,
@@ -3897,28 +3650,30 @@ app.get('/doctor/joints', (c) => {
             transcript: SpeechRecognizer.getTranscript()
           }));
           
-          sessionStorage.setItem('jointAnalysis', JSON.stringify(this.results));
-          sessionStorage.setItem('redFlags', JSON.stringify(flags));
-          
-          window.location.href = '/doctor/notes';
+          // Save to D1
+          fetch('/api/assessment/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              duration,
+              exercises: this.results,
+              redFlags: flags,
+              transcript: SpeechRecognizer.getTranscript()
+            })
+          }).then(() => {
+            window.location.href = '/doctor/notes';
+          }).catch(() => {
+            window.location.href = '/doctor/notes';
+          });
         }
       };
       
-      // ============== INIT ON DOM READY ==============
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => App.init());
-      } else {
-        App.init();
-      }
-      
-    })();
+      // Initialize
+      document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
   `, 'MSK Assessment - Thrive Ortho EHR'))
 })
 
-
-// MSK Assessment (redirects to joints)
-app.get('/doctor/assessment', (c) => c.redirect('/doctor/joints'))
 // Voice Intake
 app.get('/doctor/intake', (c) => {
   return c.html(html(`
