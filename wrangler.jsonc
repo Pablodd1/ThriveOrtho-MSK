@@ -12,5 +12,22 @@
       "database_name": "sobeairehab-telemed-db",
       "database_id": "local-dev-db"
     }
+  ],
+  
+  // R2 Storage for video recordings
+  // To create: npx wrangler r2 bucket create thrive-ortho-videos
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "thrive-ortho-videos"
+    }
   ]
+  
+  // Environment variables (set via wrangler secret or .dev.vars)
+  // TWILIO_ACCOUNT_SID - Your Twilio Account SID
+  // TWILIO_AUTH_TOKEN - Your Twilio Auth Token
+  // TWILIO_FROM_NUMBER - Your Twilio phone number (+1234567890)
+  // RESEND_API_KEY - Your Resend API key
+  // RESEND_FROM_EMAIL - From email (e.g., "Thrive Ortho <noreply@yourdomain.com>")
+  // GEMINI_API_KEY - Google Gemini API key
 }

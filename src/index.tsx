@@ -11,6 +11,15 @@ type Bindings = {
   GEMINI_API_KEY: string;
   OPENAI_API_KEY: string;
   DB: D1Database;
+  // Twilio SMS
+  TWILIO_ACCOUNT_SID: string;
+  TWILIO_AUTH_TOKEN: string;
+  TWILIO_FROM_NUMBER: string;
+  // Resend Email
+  RESEND_API_KEY: string;
+  RESEND_FROM_EMAIL: string;
+  // Cloudflare R2 Storage
+  R2_BUCKET: R2Bucket;
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -3334,20 +3343,111 @@ app.get('/api/audit/logs', async (c) => {
   }
 })
 
-// Notification API (SMS/Email)
+// ============================================================================
+// REAL TWILIO SMS INTEGRATION
+// ============================================================================
+
+async function sendTwilioSMS(
+  accountSid: string,
+  authToken: string,
+  fromNumber: string,
+  toNumber: string,
+  message: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    const url = 'https://api.twilio.com/2010-04-01/Accounts/' + accountSid + '/Messages.json'
+    
+    const credentials = btoa(accountSid + ':' + authToken)
+    
+    const formData = new URLSearchParams()
+    formData.append('From', fromNumber)
+    formData.append('To', toNumber)
+    formData.append('Body', message)
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + credentials,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
+    })
+    
+    const data = await response.json()
+    
+    if (response.ok) {
+      return { success: true, messageId: data.sid }
+    } else {
+      return { success: false, error: data.message || 'SMS send failed' }
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// ============================================================================
+// REAL RESEND EMAIL INTEGRATION
+// ============================================================================
+
+async function sendResendEmail(
+  apiKey: string,
+  fromEmail: string,
+  toEmail: string,
+  subject: string,
+  htmlBody: string,
+  textBody?: string
+): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [toEmail],
+        subject: subject,
+        html: htmlBody,
+        text: textBody || htmlBody.replace(/<[^>]*>/g, ''),
+      }),
+    })
+    
+    const data = await response.json()
+    
+    if (response.ok) {
+      return { success: true, emailId: data.id }
+    } else {
+      return { success: false, error: data.message || 'Email send failed' }
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Generate HTML email template
+function generateEmailHTML(subject: string, body: string, type: string): string {
+  const color = type === 'criticalRedFlag' ? '#dc2626' : '#2563eb'
+  const icon = type === 'criticalRedFlag' ? '⚠️' : '📋'
+  
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;"><div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><div style="text-align: center; margin-bottom: 20px;"><div style="font-size: 48px;">' + icon + '</div><h1 style="color: ' + color + '; margin: 10px 0;">' + subject + '</h1></div><div style="color: #334155; line-height: 1.6; white-space: pre-wrap;">' + body + '</div><hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;"><div style="text-align: center; color: #64748b; font-size: 12px;"><p><strong>Thrive Ortho EHR</strong></p><p>This is an automated message. Please do not reply directly to this email.</p><p style="margin-top: 10px;">© 2025 Thrive Ortho. All rights reserved.</p></div></div></body></html>'
+}
+
+// Notification API (SMS/Email) - REAL IMPLEMENTATION
 app.post('/api/notifications/send', async (c) => {
+  const { env } = c
   try {
     const { type, recipient, template, data, channels } = await c.req.json()
     
     const results = {
-      email: { sent: false, error: null as string | null },
-      sms: { sent: false, error: null as string | null }
+      email: { sent: false, error: null as string | null, emailId: null as string | null },
+      sms: { sent: false, error: null as string | null, messageId: null as string | null }
     }
     
     // Get template
     const templateData = NOTIFICATION_TEMPLATES[template as keyof typeof NOTIFICATION_TEMPLATES]
     if (!templateData) {
-      return c.json({ success: false, error: 'Template not found' })
+      return c.json({ success: false, error: 'Template not found', availableTemplates: Object.keys(NOTIFICATION_TEMPLATES) })
     }
     
     // Replace placeholders
@@ -3362,29 +3462,147 @@ app.post('/api/notifications/send', async (c) => {
       smsBody = smsBody.replace(new RegExp(placeholder, 'g'), String(value))
     })
     
-    // Send Email (mock - would use SendGrid/Resend in production)
-    if (channels?.includes('email')) {
-      try {
-        // In production: await sendEmail(recipient.email, subject, body)
-        console.log('EMAIL:', { to: recipient?.email, subject, body })
-        results.email.sent = true
-      } catch (e: any) {
-        results.email.error = e.message
+    // Send Email via Resend
+    if (channels?.includes('email') && recipient?.email) {
+      const resendKey = env?.RESEND_API_KEY
+      const fromEmail = env?.RESEND_FROM_EMAIL || 'Thrive Ortho <noreply@thriveortho.com>'
+      
+      if (resendKey) {
+        try {
+          const htmlBody = generateEmailHTML(subject, body, template)
+          const emailResult = await sendResendEmail(resendKey, fromEmail, recipient.email, subject, htmlBody, body)
+          results.email.sent = emailResult.success
+          results.email.emailId = emailResult.emailId || null
+          results.email.error = emailResult.error || null
+        } catch (e: any) {
+          results.email.error = e.message
+        }
+      } else {
+        results.email.error = 'RESEND_API_KEY not configured. Email logged to console.'
+        console.log('[EMAIL]', { to: recipient.email, subject, body })
       }
     }
     
-    // Send SMS (mock - would use Twilio in production)
-    if (channels?.includes('sms')) {
-      try {
-        // In production: await sendSMS(recipient.phone, smsBody)
-        console.log('SMS:', { to: recipient?.phone, body: smsBody })
-        results.sms.sent = true
-      } catch (e: any) {
-        results.sms.error = e.message
+    // Send SMS via Twilio
+    if (channels?.includes('sms') && recipient?.phone) {
+      const twilioSid = env?.TWILIO_ACCOUNT_SID
+      const twilioToken = env?.TWILIO_AUTH_TOKEN
+      const twilioFrom = env?.TWILIO_FROM_NUMBER
+      
+      if (twilioSid && twilioToken && twilioFrom) {
+        try {
+          const smsResult = await sendTwilioSMS(twilioSid, twilioToken, twilioFrom, recipient.phone, smsBody)
+          results.sms.sent = smsResult.success
+          results.sms.messageId = smsResult.messageId || null
+          results.sms.error = smsResult.error || null
+        } catch (e: any) {
+          results.sms.error = e.message
+        }
+      } else {
+        results.sms.error = 'Twilio credentials not configured. SMS logged to console.'
+        console.log('[SMS]', { to: recipient.phone, body: smsBody })
       }
     }
     
-    return c.json({ success: true, results, templates: NOTIFICATION_TEMPLATES })
+    // Log notification to database
+    if (env?.DB) {
+      try {
+        await env.DB.prepare(
+          'INSERT INTO notifications (id, patient_id, type, template, subject, body, channels, status, sent_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(
+          crypto.randomUUID(),
+          recipient?.patientId || null,
+          type || template,
+          template,
+          subject,
+          body,
+          JSON.stringify(channels),
+          (results.email.sent || results.sms.sent) ? 'sent' : 'failed',
+          new Date().toISOString(),
+          new Date().toISOString()
+        ).run()
+      } catch (dbErr) {
+        console.error('Failed to log notification:', dbErr)
+      }
+    }
+    
+    return c.json({ 
+      success: results.email.sent || results.sms.sent,
+      results,
+      message: {
+        subject,
+        bodyPreview: body.substring(0, 100) + '...',
+        smsPreview: smsBody.substring(0, 50) + '...'
+      }
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message })
+  }
+})
+
+// Direct SMS API endpoint
+app.post('/api/sms/send', async (c) => {
+  const { env } = c
+  try {
+    const { to, message } = await c.req.json()
+    
+    if (!to || !message) {
+      return c.json({ success: false, error: 'Missing required fields: to, message' })
+    }
+    
+    const twilioSid = env?.TWILIO_ACCOUNT_SID
+    const twilioToken = env?.TWILIO_AUTH_TOKEN
+    const twilioFrom = env?.TWILIO_FROM_NUMBER
+    
+    if (!twilioSid || !twilioToken || !twilioFrom) {
+      return c.json({ 
+        success: false, 
+        error: 'Twilio not configured',
+        help: 'Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER in environment variables'
+      })
+    }
+    
+    const result = await sendTwilioSMS(twilioSid, twilioToken, twilioFrom, to, message)
+    
+    return c.json({
+      success: result.success,
+      messageId: result.messageId,
+      error: result.error
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message })
+  }
+})
+
+// Direct Email API endpoint
+app.post('/api/email/send', async (c) => {
+  const { env } = c
+  try {
+    const { to, subject, body, html } = await c.req.json()
+    
+    if (!to || !subject || (!body && !html)) {
+      return c.json({ success: false, error: 'Missing required fields: to, subject, body or html' })
+    }
+    
+    const resendKey = env?.RESEND_API_KEY
+    const fromEmail = env?.RESEND_FROM_EMAIL || 'Thrive Ortho <noreply@thriveortho.com>'
+    
+    if (!resendKey) {
+      return c.json({ 
+        success: false, 
+        error: 'Resend not configured',
+        help: 'Set RESEND_API_KEY in environment variables. Get a free key at https://resend.com'
+      })
+    }
+    
+    const htmlBody = html || generateEmailHTML(subject, body, 'general')
+    const result = await sendResendEmail(resendKey, fromEmail, to, subject, htmlBody, body)
+    
+    return c.json({
+      success: result.success,
+      emailId: result.emailId,
+      error: result.error
+    })
   } catch (error: any) {
     return c.json({ success: false, error: error.message })
   }
@@ -3428,38 +3646,273 @@ app.get('/api/exercise-library/:category', (c) => {
   return c.json({ success: true, category, exercises })
 })
 
-// Video Recording Session API
+// ============================================================================
+// CLOUDFLARE R2 VIDEO STORAGE - REAL IMPLEMENTATION
+// ============================================================================
+
+// Video Recording Session API with R2 Storage
 app.post('/api/video/start-session', async (c) => {
+  const { env } = c
   try {
-    const { patientId, assessmentType, consent } = await c.req.json()
+    const { patientId, assessmentType, consent, providerId } = await c.req.json()
     
     if (!consent) {
       return c.json({ success: false, error: 'Patient consent required for video recording' })
     }
     
+    const sessionId = crypto.randomUUID()
+    const startTime = new Date().toISOString()
+    
     const session = {
-      id: crypto.randomUUID(),
+      id: sessionId,
       patientId,
+      providerId,
       assessmentType,
-      startTime: new Date().toISOString(),
+      startTime,
       status: 'recording',
       consentGiven: true,
-      consentTimestamp: new Date().toISOString(),
+      consentTimestamp: startTime,
+      r2Key: 'videos/' + (patientId || 'anonymous') + '/' + sessionId + '.webm',
+      uploadUrl: null as string | null,
     }
     
-    return c.json({ success: true, session })
+    // Store session in database
+    if (env?.DB) {
+      try {
+        await env.DB.prepare(
+          'INSERT INTO video_sessions (id, patient_id, provider_id, session_type, start_time, consent_given, consent_timestamp, storage_key, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(
+          session.id,
+          session.patientId || null,
+          session.providerId || null,
+          session.assessmentType || 'assessment',
+          session.startTime,
+          1,
+          session.consentTimestamp,
+          session.r2Key,
+          'recording',
+          startTime
+        ).run()
+      } catch (dbErr) {
+        console.error('Failed to log video session:', dbErr)
+      }
+    }
+    
+    return c.json({ 
+      success: true, 
+      session,
+      instructions: 'Use /api/video/upload to upload video chunks or final video'
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message })
+  }
+})
+
+// Upload video to R2
+app.post('/api/video/upload', async (c) => {
+  const { env } = c
+  try {
+    const contentType = c.req.header('content-type') || ''
+    
+    // Handle multipart form data
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await c.req.formData()
+      const sessionId = formData.get('sessionId') as string
+      const file = formData.get('video') as File
+      
+      if (!sessionId || !file) {
+        return c.json({ success: false, error: 'Missing sessionId or video file' })
+      }
+      
+      if (!env?.R2_BUCKET) {
+        return c.json({ 
+          success: false, 
+          error: 'R2 bucket not configured',
+          help: 'Add R2_BUCKET binding to wrangler.jsonc'
+        })
+      }
+      
+      const r2Key = 'videos/' + sessionId + '/' + Date.now() + '-' + file.name
+      const arrayBuffer = await file.arrayBuffer()
+      
+      // Upload to R2
+      await env.R2_BUCKET.put(r2Key, arrayBuffer, {
+        httpMetadata: {
+          contentType: file.type || 'video/webm',
+        },
+        customMetadata: {
+          sessionId,
+          uploadedAt: new Date().toISOString(),
+          originalName: file.name,
+        }
+      })
+      
+      // Update database
+      if (env?.DB) {
+        try {
+          await env.DB.prepare(
+            'UPDATE video_sessions SET storage_key = ?, storage_location = ? WHERE id = ?'
+          ).bind(r2Key, 'cloudflare-r2', sessionId).run()
+        } catch (dbErr) {
+          console.error('Failed to update video session:', dbErr)
+        }
+      }
+      
+      return c.json({
+        success: true,
+        r2Key,
+        size: arrayBuffer.byteLength,
+        contentType: file.type
+      })
+    }
+    
+    // Handle raw video data with sessionId in query
+    const sessionId = c.req.query('sessionId')
+    if (!sessionId) {
+      return c.json({ success: false, error: 'Missing sessionId query parameter' })
+    }
+    
+    if (!env?.R2_BUCKET) {
+      return c.json({ 
+        success: false, 
+        error: 'R2 bucket not configured',
+        help: 'Add R2_BUCKET binding to wrangler.jsonc'
+      })
+    }
+    
+    const arrayBuffer = await c.req.arrayBuffer()
+    const r2Key = 'videos/' + sessionId + '/' + Date.now() + '.webm'
+    
+    await env.R2_BUCKET.put(r2Key, arrayBuffer, {
+      httpMetadata: {
+        contentType: contentType || 'video/webm',
+      },
+      customMetadata: {
+        sessionId,
+        uploadedAt: new Date().toISOString(),
+      }
+    })
+    
+    return c.json({
+      success: true,
+      r2Key,
+      size: arrayBuffer.byteLength
+    })
+    
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message })
+  }
+})
+
+// Get video from R2
+app.get('/api/video/:sessionId', async (c) => {
+  const { env } = c
+  try {
+    const sessionId = c.req.param('sessionId')
+    
+    if (!env?.R2_BUCKET) {
+      return c.json({ success: false, error: 'R2 bucket not configured' })
+    }
+    
+    // List videos for this session
+    const list = await env.R2_BUCKET.list({ prefix: 'videos/' + sessionId + '/' })
+    
+    if (list.objects.length === 0) {
+      return c.json({ success: false, error: 'No videos found for this session' }, 404)
+    }
+    
+    // Get the latest video
+    const latestKey = list.objects.sort((a, b) => 
+      (b.uploaded?.getTime() || 0) - (a.uploaded?.getTime() || 0)
+    )[0].key
+    
+    const object = await env.R2_BUCKET.get(latestKey)
+    
+    if (!object) {
+      return c.json({ success: false, error: 'Video not found' }, 404)
+    }
+    
+    // Return video metadata or stream
+    const wantsStream = c.req.query('stream') === 'true'
+    
+    if (wantsStream) {
+      return new Response(object.body, {
+        headers: {
+          'Content-Type': object.httpMetadata?.contentType || 'video/webm',
+          'Content-Length': String(object.size),
+        }
+      })
+    }
+    
+    return c.json({
+      success: true,
+      video: {
+        key: latestKey,
+        size: object.size,
+        contentType: object.httpMetadata?.contentType,
+        uploaded: object.uploaded,
+        metadata: object.customMetadata
+      },
+      allVideos: list.objects.map(obj => ({
+        key: obj.key,
+        size: obj.size,
+        uploaded: obj.uploaded
+      }))
+    })
+    
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message })
+  }
+})
+
+// Delete video from R2
+app.delete('/api/video/:sessionId', async (c) => {
+  const { env } = c
+  try {
+    const sessionId = c.req.param('sessionId')
+    
+    if (!env?.R2_BUCKET) {
+      return c.json({ success: false, error: 'R2 bucket not configured' })
+    }
+    
+    // List and delete all videos for this session
+    const list = await env.R2_BUCKET.list({ prefix: 'videos/' + sessionId + '/' })
+    
+    const deletePromises = list.objects.map(obj => env.R2_BUCKET.delete(obj.key))
+    await Promise.all(deletePromises)
+    
+    // Update database
+    if (env?.DB) {
+      try {
+        await env.DB.prepare(
+          'UPDATE video_sessions SET status = ? WHERE id = ?'
+        ).bind('deleted', sessionId).run()
+      } catch (dbErr) {
+        console.error('Failed to update video session:', dbErr)
+      }
+    }
+    
+    return c.json({
+      success: true,
+      deletedCount: list.objects.length,
+      sessionId
+    })
+    
   } catch (error: any) {
     return c.json({ success: false, error: error.message })
   }
 })
 
 app.post('/api/video/end-session', async (c) => {
+  const { env } = c
   try {
     const { sessionId, duration, frameCount } = await c.req.json()
     
+    const endTime = new Date().toISOString()
+    
     const session = {
       id: sessionId,
-      endTime: new Date().toISOString(),
+      endTime,
       duration,
       frameCount,
       status: 'completed',
@@ -3470,7 +3923,60 @@ app.post('/api/video/end-session', async (c) => {
       }
     }
     
-    return c.json({ success: true, session })
+    // Update database
+    if (env?.DB) {
+      try {
+        await env.DB.prepare(
+          'UPDATE video_sessions SET end_time = ?, duration_seconds = ?, frame_count = ?, status = ? WHERE id = ?'
+        ).bind(endTime, duration, frameCount, 'completed', sessionId).run()
+      } catch (dbErr) {
+        console.error('Failed to update video session:', dbErr)
+      }
+    }
+    
+    // Get video info from R2
+    let videoInfo = null
+    if (env?.R2_BUCKET) {
+      try {
+        const list = await env.R2_BUCKET.list({ prefix: 'videos/' + sessionId + '/' })
+        videoInfo = {
+          fileCount: list.objects.length,
+          totalSize: list.objects.reduce((sum, obj) => sum + obj.size, 0),
+          files: list.objects.map(obj => obj.key)
+        }
+      } catch (r2Err) {
+        console.error('Failed to get R2 info:', r2Err)
+      }
+    }
+    
+    return c.json({ 
+      success: true, 
+      session,
+      videoInfo,
+      message: 'Video session completed and saved to R2 storage'
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message })
+  }
+})
+
+// List all video sessions
+app.get('/api/video/sessions', async (c) => {
+  const { env } = c
+  try {
+    if (!env?.DB) {
+      return c.json({ success: false, error: 'Database not configured' })
+    }
+    
+    const results = await env.DB.prepare(
+      'SELECT * FROM video_sessions ORDER BY created_at DESC LIMIT 50'
+    ).all()
+    
+    return c.json({
+      success: true,
+      sessions: results.results || [],
+      count: results.results?.length || 0
+    })
   } catch (error: any) {
     return c.json({ success: false, error: error.message })
   }

@@ -1,6 +1,6 @@
 {
   "name": "thrive-ortho-ehr",
-  "version": "9.0.0",
+  "version": "10.0.0",
   "description": "Thrive Ortho EHR - MSK Assessment Platform with Real-Time Joint Tracking",
   "type": "module",
   "scripts": {

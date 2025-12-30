@@ -1,0 +1,102 @@
+# ============================================================================
+# THRIVE ORTHO EHR - Environment Variables
+# ============================================================================
+# Copy this file to .dev.vars and fill in your values for local development
+# For production, use: npx wrangler secret put VARIABLE_NAME
+
+# ============================================================================
+# AI SERVICES (Optional - mock data used if not configured)
+# ============================================================================
+
+# Google Gemini API Key
+# Get yours at: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key
+
+# OpenAI API Key (optional, for fallback)
+# Get yours at: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your_openai_api_key
+
+# ============================================================================
+# TWILIO SMS (Required for SMS notifications)
+# ============================================================================
+# Sign up at: https://www.twilio.com/try-twilio
+# Free trial includes $15 credit (~2000 SMS messages)
+
+# Your Twilio Account SID (starts with AC...)
+# Found at: https://console.twilio.com/
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Your Twilio Auth Token
+# Found at: https://console.twilio.com/
+TWILIO_AUTH_TOKEN=your_auth_token_here
+
+# Your Twilio Phone Number (must be purchased or use trial number)
+# Format: +1234567890
+TWILIO_FROM_NUMBER=+1234567890
+
+# ============================================================================
+# RESEND EMAIL (Required for email notifications)
+# ============================================================================
+# Sign up at: https://resend.com
+# Free tier: 3,000 emails/month, 100 emails/day
+
+# Your Resend API Key
+# Found at: https://resend.com/api-keys
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# From email address (must be verified domain or use onboarding@resend.dev for testing)
+# For production: verify your domain at https://resend.com/domains
+RESEND_FROM_EMAIL=Thrive Ortho <onboarding@resend.dev>
+
+# ============================================================================
+# CLOUDFLARE R2 STORAGE (Required for video recording)
+# ============================================================================
+# R2 is configured in wrangler.jsonc, not here
+# To create bucket: npx wrangler r2 bucket create thrive-ortho-videos
+# 
+# R2 Free tier includes:
+# - 10 GB storage
+# - 1 million Class A operations/month (writes)
+# - 10 million Class B operations/month (reads)
+# - Free egress (no bandwidth charges!)
+
+# ============================================================================
+# QUICK START GUIDE
+# ============================================================================
+#
+# 1. TWILIO (SMS):
+#    a. Go to https://www.twilio.com/try-twilio
+#    b. Sign up for free trial ($15 credit)
+#    c. Get a phone number from Console
+#    d. Copy Account SID and Auth Token
+#
+# 2. RESEND (Email):
+#    a. Go to https://resend.com
+#    b. Sign up with GitHub/Google
+#    c. Create API key
+#    d. Use onboarding@resend.dev for testing
+#    e. Verify your domain for production
+#
+# 3. R2 (Video Storage):
+#    a. Already included with Cloudflare account
+#    b. Run: npx wrangler r2 bucket create thrive-ortho-videos
+#    c. Bucket binding is in wrangler.jsonc
+#
+# 4. GEMINI (AI):
+#    a. Go to https://aistudio.google.com/app/apikey
+#    b. Create API key (free tier available)
+#
+# ============================================================================
+# PRODUCTION DEPLOYMENT
+# ============================================================================
+#
+# Set secrets with wrangler:
+#   npx wrangler secret put TWILIO_ACCOUNT_SID
+#   npx wrangler secret put TWILIO_AUTH_TOKEN
+#   npx wrangler secret put TWILIO_FROM_NUMBER
+#   npx wrangler secret put RESEND_API_KEY
+#   npx wrangler secret put RESEND_FROM_EMAIL
+#   npx wrangler secret put GEMINI_API_KEY
+#
+# Create R2 bucket:
+#   npx wrangler r2 bucket create thrive-ortho-videos

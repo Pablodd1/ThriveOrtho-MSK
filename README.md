@@ -1,4 +1,4 @@
-# Thrive Ortho EHR v10.0 - Enterprise Edition
+# Thrive Ortho EHR v10.1 - Enterprise Edition
 
 ## The Most Comprehensive Open-Source MSK Assessment Platform
 
@@ -202,11 +202,21 @@ Professional medical-grade EHR platform featuring **543-landmark real-time track
 | `/api/languages` | GET | Available languages |
 | `/api/languages/:code` | GET | Language instructions |
 
-### Video Session APIs
+### Video Session APIs (R2 Storage)
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/video/start-session` | POST | Start recording |
-| `/api/video/end-session` | POST | End recording |
+| `/api/video/start-session` | POST | Start recording session |
+| `/api/video/upload` | POST | Upload video to R2 storage |
+| `/api/video/:sessionId` | GET | Get video from R2 |
+| `/api/video/:sessionId` | DELETE | Delete video from R2 |
+| `/api/video/end-session` | POST | End recording session |
+| `/api/video/sessions` | GET | List all video sessions |
+
+### Direct Communication APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sms/send` | POST | Send SMS via Twilio |
+| `/api/email/send` | POST | Send email via Resend |
 
 ### Telemedicine APIs
 | Endpoint | Method | Description |
@@ -263,28 +273,67 @@ Professional medical-grade EHR platform featuring **543-landmark real-time track
 
 ## Technology Stack
 
-- **Backend**: Hono framework (5,800 lines)
+- **Backend**: Hono framework (6,300+ lines)
 - **Runtime**: Cloudflare Workers/Pages
 - **Database**: Cloudflare D1 (SQLite)
+- **Storage**: Cloudflare R2 (video recordings)
 - **ML**: MediaPipe Holistic (WebGL/GPU)
 - **AI**: Google Gemini 2.0 Flash
+- **SMS**: Twilio (real integration)
+- **Email**: Resend (real integration)
 - **Build**: Vite + TypeScript
-- **Bundle Size**: 211 KB
+- **Bundle Size**: 224 KB
+- **API Endpoints**: 59
 
 ---
 
 ## Environment Variables
 
-```bash
-# AI Features (Optional - mock data if not set)
-GEMINI_API_KEY=your_gemini_key
-OPENAI_API_KEY=your_openai_key
+See `.dev.vars.example` for full documentation.
 
-# Notifications (Optional)
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_token
+```bash
+# ============================================================================
+# AI SERVICES (Optional - mock data used if not configured)
+# ============================================================================
+GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
+
+# ============================================================================
+# TWILIO SMS (Real Integration)
+# ============================================================================
+# Sign up at: https://www.twilio.com/try-twilio (free $15 credit)
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token_here
 TWILIO_FROM_NUMBER=+1234567890
-SENDGRID_API_KEY=your_sendgrid_key
+
+# ============================================================================
+# RESEND EMAIL (Real Integration)
+# ============================================================================
+# Sign up at: https://resend.com (free 3,000 emails/month)
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=Thrive Ortho <noreply@yourdomain.com>
+
+# ============================================================================
+# CLOUDFLARE R2 (Video Storage)
+# ============================================================================
+# R2 is configured in wrangler.jsonc
+# Create bucket: npx wrangler r2 bucket create thrive-ortho-videos
+# Free tier: 10GB storage, 1M writes, 10M reads/month
+```
+
+### Setting Production Secrets
+
+```bash
+# Set each secret
+npx wrangler secret put TWILIO_ACCOUNT_SID
+npx wrangler secret put TWILIO_AUTH_TOKEN
+npx wrangler secret put TWILIO_FROM_NUMBER
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put RESEND_FROM_EMAIL
+npx wrangler secret put GEMINI_API_KEY
+
+# Create R2 bucket
+npx wrangler r2 bucket create thrive-ortho-videos
 ```
 
 ---
