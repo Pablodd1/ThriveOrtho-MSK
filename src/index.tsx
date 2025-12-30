@@ -4615,18 +4615,53 @@ app.get('/doctor/joints', (c) => {
         justify-content: center;
         transition: all 0.3s;
         min-height: 140px;
+        position: relative;
       }
       
       .angle-card.primary {
         grid-column: 1 / -1;
         background: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
         border-color: #3b82f6;
-        min-height: 180px;
+        min-height: 200px;
       }
       
       .angle-card.highlight {
         border-color: #22c55e;
         box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+      }
+      
+      /* ROM RANGE STATUS COLORS */
+      .angle-card.in-range {
+        border-color: #22c55e !important;
+        background: linear-gradient(135deg, #0f2918 0%, #1a1a1a 100%);
+        box-shadow: 0 0 25px rgba(34, 197, 94, 0.3), inset 0 0 30px rgba(34, 197, 94, 0.1);
+      }
+      .angle-card.in-range .angle-value { color: #22c55e !important; }
+      .angle-card.in-range .angle-unit { color: #4ade80 !important; }
+      .angle-card.in-range .angle-name { color: #86efac !important; }
+      
+      .angle-card.out-range {
+        border-color: #ef4444 !important;
+        background: linear-gradient(135deg, #2a1515 0%, #1a1a1a 100%);
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.3), inset 0 0 30px rgba(239, 68, 68, 0.1);
+        animation: pulse-red 1.5s ease-in-out infinite;
+      }
+      .angle-card.out-range .angle-value { color: #ef4444 !important; }
+      .angle-card.out-range .angle-unit { color: #f87171 !important; }
+      .angle-card.out-range .angle-name { color: #fca5a5 !important; }
+      
+      .angle-card.warning-range {
+        border-color: #f59e0b !important;
+        background: linear-gradient(135deg, #2a2010 0%, #1a1a1a 100%);
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+      }
+      .angle-card.warning-range .angle-value { color: #f59e0b !important; }
+      .angle-card.warning-range .angle-unit { color: #fbbf24 !important; }
+      .angle-card.warning-range .angle-name { color: #fcd34d !important; }
+      
+      @keyframes pulse-red {
+        0%, 100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.5); }
       }
       
       .angle-name {
@@ -4648,6 +4683,7 @@ app.get('/doctor/joints', (c) => {
         color: #fff;
         line-height: 1;
         font-variant-numeric: tabular-nums;
+        transition: color 0.3s;
       }
       
       .angle-card.primary .angle-value {
@@ -4659,6 +4695,7 @@ app.get('/doctor/joints', (c) => {
         font-size: 24px;
         color: #666;
         margin-left: 4px;
+        transition: color 0.3s;
       }
       
       .angle-card.primary .angle-unit {
@@ -4680,6 +4717,10 @@ app.get('/doctor/joints', (c) => {
         border-radius: 6px;
       }
       
+      .angle-lr span.in-range { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+      .angle-lr span.out-range { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+      .angle-lr span.warning-range { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+      
       .angle-delta {
         padding: 4px 8px;
         border-radius: 6px;
@@ -4687,6 +4728,53 @@ app.get('/doctor/joints', (c) => {
       }
       .angle-delta.ok { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
       .angle-delta.warn { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+      .angle-delta.critical { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+      
+      /* ROM RANGE INDICATOR BAR */
+      .rom-range-bar {
+        width: 100%;
+        height: 6px;
+        background: #333;
+        border-radius: 3px;
+        margin-top: 10px;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .rom-range-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s, background 0.3s;
+      }
+      .rom-range-fill.in-range { background: linear-gradient(90deg, #22c55e, #4ade80); }
+      .rom-range-fill.warning-range { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+      .rom-range-fill.out-range { background: linear-gradient(90deg, #ef4444, #f87171); }
+      
+      .rom-range-text {
+        font-size: 11px;
+        color: #888;
+        margin-top: 4px;
+        text-align: center;
+      }
+      .rom-range-text.in-range { color: #22c55e; }
+      .rom-range-text.warning-range { color: #f59e0b; }
+      .rom-range-text.out-range { color: #ef4444; }
+      
+      /* RANGE STATUS BADGE */
+      .range-status-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .range-status-badge.in-range { background: #22c55e; color: #fff; }
+      .range-status-badge.warning-range { background: #f59e0b; color: #000; }
+      .range-status-badge.out-range { background: #ef4444; color: #fff; }
       
       .angle-status {
         display: flex;
@@ -5002,6 +5090,7 @@ app.get('/doctor/joints', (c) => {
         <div class="angles-grid" id="anglesGrid">
           <!-- Primary tracked joint (large) -->
           <div class="angle-card primary" id="primaryAngle">
+            <span class="range-status-badge" id="primaryRangeBadge">--</span>
             <div class="angle-name" id="primaryName">KNEE</div>
             <div>
               <span class="angle-value" id="primaryValue">--</span>
@@ -5012,43 +5101,67 @@ app.get('/doctor/joints', (c) => {
               <span id="primaryR">R: --°</span>
               <span class="angle-delta ok" id="primaryDelta">Δ 0°</span>
             </div>
+            <div class="rom-range-bar">
+              <div class="rom-range-fill" id="primaryRangeFill" style="width: 0%"></div>
+            </div>
+            <div class="rom-range-text" id="primaryRangeText">Normal: --° | Min: --°</div>
             <div class="angle-status">
               <div class="status-dot stable" id="primaryStatus"></div>
               <span id="primaryStatusText">Stable</span>
             </div>
           </div>
           
-          <!-- Secondary joints -->
+          <!-- Secondary joints with ROM indicators -->
           <div class="angle-card" id="kneeCard">
-            <div class="angle-name">KNEE</div>
+            <span class="range-status-badge" id="kneeRangeBadge">--</span>
+            <div class="angle-name">KNEE FLEX</div>
             <div>
               <span class="angle-value" id="kneeValue">--</span>
               <span class="angle-unit">°</span>
             </div>
+            <div class="rom-range-bar">
+              <div class="rom-range-fill" id="kneeRangeFill" style="width: 0%"></div>
+            </div>
+            <div class="rom-range-text" id="kneeRangeText">Normal: 140° | Min: 120°</div>
           </div>
           
           <div class="angle-card" id="hipCard">
-            <div class="angle-name">HIP</div>
+            <span class="range-status-badge" id="hipRangeBadge">--</span>
+            <div class="angle-name">HIP FLEX</div>
             <div>
               <span class="angle-value" id="hipValue">--</span>
               <span class="angle-unit">°</span>
             </div>
+            <div class="rom-range-bar">
+              <div class="rom-range-fill" id="hipRangeFill" style="width: 0%"></div>
+            </div>
+            <div class="rom-range-text" id="hipRangeText">Normal: 120° | Min: 90°</div>
           </div>
           
           <div class="angle-card" id="shoulderCard">
+            <span class="range-status-badge" id="shoulderRangeBadge">--</span>
             <div class="angle-name">SHOULDER</div>
             <div>
               <span class="angle-value" id="shoulderValue">--</span>
               <span class="angle-unit">°</span>
             </div>
+            <div class="rom-range-bar">
+              <div class="rom-range-fill" id="shoulderRangeFill" style="width: 0%"></div>
+            </div>
+            <div class="rom-range-text" id="shoulderRangeText">Normal: 180° | Min: 150°</div>
           </div>
           
           <div class="angle-card" id="elbowCard">
+            <span class="range-status-badge" id="elbowRangeBadge">--</span>
             <div class="angle-name">ELBOW</div>
             <div>
               <span class="angle-value" id="elbowValue">--</span>
               <span class="angle-unit">°</span>
             </div>
+            <div class="rom-range-bar">
+              <div class="rom-range-fill" id="elbowRangeFill" style="width: 0%"></div>
+            </div>
+            <div class="rom-range-text" id="elbowRangeText">Normal: 150° | Min: 130°</div>
           </div>
         </div>
         
@@ -5590,6 +5703,76 @@ app.get('/doctor/joints', (c) => {
           this.updateAnglesUI();
         },
         
+        // ============== ROM RANGE REFERENCE VALUES ==============
+        ROM_RANGES: {
+          knee: { normal: 140, min: 120, label: 'Knee Flexion' },
+          hip: { normal: 120, min: 90, label: 'Hip Flexion' },
+          shoulder: { normal: 180, min: 150, label: 'Shoulder Flexion' },
+          elbow: { normal: 150, min: 130, label: 'Elbow Flexion' }
+        },
+        
+        // ============== CHECK ROM RANGE STATUS ==============
+        checkRangeStatus: function(joint, value) {
+          const range = this.ROM_RANGES[joint];
+          if (!range || !value || value === '--') return { status: 'unknown', percent: 0 };
+          
+          const val = parseInt(value);
+          const percent = Math.min(100, Math.max(0, (val / range.normal) * 100));
+          
+          if (val >= range.min) {
+            return { status: 'in-range', percent, label: 'NORMAL', color: '#22c55e' };
+          } else if (val >= range.min * 0.8) {
+            return { status: 'warning-range', percent, label: 'LIMITED', color: '#f59e0b' };
+          } else {
+            return { status: 'out-range', percent, label: 'RESTRICTED', color: '#ef4444' };
+          }
+        },
+        
+        // ============== UPDATE ANGLE CARD WITH RANGE ==============
+        updateAngleCard: function(joint, value) {
+          const card = document.getElementById(joint + 'Card');
+          const valueEl = document.getElementById(joint + 'Value');
+          const rangeFill = document.getElementById(joint + 'RangeFill');
+          const rangeText = document.getElementById(joint + 'RangeText');
+          const rangeBadge = document.getElementById(joint + 'RangeBadge');
+          
+          if (!card) return;
+          
+          valueEl.textContent = value || '--';
+          
+          const range = this.ROM_RANGES[joint];
+          const rangeStatus = this.checkRangeStatus(joint, value);
+          
+          // Remove all range classes
+          card.classList.remove('in-range', 'warning-range', 'out-range');
+          
+          if (value && value !== '--' && range) {
+            // Add appropriate range class
+            card.classList.add(rangeStatus.status);
+            
+            // Update range fill bar
+            if (rangeFill) {
+              rangeFill.style.width = rangeStatus.percent + '%';
+              rangeFill.className = 'rom-range-fill ' + rangeStatus.status;
+            }
+            
+            // Update range text
+            if (rangeText) {
+              rangeText.textContent = 'Normal: ' + range.normal + '° | Min: ' + range.min + '°';
+              rangeText.className = 'rom-range-text ' + rangeStatus.status;
+            }
+            
+            // Update badge
+            if (rangeBadge) {
+              rangeBadge.textContent = rangeStatus.label;
+              rangeBadge.className = 'range-status-badge ' + rangeStatus.status;
+            }
+          } else {
+            if (rangeFill) rangeFill.style.width = '0%';
+            if (rangeBadge) rangeBadge.textContent = '--';
+          }
+        },
+        
         // ============== UPDATE UI ==============
         updateAnglesUI: function() {
           const ex = EXERCISES[this.currentIdx];
@@ -5602,26 +5785,58 @@ app.get('/doctor/joints', (c) => {
           const delta = Math.abs(primaryL - primaryR);
           const isStable = Smoother.isStable(primaryJoint);
           
+          // Get range status for primary joint
+          const primaryRange = this.ROM_RANGES[primaryJoint];
+          const primaryRangeStatus = this.checkRangeStatus(primaryJoint, primaryVal);
+          
           // Primary angle card
+          const primaryCard = document.getElementById('primaryAngle');
+          primaryCard.classList.remove('in-range', 'warning-range', 'out-range');
+          if (primaryVal) primaryCard.classList.add(primaryRangeStatus.status);
+          
           document.getElementById('primaryName').textContent = primaryJoint.toUpperCase();
           document.getElementById('primaryValue').textContent = primaryVal;
-          document.getElementById('primaryL').textContent = 'L: ' + primaryL + '°';
-          document.getElementById('primaryR').textContent = 'R: ' + primaryR + '°';
           
+          // Left/Right values with individual range status
+          const primaryLEl = document.getElementById('primaryL');
+          const primaryREl = document.getElementById('primaryR');
+          const lRangeStatus = this.checkRangeStatus(primaryJoint, primaryL);
+          const rRangeStatus = this.checkRangeStatus(primaryJoint, primaryR);
+          
+          primaryLEl.textContent = 'L: ' + primaryL + '°';
+          primaryLEl.className = lRangeStatus.status;
+          primaryREl.textContent = 'R: ' + primaryR + '°';
+          primaryREl.className = rRangeStatus.status;
+          
+          // Delta indicator
           const deltaEl = document.getElementById('primaryDelta');
           deltaEl.textContent = 'Δ ' + delta + '°';
-          deltaEl.className = 'angle-delta ' + (delta > 10 ? 'warn' : 'ok');
+          deltaEl.className = 'angle-delta ' + (delta > 15 ? 'critical' : delta > 10 ? 'warn' : 'ok');
+          
+          // Primary range bar
+          const primaryRangeFill = document.getElementById('primaryRangeFill');
+          const primaryRangeText = document.getElementById('primaryRangeText');
+          const primaryRangeBadge = document.getElementById('primaryRangeBadge');
+          
+          if (primaryRange && primaryVal) {
+            primaryRangeFill.style.width = primaryRangeStatus.percent + '%';
+            primaryRangeFill.className = 'rom-range-fill ' + primaryRangeStatus.status;
+            primaryRangeText.textContent = 'Normal: ' + primaryRange.normal + '° | Min: ' + primaryRange.min + '°';
+            primaryRangeText.className = 'rom-range-text ' + primaryRangeStatus.status;
+            primaryRangeBadge.textContent = primaryRangeStatus.label;
+            primaryRangeBadge.className = 'range-status-badge ' + primaryRangeStatus.status;
+          }
           
           const statusDot = document.getElementById('primaryStatus');
           const statusText = document.getElementById('primaryStatusText');
           statusDot.className = 'status-dot ' + (isStable ? 'stable' : 'moving');
           statusText.textContent = isStable ? 'Stable' : 'Moving';
           
-          // Secondary cards
-          document.getElementById('kneeValue').textContent = this.angles.knee || '--';
-          document.getElementById('hipValue').textContent = this.angles.hip || '--';
-          document.getElementById('shoulderValue').textContent = this.angles.shoulder || '--';
-          document.getElementById('elbowValue').textContent = this.angles.elbow || '--';
+          // Secondary cards with ROM range checking
+          this.updateAngleCard('knee', this.angles.knee);
+          this.updateAngleCard('hip', this.angles.hip);
+          this.updateAngleCard('shoulder', this.angles.shoulder);
+          this.updateAngleCard('elbow', this.angles.elbow);
           
           // Highlight tracked joints
           ['knee', 'hip', 'shoulder', 'elbow'].forEach(j => {
