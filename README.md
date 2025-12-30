@@ -1,121 +1,123 @@
-# Thrive Ortho EHR v3.0
+# Thrive Ortho EHR v9.0
 
-## Professional MSK Assessment Platform
+## Real-Time MSK Assessment Platform with AI Joint Tracking
 
-Ultra-minimal, medical-grade EHR platform with Gemini AI integration for musculoskeletal assessment, voice analysis, and comprehensive medical documentation.
+Professional medical-grade EHR platform featuring real-time joint tracking using MediaPipe Holistic, voice-guided exercises, automatic rep counting, and comprehensive clinical documentation.
 
 ## Live Demo
 
-**Production URL**: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
+**Sandbox URL**: https://3000-isoavrqar3ev1h6ka8wvl-cc2fbc16.sandbox.novita.ai
 
-### Quick Access (Skip Login Demo)
+### Quick Access
 
-| Role | URL | Description |
+| Page | URL | Description |
 |------|-----|-------------|
-| **Login** | `/login` | Role selection page |
-| **Doctor** | `/doctor` | Provider dashboard with patient management |
-| **Patient** | `/patient` | Patient portal with exercises and appointments |
-| **Coach** | `/coach` | Coach dashboard with client management |
-| **Admin** | `/admin` | System administration and analytics |
-
-### Doctor Workflow
-
-1. `/doctor/intake` - Voice Medical Intake (AI pain flag detection)
-2. `/doctor/assessment` - MSK Movement Assessment (10 movements)
-3. `/doctor/notes` - Medical Note Generator (DX/CPT codes)
-4. `/doctor/video` - Telemedicine (HIPAA compliant)
-5. `/doctor/tasks` - Task management (To-do list)
+| **Login** | `/login` | Role selection |
+| **Doctor Dashboard** | `/doctor` | Main provider interface |
+| **MSK Assessment** | `/doctor/joints` | Real-time joint tracking |
+| **Voice Intake** | `/doctor/intake` | AI pain flag detection |
+| **Medical Notes** | `/doctor/notes` | Generate clinical notes |
 
 ## Key Features
 
-### Design System
-- **Ultra-minimal UI**: Monochrome base with single teal accent
-- **Dashboard on RIGHT**: Professional panel layout
-- **Typography**: Inter font family
-- **Professional colors**: Gray scale + medical teal (#0d9488)
+### Real-Time Joint Tracking (v9.0)
+- **543 Landmarks**: Body (33) + Face (468) + Hands (42)
+- **MediaPipe Holistic**: GPU-accelerated ML tracking
+- **Temporal Smoothing**: EMA filter for stable angles
+- **Bilateral Tracking**: L/R comparison with asymmetry detection
+- **Large Dashboard**: 80px angle display for clinical viewing
 
-### MSK Assessment (FMS + AMA)
-- **10 validated movements**:
-  - FMS (1-7): Deep Squat, Hurdle Step, Inline Lunge, Shoulder Mobility, ASLR, Trunk Stability Push-Up, Rotary Stability
-  - AMA (8-10): Cervical ROM, Lumbar ROM, Gait Analysis
-- **Scoring**: 0-3 scale (0=Pain, 1=Unable, 2=Compensation, 3=Perfect)
-- **Risk stratification**: High (≤11), Moderate (12-14), Low (≥15)
+### Guided Assessment Workflow
+- **6 Exercises**: Deep Squat, Shoulder Raise, Hip Hinge, Arm Curl, Trunk Rotation, Balance Check
+- **Auto Rep Counting**: State machine detects down→up movements
+- **Voice Instructions**: TTS guides through each exercise
+- **Auto-Advance**: Moves to next exercise when reps complete
+- **Red Flag Detection**: Speech recognition monitors for pain keywords
 
-### Gemini AI Integration
-- **Real-time joint tracking**: Camera-based movement analysis
-- **Joint angle measurement**: Hip, knee, ankle, trunk, shoulder
-- **Compensation detection**: AI identifies movement compensations
-- **Confidence scoring**: Percentage-based accuracy
+### D1 Database Storage
+- **Persistent History**: Assessments saved to Cloudflare D1
+- **Red Flag Tracking**: Alerts with acknowledgment workflow
+- **Error Logging**: Silent fail-safe error capture
+- **Patient History**: Full assessment timeline per patient
 
-### Voice Analysis
-- **Web Speech API**: Real-time transcription
-- **Pain flag detection**: Red flags (serious), Yellow flags (psychosocial)
-- **Voice cue analysis**: Hesitation, breathing patterns
-- **Gemini AI analysis**: Potential diagnoses with ICD-10 codes
-
-### Medical Notes
-- **Comprehensive documentation**: SOAP-style format
-- **ICD-10 codes**: M54.5, M54.16, M62.838, M99.03
-- **CPT codes**: 97161, 97162, 97163, 97110, 97140, 97530
-- **Exercise prescription**: 12 evidence-based exercises
-- **HIPAA compliant**: Professional formatting
-
-### Task Management
-- **Priority levels**: High, Medium, Low
-- **Status tracking**: Pending, In Progress, Completed
-- **Patient context**: Tasks linked to patients
-- **Due date management**: Today, Tomorrow, This week
+### Clinical Documentation
+- **ICD-10 Codes**: M54.5, M54.16, M62.838, etc.
+- **CPT Codes**: 97161, 97162, 97163, 97110, 97140
+- **SOAP Format**: Professional medical notes
+- **Exercise Prescription**: Evidence-based HEP
 
 ## API Endpoints
 
+### Core APIs
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/health` | GET | Health check |
 | `/api/ai/analyze-joints` | POST | Gemini joint analysis |
-| `/api/ai/analyze-voice` | POST | Voice pain flag detection |
+| `/api/ai/analyze-voice` | POST | Voice pain detection |
 | `/api/ai/generate-note` | POST | Generate medical note |
-| `/api/tasks` | GET | Get task list |
-| `/api/exercises` | GET | Get exercise library |
-| `/api/movements` | GET | Get movement protocol |
+
+### Assessment APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/assessment/log` | POST | Save assessment |
+| `/api/assessment/:id` | GET | Get assessment |
+| `/api/assessments` | GET | List assessments |
+| `/api/patient/:id/assessments` | GET | Patient history |
+
+### Error & Flag APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/log-error` | POST | Log error (silent) |
+| `/api/errors` | GET | View error history |
+| `/api/red-flag` | POST | Log red flag |
+| `/api/red-flags` | GET | View flags |
+| `/api/red-flag/:id/acknowledge` | POST | Acknowledge flag |
 
 ## Technology Stack
 
 - **Backend**: Hono framework
-- **Runtime**: Cloudflare Workers
-- **Frontend**: HTML/CSS/JavaScript + TailwindCSS
-- **Build**: Vite
-- **AI**: Google Gemini API (gemini-2.0-flash)
-- **Deploy**: Cloudflare Pages
+- **Runtime**: Cloudflare Workers/Pages
+- **Database**: Cloudflare D1 (SQLite)
+- **ML**: MediaPipe Holistic (WebGL)
+- **AI**: Google Gemini 2.0 Flash
+- **Build**: Vite + TypeScript
+
+## Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `msk_assessments` | Full assessment sessions |
+| `msk_red_flags` | Clinical alerts |
+| `msk_angle_history` | Per-frame angle data |
+| `error_logs` | Application errors |
+| `patients` | Patient records |
+| `users` | Authentication |
 
 ## Environment Variables
 
 ```bash
-# Required for AI features
-GEMINI_API_KEY=your_gemini_api_key
+# AI Features
+GEMINI_API_KEY=your_gemini_key
+OPENAI_API_KEY=your_openai_key
 
-# Optional
-OPENAI_API_KEY=your_openai_api_key
+# Database (auto-configured)
+DB=d1_database_binding
 ```
-
-### Get Gemini API Key
-1. Visit: https://aistudio.google.com/app/apikey
-2. Create new API key
-3. Add to environment variables
 
 ## Local Development
 
 ```bash
-# Install dependencies
+# Install
 npm install
 
 # Build
 npm run build
 
-# Start development server
-npm run dev:sandbox
-
-# Or with PM2
+# Run with D1
 pm2 start ecosystem.config.cjs
+
+# Or directly
+npx wrangler pages dev dist --d1=sobeairehab-telemed-db --local --ip 0.0.0.0 --port 3000
 ```
 
 ## Deployment
@@ -123,25 +125,23 @@ pm2 start ecosystem.config.cjs
 ### Cloudflare Pages
 
 ```bash
-# Configure Cloudflare API
+# Setup (run once)
 setup_cloudflare_api_key
 
 # Deploy
 npm run build
-npx wrangler pages deploy dist --project-name sobeairehab
+npx wrangler pages deploy dist --project-name thrive-ortho
 ```
 
-### With D1 Database
+### D1 Database Setup
 
 ```bash
-# Create database
-npx wrangler d1 create telemed-ai-db
+# Create production DB
+npx wrangler d1 create thrive-ortho-db
 
 # Apply migrations
-npx wrangler d1 migrations apply telemed-ai-db --local
-
-# Start with D1
-npm run dev:d1
+npx wrangler d1 execute thrive-ortho-db --file=migrations/0001_initial_schema.sql
+npx wrangler d1 execute thrive-ortho-db --file=migrations/0008_msk_assessments.sql
 ```
 
 ## Project Structure
@@ -149,40 +149,36 @@ npm run dev:d1
 ```
 webapp/
 ├── src/
-│   └── index.tsx          # Main application
+│   └── index.tsx           # Main app (4100 lines)
 ├── migrations/
-│   └── 0001_initial_schema.sql
-├── public/                # Static assets
-├── dist/                  # Build output
-├── ecosystem.config.cjs   # PM2 configuration
-├── wrangler.jsonc         # Cloudflare configuration
-├── vite.config.ts         # Vite configuration
-├── package.json           # Dependencies
-└── README.md              # This file
+│   ├── 0001_initial_schema.sql
+│   └── 0008_msk_assessments.sql
+├── dist/                   # Build output (~155KB)
+├── ecosystem.config.cjs    # PM2 config
+├── wrangler.jsonc          # Cloudflare config
+└── package.json
 ```
-
-## Exercise Library
-
-| ID | Name | Target | Difficulty |
-|----|------|--------|------------|
-| E001 | Hip Flexor Stretch | Hip | Beginner |
-| E002 | Piriformis Stretch | Hip | Beginner |
-| E003 | Dead Bug | Core | Intermediate |
-| E004 | Bird Dog | Core | Beginner |
-| E005 | Cat-Cow Stretch | Spine | Beginner |
-| E006 | Cervical Retraction | Cervical | Beginner |
-| E007 | Shoulder ER/IR | Shoulder | Intermediate |
-| E008 | Clamshells | Hip | Beginner |
-| E009 | Ankle Alphabet | Ankle | Beginner |
-| E010 | McKenzie Extension | Lumbar | Beginner |
-| E011 | Glute Bridge | Hip | Beginner |
-| E012 | Side Plank | Core | Intermediate |
 
 ## Version History
 
-- **v3.0** (Current): Ultra-minimal UI, Gemini AI integration, comprehensive medical notes
-- **v2.0**: Glass morphism UI, voice intake, FMS assessment
-- **v1.0**: Initial MVP with basic dashboards
+| Version | Features |
+|---------|----------|
+| **v9.0** | Desktop layout, large angle dashboard, auto rep counting |
+| **v8.1** | D1 database storage, temporal smoothing |
+| **v8.0** | Full holistic tracking (body+face+hands) |
+| **v7.0** | Voice instructions, guided workflow |
+| **v6.0** | MediaPipe Holistic integration |
+| **v5.2** | Enhanced camera support |
+| **v3.0** | Gemini AI integration |
+
+## Rep Detection Thresholds
+
+| Exercise | Joint | Down | Up |
+|----------|-------|------|-----|
+| Deep Squat | Knee | ≤110° | ≥155° |
+| Shoulder Raise | Shoulder | ≤60° | ≥140° |
+| Hip Hinge | Hip | ≤110° | ≥160° |
+| Arm Curl | Elbow | ≤60° | ≥140° |
 
 ## License
 
@@ -190,4 +186,4 @@ Proprietary - Thrive Ortho
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: December 2025 | **Build**: 155KB | **Routes**: 32

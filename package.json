@@ -1,7 +1,7 @@
 {
-  "name": "telemed-ai",
-  "version": "1.0.0",
-  "description": "TeleMed AI Platform - Telemedicine with AI-powered diagnostics",
+  "name": "thrive-ortho-ehr",
+  "version": "9.0.0",
+  "description": "Thrive Ortho EHR - MSK Assessment Platform with Real-Time Joint Tracking",
   "type": "module",
   "scripts": {
     "dev": "vite",
