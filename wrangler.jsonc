@@ -9,19 +9,19 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "sobeairehab-telemed-db",
-      "database_id": "local-dev-db"
-    }
-  ],
-  
-  // R2 Storage for video recordings
-  // To create: npx wrangler r2 bucket create thrive-ortho-videos
-  "r2_buckets": [
-    {
-      "binding": "R2_BUCKET",
-      "bucket_name": "thrive-ortho-videos"
+      "database_name": "thrive-ortho-db",
+      "database_id": "51a6f32c-8f5d-4baf-9591-a822053e4b0c"
     }
   ]
+  
+  // R2 Storage for video recordings (enable R2 in Cloudflare dashboard first)
+  // Then uncomment and run: npx wrangler r2 bucket create thrive-ortho-videos
+  // "r2_buckets": [
+  //   {
+  //     "binding": "R2_BUCKET",
+  //     "bucket_name": "thrive-ortho-videos"
+  //   }
+  // ]
   
   // Environment variables (set via wrangler secret or .dev.vars)
   // TWILIO_ACCOUNT_SID - Your Twilio Account SID
