@@ -167,11 +167,85 @@ const exercises = [
 ]
 
 const demoUsers = {
-  patient: { id: 'P001', name: 'Sarah Johnson', email: 'sarah.j@email.com', avatar: 'SJ', age: 39, gender: 'Female', role: 'patient' },
   doctor: { id: 'D001', name: 'Dr. Michael Torres', email: 'dr.torres@thriveortho.com', avatar: 'MT', credentials: 'MD, Sports Medicine', role: 'doctor' },
   coach: { id: 'C001', name: 'Jessica Martinez', email: 'jessica.m@thriveortho.com', avatar: 'JM', credentials: 'DPT, CSCS, FMS', role: 'coach' },
   admin: { id: 'A001', name: 'Robert Chen', email: 'admin@thriveortho.com', avatar: 'RC', role: 'admin' }
 }
+
+// Clinical Demo Patients - 5 realistic cases
+const demoPatients = [
+  { 
+    id: 'P001', 
+    name: 'Marcus Williams', 
+    avatar: 'MW', 
+    age: 52, 
+    gender: 'Male',
+    bmi: 38.5,
+    condition: 'Obesity',
+    cc: 'Bilateral knee pain, limited mobility',
+    focus: 'Knee, Hip, Gait',
+    fms: 10,
+    status: 'In Progress',
+    risk: 'High Risk',
+    notes: 'BMI 38.5, Class II Obesity. Difficulty with weight-bearing exercises. Focus on low-impact mobility.'
+  },
+  { 
+    id: 'P002', 
+    name: 'Patricia Chen', 
+    avatar: 'PC', 
+    age: 61, 
+    gender: 'Female',
+    condition: 'Type 2 Diabetes',
+    cc: 'Diabetic neuropathy, balance issues',
+    focus: 'Balance, Feet, Gait',
+    fms: 11,
+    status: 'In Progress',
+    risk: 'High Risk',
+    notes: 'T2DM x 12 years. Peripheral neuropathy bilateral feet. Fall risk assessment needed.'
+  },
+  { 
+    id: 'P003', 
+    name: 'James Rodriguez', 
+    avatar: 'JR', 
+    age: 58, 
+    gender: 'Male',
+    condition: 'Pre-Op Knee',
+    cc: 'Right TKA scheduled, pre-surgical eval',
+    focus: 'Knee ROM, Quad strength',
+    fms: 9,
+    status: 'Pre-Surgery',
+    risk: 'Moderate',
+    notes: 'Right TKA scheduled 01/15. Pre-op PT eval. OA Grade IV. Document baseline ROM.'
+  },
+  { 
+    id: 'P004', 
+    name: 'Linda Thompson', 
+    avatar: 'LT', 
+    age: 67, 
+    gender: 'Female',
+    condition: 'Post-Op Hip',
+    cc: 'Left THR 4 weeks ago, rehab phase',
+    focus: 'Hip ROM, Gait, Balance',
+    fms: 13,
+    status: 'Rehab',
+    risk: 'Moderate',
+    notes: 'Left THR 4 weeks post-op. Posterior approach precautions. Progress to full weight bearing.'
+  },
+  { 
+    id: 'P005', 
+    name: 'David Park', 
+    avatar: 'DP', 
+    age: 45, 
+    gender: 'Male',
+    condition: 'Healthy Baseline',
+    cc: 'Annual MSK screening, active lifestyle',
+    focus: 'Full Body, FMS',
+    fms: 17,
+    status: 'Screening',
+    risk: 'Low Risk',
+    notes: 'Annual wellness screen. Marathon runner. No current complaints.'
+  }
+]
 
 const painKeywords = {
   red: ['numbness', 'tingling', 'weakness', 'bowel', 'bladder', 'night pain', 'fever', 'weight loss', 'cancer', 'trauma', 'fall', 'accident', 'bilateral', 'progressive', 'dizziness', 'vision changes'],
@@ -999,18 +1073,22 @@ const sidebar = (role: string, active: string) => {
 }
 
 // Right Panel with full joint data
-const rightPanel = (data: any = {}) => `
+const rightPanel = (data: any = {}) => {
+  const patient = data.patient || demoPatients[0];
+  const fmsScore = data.fmsScore ?? patient.fms ?? null;
+  const riskLevel = fmsScore <= 11 ? 'High Risk' : fmsScore <= 14 ? 'Moderate' : fmsScore ? 'Low Risk' : 'Not Scored';
+  const riskClass = fmsScore <= 11 ? 'badge-danger' : fmsScore <= 14 ? 'badge-warning' : fmsScore ? 'badge-success' : 'badge-neutral';
+  
+  return `
   <aside class="panel">
     <div class="panel-section">
       <div class="panel-label">Assessment Score</div>
       <div class="score-display">
-        <div class="score-value" id="fmsScore">${data.fmsScore ?? '--'}</div>
+        <div class="score-value" id="fmsScore">${fmsScore ?? '--'}</div>
         <div class="score-label">of 21 points (FMS)</div>
       </div>
       <div class="mt-1 text-center">
-        <span class="badge ${data.fmsScore <= 11 ? 'badge-danger' : data.fmsScore <= 14 ? 'badge-warning' : data.fmsScore ? 'badge-success' : 'badge-neutral'}" id="riskBadge">
-          ${data.fmsScore <= 11 ? 'High Risk' : data.fmsScore <= 14 ? 'Moderate' : data.fmsScore ? 'Low Risk' : 'Not Scored'}
-        </span>
+        <span class="badge ${riskClass}" id="riskBadge">${riskLevel}</span>
       </div>
     </div>
     
@@ -1018,14 +1096,15 @@ const rightPanel = (data: any = {}) => `
       <div class="panel-label">Current Patient</div>
       <div class="panel-card">
         <div class="flex items-center gap-1 mb-1">
-          <div class="avatar">SJ</div>
+          <div class="avatar">${patient.avatar}</div>
           <div>
-            <div class="user-name">Sarah Johnson</div>
-            <div class="user-meta">39 y/o Female</div>
+            <div class="user-name">${patient.name}</div>
+            <div class="user-meta">${patient.age} y/o ${patient.gender}</div>
           </div>
         </div>
-        <div class="text-sm text-muted" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--gray-200);">
-          <strong>CC:</strong> LBP w/ radiculopathy
+        <div class="text-sm" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--gray-200);">
+          <strong>Condition:</strong> ${patient.condition}<br>
+          <strong>CC:</strong> ${patient.cc}
         </div>
       </div>
     </div>
@@ -1062,7 +1141,7 @@ const rightPanel = (data: any = {}) => `
       </a>
     </div>
   </aside>
-`
+`}
 
 // ============================================================================
 // API ROUTES
@@ -1816,8 +1895,8 @@ NPI:      1234567890
 ═══════════════════════════════════════════════════════════════════════════════
 PATIENT
 ═══════════════════════════════════════════════════════════════════════════════
-NAME:      ${patient?.name || 'Sarah Johnson'}
-DOB:       03/15/1985 | AGE: 39 | SEX: Female
+NAME:      ${patient?.name || 'Select Patient'}
+DOB:       ${patient?.dob || '--/--/----'} | AGE: ${patient?.age || '--'} | SEX: ${patient?.gender || '--'}
 MRN:       P-2025-001234
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -4143,11 +4222,15 @@ app.get('/api/patient/:id/portal', async (c) => {
 
 // API endpoints
 app.get('/api/tasks', (c) => c.json({ tasks: [
-  { id: 1, title: 'Complete Sarah Johnson intake', priority: 'high', status: 'pending', due: 'Today' },
-  { id: 2, title: 'Full body joint scan', priority: 'high', status: 'pending', due: 'Today' },
-  { id: 3, title: 'Generate medical note', priority: 'high', status: 'pending', due: 'Today' },
-  { id: 4, title: 'Elderly gait assessment - Mr. Thompson', priority: 'medium', status: 'pending', due: 'Tomorrow' },
+  { id: 1, title: 'Pre-op knee eval - James Rodriguez', priority: 'high', status: 'pending', due: 'Today', patientId: 'P003' },
+  { id: 2, title: 'Fall risk assessment - Patricia Chen', priority: 'high', status: 'pending', due: 'Today', patientId: 'P002' },
+  { id: 3, title: 'Post-op hip progress - Linda Thompson', priority: 'medium', status: 'pending', due: 'Today', patientId: 'P004' },
+  { id: 4, title: 'Obesity mobility assessment - Marcus Williams', priority: 'medium', status: 'pending', due: 'Today', patientId: 'P001' },
+  { id: 5, title: 'Annual FMS screening - David Park', priority: 'low', status: 'pending', due: 'Tomorrow', patientId: 'P005' },
 ]}))
+
+// Get demo patients list
+app.get('/api/patients', (c) => c.json({ patients: demoPatients }))
 
 app.get('/api/exercises', (c) => c.json({ exercises }))
 app.get('/api/movements', (c) => c.json({ movements }))
@@ -4259,32 +4342,48 @@ app.get('/doctor', (c) => {
           </div>
           <table class="table">
             <thead>
-              <tr><th>Patient</th><th>Type</th><th>Focus</th><th>FMS</th><th>Status</th><th></th></tr>
+              <tr><th>Patient</th><th>Condition</th><th>Focus</th><th>FMS</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               <tr>
-                <td><div class="flex items-center gap-1"><div class="avatar">SJ</div><div><strong>Sarah Johnson</strong><div class="text-muted text-sm">39 y/o F</div></div></div></td>
-                <td>Standard</td>
-                <td>LBP, Hip, Ankle</td>
-                <td><span style="font-weight: 700; color: var(--warning);">12</span>/21</td>
-                <td><span class="badge badge-warning">In Progress</span></td>
-                <td class="text-right"><a href="/doctor/joints" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
-              </tr>
-              <tr>
-                <td><div class="flex items-center gap-1"><div class="avatar">RT</div><div><strong>Robert Thompson</strong><div class="text-muted text-sm">72 y/o M</div></div></div></td>
-                <td><span class="badge badge-info">Elderly</span></td>
-                <td>Gait, Balance, Fall Risk</td>
-                <td><span style="font-weight: 700; color: var(--error);">9</span>/21</td>
+                <td><div class="flex items-center gap-1"><div class="avatar">MW</div><div><strong>Marcus Williams</strong><div class="text-muted text-sm">52 y/o M</div></div></div></td>
+                <td><span class="badge badge-warning">Obesity</span></td>
+                <td>Knee, Hip, Gait</td>
+                <td><span style="font-weight: 700; color: var(--error);">10</span>/21</td>
                 <td><span class="badge badge-danger">High Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P001" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
-                <td><div class="flex items-center gap-1"><div class="avatar">MK</div><div><strong>Maria Kim</strong><div class="text-muted text-sm">45 y/o F</div></div></div></td>
-                <td>Standard</td>
-                <td>Hands, Wrists</td>
-                <td><span style="font-weight: 700; color: var(--success);">16</span>/21</td>
+                <td><div class="flex items-center gap-1"><div class="avatar">PC</div><div><strong>Patricia Chen</strong><div class="text-muted text-sm">61 y/o F</div></div></div></td>
+                <td><span class="badge badge-info">Diabetes</span></td>
+                <td>Balance, Feet, Gait</td>
+                <td><span style="font-weight: 700; color: var(--error);">11</span>/21</td>
+                <td><span class="badge badge-danger">High Risk</span></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P002" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+              </tr>
+              <tr>
+                <td><div class="flex items-center gap-1"><div class="avatar">JR</div><div><strong>James Rodriguez</strong><div class="text-muted text-sm">58 y/o M</div></div></div></td>
+                <td><span class="badge badge-warning">Pre-Op Knee</span></td>
+                <td>Knee ROM, Quad</td>
+                <td><span style="font-weight: 700; color: var(--error);">9</span>/21</td>
+                <td><span class="badge badge-warning">Pre-Surgery</span></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P003" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+              </tr>
+              <tr>
+                <td><div class="flex items-center gap-1"><div class="avatar">LT</div><div><strong>Linda Thompson</strong><div class="text-muted text-sm">67 y/o F</div></div></div></td>
+                <td><span class="badge badge-success">Post-Op Hip</span></td>
+                <td>Hip ROM, Gait, Balance</td>
+                <td><span style="font-weight: 700; color: var(--warning);">13</span>/21</td>
+                <td><span class="badge badge-info">Rehab</span></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P004" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+              </tr>
+              <tr>
+                <td><div class="flex items-center gap-1"><div class="avatar">DP</div><div><strong>David Park</strong><div class="text-muted text-sm">45 y/o M</div></div></div></td>
+                <td><span class="badge badge-neutral">Screening</span></td>
+                <td>Full Body, FMS</td>
+                <td><span style="font-weight: 700; color: var(--success);">17</span>/21</td>
                 <td><span class="badge badge-success">Low Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints" class="btn btn-sm btn-ghost"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P005" class="btn btn-sm btn-ghost"><i class="fas fa-bone"></i></a></td>
               </tr>
             </tbody>
           </table>
@@ -4301,16 +4400,24 @@ app.get('/doctor', (c) => {
                 <div class="task-priority high"></div>
                 <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
-                  <div class="task-title">Full body joint scan - Sarah Johnson</div>
-                  <div class="task-meta">Due: Today</div>
+                  <div class="task-title">Pre-op knee eval - James Rodriguez</div>
+                  <div class="task-meta">Due: Today • TKA scheduled 01/15</div>
                 </div>
               </li>
               <li class="task-item">
                 <div class="task-priority high"></div>
                 <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
-                  <div class="task-title">Elderly gait assessment - Robert Thompson</div>
-                  <div class="task-meta">Due: Today • Fall risk evaluation</div>
+                  <div class="task-title">Fall risk assessment - Patricia Chen</div>
+                  <div class="task-meta">Due: Today • Diabetic neuropathy</div>
+                </div>
+              </li>
+              <li class="task-item">
+                <div class="task-priority medium"></div>
+                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-content">
+                  <div class="task-title">Post-op hip progress - Linda Thompson</div>
+                  <div class="task-meta">Due: Today • 4 weeks post THR</div>
                 </div>
               </li>
             </ul>
@@ -6416,7 +6523,7 @@ app.get('/doctor/notes', (c) => {
         <div class="panel-section">
           <div class="panel-label">Summary</div>
           <div class="panel-card text-sm">
-            <strong>Patient:</strong> Sarah Johnson<br>
+            <strong>Patient:</strong> <span id="summaryPatient">Select Patient</span><br>
             <strong>FMS:</strong> <span id="summaryScore">--</span>/21<br>
             <strong>Risk:</strong> <span id="summaryRisk">--</span>
           </div>
@@ -6455,7 +6562,7 @@ app.get('/doctor/notes', (c) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              patient: { name: 'Sarah Johnson' },
+              patient: JSON.parse(sessionStorage.getItem('currentPatient') || '{}'),
               intake: {},
               fmsScores: scores,
               aiFlags: flags,
