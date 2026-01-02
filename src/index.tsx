@@ -5086,6 +5086,90 @@ app.get('/doctor/joints', (c) => {
       .alert-icon { font-size: 20px; }
       .alert-text { flex: 1; font-size: 13px; }
       
+      /* High severity alert */
+      .alert-high {
+        background: rgba(245, 158, 11, 0.95);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease-out, pulse 1s ease-in-out 2;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+      }
+      
+      /* Critical severity alert */
+      .alert-critical {
+        background: rgba(220, 38, 38, 0.98);
+        border: 3px solid #fff;
+        border-radius: 12px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease-out, criticalPulse 0.5s ease-in-out infinite;
+        box-shadow: 0 6px 30px rgba(220, 38, 38, 0.6);
+        font-weight: 600;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+      }
+      
+      @keyframes criticalPulse {
+        0%, 100% { box-shadow: 0 6px 30px rgba(220, 38, 38, 0.6); }
+        50% { box-shadow: 0 6px 40px rgba(220, 38, 38, 0.9); }
+      }
+      
+      /* Dashboard flash for critical alerts */
+      .dashboard.alert-flash {
+        animation: dashboardFlash 0.5s ease-in-out 2;
+      }
+      
+      @keyframes dashboardFlash {
+        0%, 100% { border-color: #222; }
+        50% { border-color: #ef4444; box-shadow: 0 0 30px rgba(239, 68, 68, 0.3); }
+      }
+      
+      /* ========== LIVE DATA PANEL ========== */
+      .live-data-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid #22c55e;
+        border-radius: 8px;
+        font-size: 11px;
+        color: #22c55e;
+        margin-bottom: 12px;
+      }
+      
+      .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #22c55e;
+        border-radius: 50%;
+        animation: liveBlink 1s ease-in-out infinite;
+      }
+      
+      @keyframes liveBlink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      
+      /* Medical record timestamp */
+      .record-timestamp {
+        font-size: 10px;
+        color: #666;
+        padding: 4px 8px;
+        background: #1a1a1a;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+      
       /* ========== ERROR DISPLAY ========== */
       .error-display {
         background: rgba(220, 38, 38, 0.2);
@@ -5187,11 +5271,18 @@ app.get('/doctor/joints', (c) => {
         </div>
       </section>
       
-      <!-- ANGLES DASHBOARD -->
+      <!-- ANGLES DASHBOARD - Real-Time Clinical Data -->
       <aside class="dashboard">
         <div class="dashboard-header">
           <div class="dashboard-title">📊 Joint Angles</div>
           <div class="fps-badge" id="fpsBadge">-- FPS</div>
+        </div>
+        
+        <!-- Live Data Indicator -->
+        <div class="live-data-indicator" id="liveIndicator" style="display: none;">
+          <div class="live-dot"></div>
+          <span>LIVE DATA - Recording for Medical Note</span>
+          <span class="record-timestamp" id="recordTime">00:00</span>
         </div>
         
         <div class="angles-grid" id="anglesGrid">
@@ -5312,62 +5403,68 @@ app.get('/doctor/joints', (c) => {
         {
           name: 'Deep Squat',
           desc: 'Squat down until knees bend past 90°, then stand up straight',
-          voice: 'Exercise 1: Deep Squat. Stand with feet shoulder width apart. Squat down as low as comfortable, then stand back up. Complete 5 repetitions.',
+          voice: "Let's start with Deep Squats. Stand with your feet shoulder width apart, and when you're ready, squat down nice and low, then stand back up. We'll do 5 together. Take your time!",
           reps: 5,
           joint: 'knee',
-          downThreshold: 110,  // Angle when "down" (knee bent)
-          upThreshold: 155,    // Angle when "up" (standing)
-          track: ['knee', 'hip']
+          downThreshold: 120,  // More forgiving - angle when "down" (knee bent)
+          upThreshold: 150,    // More forgiving - angle when "up" (standing)
+          track: ['knee', 'hip'],
+          encouragements: ['Great form!', 'Nice and steady!', 'Perfect!', 'You got this!', 'Excellent!']
         },
         {
           name: 'Shoulder Raise',
           desc: 'Raise both arms straight up overhead, then lower',
-          voice: 'Exercise 2: Shoulder Raise. Raise both arms straight up overhead, then lower them back down. Complete 5 repetitions.',
+          voice: "Wonderful! Now let's do Shoulder Raises. Reach your arms up toward the ceiling, then bring them back down. 5 repetitions. Nice and smooth!",
           reps: 5,
           joint: 'shoulder',
-          downThreshold: 60,   // Arms down
-          upThreshold: 140,    // Arms up
-          track: ['shoulder', 'elbow']
+          downThreshold: 70,   // More forgiving - arms down
+          upThreshold: 130,    // More forgiving - arms up
+          track: ['shoulder', 'elbow'],
+          encouragements: ['Looking good!', 'Reach for the sky!', 'Beautiful!', 'Keep it up!', 'Almost there!']
         },
         {
           name: 'Hip Hinge',
           desc: 'Bend forward at hips keeping back straight, then stand',
-          voice: 'Exercise 3: Hip Hinge. Bend forward at your hips while keeping your back straight, then stand up. Complete 5 repetitions.',
+          voice: "Great job! Next is the Hip Hinge. Bend forward at your hips, keeping your back nice and straight, then stand tall. 5 reps, at your own pace.",
           reps: 5,
           joint: 'hip',
-          downThreshold: 110,  // Bent forward
-          upThreshold: 160,    // Standing straight
-          track: ['hip', 'knee']
+          downThreshold: 120,  // More forgiving - bent forward
+          upThreshold: 155,    // More forgiving - standing straight
+          track: ['hip', 'knee'],
+          encouragements: ['Excellent control!', 'Nice hip movement!', 'Perfect form!', 'Well done!', 'Fantastic!']
         },
         {
           name: 'Arm Curl',
           desc: 'Bend elbows to bring hands to shoulders, then straighten',
-          voice: 'Exercise 4: Arm Curl. Bend your elbows to bring your hands toward your shoulders, then straighten. Complete 5 repetitions.',
+          voice: "You're doing amazing! Now let's do Arm Curls. Bend your elbows to bring your hands up toward your shoulders, then straighten them out. 5 repetitions.",
           reps: 5,
           joint: 'elbow',
-          downThreshold: 60,   // Elbow bent (curled)
-          upThreshold: 140,    // Arms straight
-          track: ['elbow', 'shoulder']
+          downThreshold: 70,   // More forgiving - elbow bent (curled)
+          upThreshold: 130,    // More forgiving - arms straight
+          track: ['elbow', 'shoulder'],
+          encouragements: ['Strong arms!', 'Nice and controlled!', 'Great job!', 'Keep going!', 'You nailed it!']
         },
         {
           name: 'Trunk Rotation',
           desc: 'Rotate upper body left and right with arms extended',
-          voice: 'Exercise 5: Trunk Rotation. Extend arms and rotate your upper body left, then right. Complete 4 repetitions each direction.',
+          voice: "Almost done! Trunk Rotation time. Extend your arms out and gently rotate your upper body left, then right. 4 rotations. Nice and easy!",
           reps: 4,
           joint: 'hip',
-          downThreshold: 155,  // Rotated
-          upThreshold: 170,    // Centered
-          track: ['hip', 'shoulder']
+          downThreshold: 160,  // More forgiving - rotated
+          upThreshold: 168,    // More forgiving - centered
+          track: ['hip', 'shoulder'],
+          encouragements: ['Good rotation!', 'Smooth movement!', 'Nice twist!', 'Excellent!']
         },
         {
           name: 'Balance Check',
           desc: 'Stand on one leg for 3 seconds, then switch',
-          voice: 'Exercise 6: Balance Check. Lift one foot off the ground and balance for 3 seconds. Complete 3 repetitions each leg.',
+          voice: "Last one! Balance Check. Carefully lift one foot off the ground and hold for a moment, then switch legs. 3 times each. Use support if you need it!",
           reps: 3,
           joint: 'hip',
-          downThreshold: 155,
-          upThreshold: 170,
-          track: ['hip', 'knee']
+          downThreshold: 160,  // More forgiving
+          upThreshold: 168,    // More forgiving
+          track: ['hip', 'knee'],
+          encouragements: ['Great balance!', 'Steady as you go!', 'Wonderful!']
         }
       ];
       
@@ -5414,11 +5511,36 @@ app.get('/doctor/joints', (c) => {
       };
       
       // ================================================================
-      // TEXT TO SPEECH
+      // TEXT TO SPEECH - Friendly, warm voice settings
       // ================================================================
       const TTS = {
         muted: false,
         speaking: false,
+        preferredVoice: null,
+        
+        init: function() {
+          // Find a friendly voice (prefer female voices for warmth)
+          const loadVoices = () => {
+            const voices = speechSynthesis.getVoices();
+            // Prefer: Samantha, Google UK English Female, Microsoft Zira
+            const preferred = ['Samantha', 'Google UK English Female', 'Microsoft Zira', 'Fiona', 'Karen', 'Moira', 'Google US English'];
+            for (const name of preferred) {
+              const found = voices.find(v => v.name.includes(name));
+              if (found) {
+                this.preferredVoice = found;
+                console.log('[TTS] Using voice:', found.name);
+                break;
+              }
+            }
+            if (!this.preferredVoice && voices.length > 0) {
+              // Fallback to first English voice
+              this.preferredVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+            }
+          };
+          
+          if (speechSynthesis.getVoices().length > 0) loadVoices();
+          speechSynthesis.onvoiceschanged = loadVoices;
+        },
         
         speak: function(text, onEnd) {
           if (this.muted || !window.speechSynthesis) {
@@ -5427,8 +5549,41 @@ app.get('/doctor/joints', (c) => {
           }
           
           const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 1.0;
-          utterance.pitch = 1.0;
+          // Friendly voice settings - slower, warmer tone
+          utterance.rate = 0.85;   // Slower for clarity (was 1.0)
+          utterance.pitch = 1.1;   // Slightly higher for warmth (was 1.0)
+          utterance.volume = 0.9;  // Comfortable volume
+          
+          if (this.preferredVoice) {
+            utterance.voice = this.preferredVoice;
+          }
+          
+          utterance.onend = () => {
+            this.speaking = false;
+            if (onEnd) onEnd();
+          };
+          
+          this.speaking = true;
+          speechSynthesis.cancel();
+          speechSynthesis.speak(utterance);
+        },
+        
+        // Urgent alert voice (faster, higher pitch for attention)
+        speakAlert: function(text, onEnd) {
+          if (this.muted || !window.speechSynthesis) {
+            if (onEnd) setTimeout(onEnd, 500);
+            return;
+          }
+          
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 0.95;   // Slightly faster for urgency
+          utterance.pitch = 1.2;   // Higher pitch for attention
+          utterance.volume = 1.0;  // Full volume for alerts
+          
+          if (this.preferredVoice) {
+            utterance.voice = this.preferredVoice;
+          }
+          
           utterance.onend = () => {
             this.speaking = false;
             if (onEnd) onEnd();
@@ -5506,16 +5661,35 @@ app.get('/doctor/joints', (c) => {
       };
       
       // ================================================================
-      // RED FLAG DETECTION
+      // RED FLAG DETECTION - Enhanced with visual + voice alerts
       // ================================================================
       const RedFlags = {
         flags: [],
+        lastAlertTime: 0,
+        alertCooldown: 3000, // 3 seconds between voice alerts
         keywords: {
-          pain: ['pain', 'hurt', 'ache', 'sore', 'ouch', 'ow'],
-          fall_risk: ['dizzy', 'unsteady', 'falling', 'balance', 'wobbly'],
-          acute: ['sharp', 'severe', 'intense', 'worst', 'stabbing'],
-          numbness: ['numb', 'tingling', 'pins', 'needles'],
-          weakness: ['weak', 'cant', 'unable', 'give out']
+          pain: ['pain', 'hurt', 'ache', 'sore', 'ouch', 'ow', 'painful'],
+          fall_risk: ['dizzy', 'unsteady', 'falling', 'balance', 'wobbly', 'fell', 'trip', 'stumble'],
+          acute: ['sharp', 'severe', 'intense', 'worst', 'stabbing', 'excruciating', 'unbearable'],
+          numbness: ['numb', 'tingling', 'pins', 'needles', 'dead feeling', 'no feeling'],
+          weakness: ['weak', 'cant', 'unable', 'give out', 'giving way', 'buckle', 'collapse'],
+          red_flag_neuro: ['bowel', 'bladder', 'incontinence', 'saddle', 'bilateral leg']
+        },
+        severityMap: {
+          pain: 'medium',
+          fall_risk: 'high',
+          acute: 'high',
+          numbness: 'high',
+          weakness: 'medium',
+          red_flag_neuro: 'critical'
+        },
+        voiceAlerts: {
+          pain: 'I noticed you mentioned some discomfort. Let me make a note of that.',
+          fall_risk: 'Attention, doctor: patient reports balance or fall concern. Please assess.',
+          acute: 'Alert: Patient reporting severe or acute symptoms. Please evaluate.',
+          numbness: 'Important: Patient reporting numbness or tingling. Neurological check recommended.',
+          weakness: 'Note: Patient mentions weakness. Further evaluation may be needed.',
+          red_flag_neuro: 'CRITICAL ALERT: Possible neurological red flag detected. Immediate assessment required.'
         },
         
         check: function(text) {
@@ -5529,32 +5703,124 @@ app.get('/doctor/joints', (c) => {
           }
         },
         
-        add: function(type, context) {
+        // Check ROM for clinical red flags
+        checkROM: function(joint, leftVal, rightVal) {
+          const asymmetry = Math.abs(leftVal - rightVal);
+          const range = App.ROM_RANGES[joint];
+          
+          // Alert on significant asymmetry (>20°)
+          if (asymmetry > 20) {
+            this.addROMFlag('asymmetry', joint, leftVal, rightVal, asymmetry);
+          }
+          
+          // Alert on severely restricted ROM
+          if (range && (leftVal < range.min * 0.7 || rightVal < range.min * 0.7)) {
+            this.addROMFlag('restricted', joint, leftVal, rightVal, 0);
+          }
+        },
+        
+        addROMFlag: function(type, joint, leftVal, rightVal, delta) {
+          const now = Date.now();
+          const flagKey = type + '_' + joint;
+          
+          // Prevent duplicate alerts within 10 seconds
+          if (this.flags.some(f => f.flagKey === flagKey && (now - new Date(f.timestamp).getTime()) < 10000)) {
+            return;
+          }
+          
           const flag = {
-            type,
-            context,
+            flagKey,
+            type: type === 'asymmetry' ? 'ROM Asymmetry' : 'ROM Restricted',
+            severity: type === 'asymmetry' ? 'medium' : 'high',
+            joint: joint.toUpperCase(),
+            left: leftVal,
+            right: rightVal,
+            delta,
+            context: type === 'asymmetry' 
+              ? joint.toUpperCase() + ': L=' + leftVal + '° R=' + rightVal + '° (Δ' + delta + '°)'
+              : joint.toUpperCase() + ' severely restricted: L=' + leftVal + '° R=' + rightVal + '°',
             time: new Date().toLocaleTimeString(),
-            exercise: EXERCISES[App.currentIdx]?.name || 'General'
+            timestamp: new Date().toISOString(),
+            exercise: EXERCISES[App.currentIdx]?.name || 'Assessment'
           };
+          
           this.flags.push(flag);
           this.showAlert(flag);
+          
+          // Voice alert for ROM issues
+          if (now - this.lastAlertTime > this.alertCooldown) {
+            const voiceMsg = type === 'asymmetry'
+              ? 'Note: Significant asymmetry detected in ' + joint + '. Left and right differ by ' + delta + ' degrees.'
+              : 'Alert: ' + joint + ' range of motion is significantly restricted.';
+            TTS.speakAlert(voiceMsg);
+            this.lastAlertTime = now;
+          }
           
           // Log to server
           fetch('/api/red-flag', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, severity: type === 'acute' ? 'high' : 'medium', context })
+            body: JSON.stringify({ type: flag.type, severity: flag.severity, context: flag.context, joint: flag.joint })
+          }).catch(() => {});
+        },
+        
+        add: function(type, context) {
+          const now = Date.now();
+          const severity = this.severityMap[type] || 'medium';
+          
+          const flag = {
+            type,
+            severity,
+            context,
+            time: new Date().toLocaleTimeString(),
+            timestamp: new Date().toISOString(),
+            exercise: EXERCISES[App.currentIdx]?.name || 'General'
+          };
+          this.flags.push(flag);
+          this.showAlert(flag);
+          
+          // Voice alert (with cooldown to prevent spam)
+          if (now - this.lastAlertTime > this.alertCooldown) {
+            const voiceMsg = this.voiceAlerts[type] || 'Clinical flag detected. Please review.';
+            TTS.speakAlert(voiceMsg);
+            this.lastAlertTime = now;
+          }
+          
+          // Log to server
+          fetch('/api/red-flag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, severity, context })
           }).catch(() => {});
         },
         
         showAlert: function(flag) {
           const container = document.getElementById('alertsContainer');
           const div = document.createElement('div');
-          div.className = 'alert-item';
-          div.innerHTML = '<span class="alert-icon">⚠️</span><span class="alert-text"><strong>' + 
-            flag.type.replace('_', ' ').toUpperCase() + '</strong><br>' + flag.exercise + '</span>';
+          
+          // Different styling based on severity
+          const severityClass = flag.severity === 'critical' ? 'alert-critical' : 
+                                flag.severity === 'high' ? 'alert-high' : 'alert-item';
+          div.className = severityClass;
+          
+          const icon = flag.severity === 'critical' ? '🚨' : 
+                       flag.severity === 'high' ? '⚠️' : '📋';
+          
+          div.innerHTML = '<span class="alert-icon">' + icon + '</span><span class="alert-text"><strong>' + 
+            (flag.type || '').replace('_', ' ').toUpperCase() + '</strong><br>' + 
+            (flag.context ? flag.context.substring(0, 50) : flag.exercise) + '</span>';
           container.appendChild(div);
-          setTimeout(() => div.remove(), 5000);
+          
+          // Critical alerts stay longer
+          const timeout = flag.severity === 'critical' ? 10000 : flag.severity === 'high' ? 7000 : 5000;
+          setTimeout(() => div.remove(), timeout);
+          
+          // Flash the dashboard for critical/high
+          if (flag.severity === 'critical' || flag.severity === 'high') {
+            const dashboard = document.querySelector('.dashboard');
+            dashboard.classList.add('alert-flash');
+            setTimeout(() => dashboard.classList.remove('alert-flash'), 1000);
+          }
         },
         
         getFlags: function() { return this.flags; },
@@ -5587,11 +5853,14 @@ app.get('/doctor/joints', (c) => {
         
         // ============== INIT ==============
         init: async function() {
-          console.log('[MSK v9] Initializing desktop view...');
+          console.log('[MSK v10.3] Initializing desktop view with enhanced tracking...');
           
           this.video = document.getElementById('video');
           this.canvas = document.getElementById('canvas');
           this.ctx = this.canvas.getContext('2d');
+          
+          // Initialize TTS with friendly voice
+          TTS.init();
           
           // Attach listeners
           document.getElementById('startBtn').onclick = () => this.start();
@@ -5690,6 +5959,15 @@ app.get('/doctor/joints', (c) => {
             document.getElementById('instructionOverlay').style.display = 'block';
             document.getElementById('activeControls').style.display = 'flex';
             document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('liveIndicator').style.display = 'flex';
+            
+            // Start recording timer
+            this.recordingTimer = setInterval(() => {
+              const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+              const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+              const secs = (elapsed % 60).toString().padStart(2, '0');
+              document.getElementById('recordTime').textContent = mins + ':' + secs;
+            }, 1000);
             
             // Start speech recognition
             SpeechRecognizer.start();
@@ -5995,25 +6273,55 @@ app.get('/doctor/joints', (c) => {
           document.getElementById('repCount').textContent = this.reps;
           document.getElementById('repFill').style.width = (this.reps / ex.reps * 100) + '%';
           
-          // Voice feedback
+          // Check ROM for red flags during exercise
+          const primaryJoint = ex.joint;
+          const leftVal = this.angles[primaryJoint + '_L'];
+          const rightVal = this.angles[primaryJoint + '_R'];
+          if (leftVal && rightVal) {
+            RedFlags.checkROM(primaryJoint, leftVal, rightVal);
+          }
+          
+          // Voice feedback with encouraging phrases
           if (this.reps < ex.reps) {
-            TTS.speak(String(this.reps));
+            const encouragement = ex.encouragements?.[this.reps - 1] || String(this.reps);
+            TTS.speak(encouragement);
           }
           
           // Check if exercise complete
           if (this.reps >= ex.reps) {
-            // Save result
+            // Save result with detailed data for medical notes
             this.results.push({
               name: ex.name,
               reps: this.reps,
               target: ex.reps,
               score: 3, // Full score
               maxAngles: { ...this.angles },
-              skipped: false
+              leftAngles: {
+                knee: this.angles.knee_L,
+                hip: this.angles.hip_L,
+                shoulder: this.angles.shoulder_L,
+                elbow: this.angles.elbow_L
+              },
+              rightAngles: {
+                knee: this.angles.knee_R,
+                hip: this.angles.hip_R,
+                shoulder: this.angles.shoulder_R,
+                elbow: this.angles.elbow_R
+              },
+              skipped: false,
+              timestamp: new Date().toISOString()
             });
             
-            // Move to next exercise
-            TTS.speak('Excellent! Exercise complete.', () => {
+            // Move to next exercise with friendly message
+            const completionMessages = [
+              'Wonderful! Great job on that one!',
+              'Excellent work! You did amazing!',
+              'Perfect! That was fantastic!',
+              'Beautiful! Really nice form!',
+              'Outstanding! Well done!',
+              'Congratulations! All exercises complete!'
+            ];
+            TTS.speak(completionMessages[Math.min(this.currentIdx, 5)], () => {
               setTimeout(() => this.startExercise(this.currentIdx + 1), 1500);
             });
           }
@@ -6073,11 +6381,17 @@ app.get('/doctor/joints', (c) => {
         
         // ============== COMPLETE ==============
         complete: function() {
-          console.log('[MSK v9] Assessment complete');
+          console.log('[MSK v10.3] Assessment complete');
           
           this.running = false;
           SpeechRecognizer.stop();
-          TTS.speak('Assessment complete. Great job!');
+          
+          if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+          }
+          
+          TTS.speak("Congratulations! You've completed all the exercises. Great job today!");
           
           // Calculate stats
           const totalReps = this.results.reduce((sum, r) => sum + r.reps, 0);
@@ -6102,6 +6416,11 @@ app.get('/doctor/joints', (c) => {
           SpeechRecognizer.stop();
           TTS.stop();
           
+          if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+          }
+          
           if (this.stream) {
             this.stream.getTracks().forEach(t => t.stop());
           }
@@ -6112,6 +6431,7 @@ app.get('/doctor/joints', (c) => {
           document.getElementById('repOverlay').style.display = 'none';
           document.getElementById('instructionOverlay').style.display = 'none';
           document.getElementById('activeControls').style.display = 'none';
+          document.getElementById('liveIndicator').style.display = 'none';
           document.getElementById('startBtn').style.display = 'block';
           document.getElementById('startBtn').disabled = false;
           document.getElementById('startBtn').textContent = '🎬 Resume';
