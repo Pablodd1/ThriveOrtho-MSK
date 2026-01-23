@@ -4351,7 +4351,7 @@ app.get('/doctor', (c) => {
                 <td>Knee, Hip, Gait</td>
                 <td><span style="font-weight: 700; color: var(--error);">10</span>/21</td>
                 <td><span class="badge badge-danger">High Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P001" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P001" class="btn btn-sm btn-primary" aria-label="Start full body scan for Marcus Williams"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">PC</div><div><strong>Patricia Chen</strong><div class="text-muted text-sm">61 y/o F</div></div></div></td>
@@ -4359,7 +4359,7 @@ app.get('/doctor', (c) => {
                 <td>Balance, Feet, Gait</td>
                 <td><span style="font-weight: 700; color: var(--error);">11</span>/21</td>
                 <td><span class="badge badge-danger">High Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P002" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P002" class="btn btn-sm btn-primary" aria-label="Start full body scan for Patricia Chen"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">JR</div><div><strong>James Rodriguez</strong><div class="text-muted text-sm">58 y/o M</div></div></div></td>
@@ -4367,7 +4367,7 @@ app.get('/doctor', (c) => {
                 <td>Knee ROM, Quad</td>
                 <td><span style="font-weight: 700; color: var(--error);">9</span>/21</td>
                 <td><span class="badge badge-warning">Pre-Surgery</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P003" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P003" class="btn btn-sm btn-primary" aria-label="Start full body scan for James Rodriguez"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">LT</div><div><strong>Linda Thompson</strong><div class="text-muted text-sm">67 y/o F</div></div></div></td>
@@ -4375,7 +4375,7 @@ app.get('/doctor', (c) => {
                 <td>Hip ROM, Gait, Balance</td>
                 <td><span style="font-weight: 700; color: var(--warning);">13</span>/21</td>
                 <td><span class="badge badge-info">Rehab</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P004" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P004" class="btn btn-sm btn-primary" aria-label="Start full body scan for Linda Thompson"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">DP</div><div><strong>David Park</strong><div class="text-muted text-sm">45 y/o M</div></div></div></td>
@@ -4383,7 +4383,7 @@ app.get('/doctor', (c) => {
                 <td>Full Body, FMS</td>
                 <td><span style="font-weight: 700; color: var(--success);">17</span>/21</td>
                 <td><span class="badge badge-success">Low Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P005" class="btn btn-sm btn-ghost"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P005" class="btn btn-sm btn-ghost" aria-label="Start full body scan for David Park"><i class="fas fa-bone"></i></a></td>
               </tr>
             </tbody>
           </table>
@@ -4398,7 +4398,7 @@ app.get('/doctor', (c) => {
             <ul class="task-list">
               <li class="task-item">
                 <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-check" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark task as complete" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
                   <div class="task-title">Pre-op knee eval - James Rodriguez</div>
                   <div class="task-meta">Due: Today • TKA scheduled 01/15</div>
@@ -4406,7 +4406,7 @@ app.get('/doctor', (c) => {
               </li>
               <li class="task-item">
                 <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-check" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark task as complete" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
                   <div class="task-title">Fall risk assessment - Patricia Chen</div>
                   <div class="task-meta">Due: Today • Diabetic neuropathy</div>
@@ -4414,7 +4414,7 @@ app.get('/doctor', (c) => {
               </li>
               <li class="task-item">
                 <div class="task-priority medium"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-check" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark task as complete" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
                 <div class="task-content">
                   <div class="task-title">Post-op hip progress - Linda Thompson</div>
                   <div class="task-meta">Due: Today • 4 weeks post THR</div>
@@ -4430,9 +4430,18 @@ app.get('/doctor', (c) => {
     
     <script>
       function toggleTask(el) {
-        el.classList.toggle('done');
+        const isDone = el.classList.toggle('done');
+        el.setAttribute('aria-checked', isDone);
         el.closest('.task-item').classList.toggle('completed');
       }
+
+      // Add keyboard support for task toggles
+      document.addEventListener('keydown', function(e) {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-check')) {
+          e.preventDefault();
+          toggleTask(e.target);
+        }
+      });
     </script>
   `, 'Dashboard - Thrive Ortho EHR'))
 })
@@ -6529,7 +6538,7 @@ app.get('/doctor/intake', (c) => {
               <span id="micPermissionText">Checking microphone access...</span>
             </div>
             <div class="voice-area">
-              <button class="voice-btn" id="voiceBtn" onclick="toggleRecording()">
+              <button class="voice-btn" id="voiceBtn" onclick="toggleRecording()" aria-label="Start voice recording">
                 <i class="fas fa-microphone" id="voiceIcon"></i>
               </button>
               <div class="voice-status" id="voiceStatus">Tap microphone to start recording</div>
