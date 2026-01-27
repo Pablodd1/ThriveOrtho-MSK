@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercise Library - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+    <style>
+        body { 
+            background: #ffffff;
+            min-height: 100vh;
+        }
+        .exercise-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .exercise-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        .category-badge {
+            transition: all 0.2s;
+        }
+        .category-badge:hover {
+            transform: scale(1.05);
+        }
+        .category-badge.active {
+            background: #ffffff;
+            color: white;
+            font-weight: bold;
+        }
+        .video-thumbnail {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .video-thumbnail::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-thumbnail::after {
+            content: '▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-45%, -50%);
+            font-size: 24px;
+            color: #003D7A;
+            z-index: 1;
+        }
+        .search-bar {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .difficulty-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .difficulty-beginner { background: #d4edda; color: #155724; }
+        .difficulty-intermediate { background: #fff3cd; color: #856404; }
+        .difficulty-advanced { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-brand-blue to-blue-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-play-circle text-3xl"></i>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold">Exercise Library</h1>
+                            <p class="text-sm md:text-base text-blue-100">Professional PT Exercise Demonstrations</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/static/patient-dashboard.html" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        <span class="hidden md:inline">Back</span>
+                    </a>
+                    <a href="/" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                        <i class="fas fa-home"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        
+        <!-- Search Bar -->
+        <div class="bg-white rounded-xl shadow-lg p-4 search-bar">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input 
+                            type="text" 
+                            id="searchInput"
+                            placeholder="Search exercises (e.g., 'shoulder stretch', 'core strengthening'...)"
+                            class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-blue focus:outline-none"
+                            oninput="filterExercises()"
+                        >
+                    </div>
+                </div>
+                <select 
+                    id="difficultyFilter"
+                    class="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-blue focus:outline-none"
+                    onchange="filterExercises()"
+                >
+                    <option value="">All Difficulties</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fas fa-filter mr-2 text-brand-blue"></i>
+                Categories
+            </h3>
+            <div class="flex flex-wrap gap-3" id="categoryButtons">
+                <button onclick="filterByCategory('all')" class="category-badge active px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    All Exercises
+                </button>
+                <button onclick="filterByCategory('core')" class="category-badge px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    <i class="fas fa-dumbbell mr-2"></i>Core Stability
+                </button>
+                <button onclick="filterByCategory('flexibility')" class="category-badge px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    <i class="fas fa-spa mr-2"></i>Flexibility
+                </button>
+                <button onclick="filterByCategory('strength')" class="category-badge px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    <i class="fas fa-heartbeat mr-2"></i>Strength
+                </button>
+                <button onclick="filterByCategory('balance')" class="category-badge px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    <i class="fas fa-balance-scale mr-2"></i>Balance
+                </button>
+                <button onclick="filterByCategory('cardio')" class="category-badge px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    <i class="fas fa-running mr-2"></i>Cardio
+                </button>
+                <button onclick="filterByCategory('mobility')" class="category-badge px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold">
+                    <i class="fas fa-arrows-alt mr-2"></i>Mobility
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="flex justify-between items-center">
+            <div class="text-gray-700">
+                <span class="font-semibold" id="resultCount">24</span> exercises found
+            </div>
+            <select 
+                id="sortFilter"
+                class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-blue focus:outline-none"
+                onchange="sortExercises()"
+            >
+                <option value="name">Sort by Name</option>
+                <option value="difficulty">Sort by Difficulty</option>
+                <option value="popular">Most Popular</option>
+            </select>
+        </div>
+
+        <!-- Exercise Grid -->
+        <div id="exerciseGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Exercise cards will be inserted here -->
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="hidden text-center py-12">
+            <i class="fas fa-search text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-2xl font-bold text-gray-700 mb-2">No exercises found</h3>
+            <p class="text-gray-600">Try adjusting your search or filters</p>
+        </div>
+
+    </div>
+
+    <!-- Exercise Detail Modal -->
+    <div id="exerciseModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+                <h3 class="text-2xl font-bold text-gray-800" id="modalTitle">Exercise Name</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- Video Player -->
+                <div class="aspect-video bg-black rounded-lg flex items-center justify-center" id="modalVideo">
+                    <div class="text-white text-center">
+                        <i class="fas fa-video text-6xl mb-4 opacity-50"></i>
+                        <p class="text-gray-400">Video demonstration will be available soon</p>
+                    </div>
+                </div>
+
+                <!-- Exercise Meta Info -->
+                <div class="flex flex-wrap gap-4" id="modalMeta">
+                    <!-- Will be populated dynamically -->
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 mb-3">
+                        <i class="fas fa-info-circle mr-2 text-brand-blue"></i>Description
+                    </h4>
+                    <p class="text-gray-700" id="modalDescription"></p>
+                </div>
+
+                <!-- Instructions -->
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 mb-3">
+                        <i class="fas fa-list-ol mr-2 text-brand-blue"></i>Instructions
+                    </h4>
+                    <ol id="modalInstructions" class="space-y-2 text-gray-700">
+                        <!-- Instructions will be inserted here -->
+                    </ol>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                    <h4 class="font-bold text-gray-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>Tips & Safety
+                    </h4>
+                    <ul id="modalTips" class="space-y-1 text-sm text-gray-700">
+                        <!-- Tips will be inserted here -->
+                    </ul>
+                </div>
+
+                <!-- Targeted Muscles -->
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-bold text-gray-800 mb-2">
+                        <i class="fas fa-bullseye mr-2 text-brand-blue"></i>Targeted Muscles
+                    </h4>
+                    <div id="modalMuscles" class="flex flex-wrap gap-2">
+                        <!-- Muscle tags will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button onclick="addToMyProgram()" class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all">
+                        <i class="fas fa-plus-circle mr-2"></i>Add to My Program
+                    </button>
+                    <button onclick="toggleBookmark()" class="px-6 py-3 bg-yellow-100 text-yellow-700 rounded-lg font-semibold hover:bg-yellow-200 transition-colors">
+                        <i class="far fa-bookmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        const STATE = {
+            exercises: [],
+            filteredExercises: [],
+            currentCategory: 'all',
+            currentExercise: null,
+            bookmarks: []
+        };
+
+        // ============================================
+        // EXERCISE DATABASE
+        // ============================================
+        const EXERCISES = [
+            // Core Stability
+            {
+                id: 'ex1',
+                name: 'Pelvic Tilts',
+                category: 'core',
+                difficulty: 'beginner',
+                description: 'Gentle exercise to strengthen lower back and abdominal muscles while improving pelvic mobility.',
+                sets: 3,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Lie on your back with knees bent and feet flat on floor',
+                    'Tighten your abdominal muscles',
+                    'Tilt your pelvis upward, flattening your lower back against the floor',
+                    'Hold for 5 seconds, then release',
+                    'Repeat for prescribed repetitions'
+                ],
+                tips: [
+                    'Keep breathing throughout the exercise - don\'t hold your breath',
+                    'Movement should be gentle and controlled, not forced',
+                    'Stop if you feel sharp pain',
+                    'Focus on engaging your core muscles'
+                ],
+                muscles: ['Lower Back', 'Abdominals', 'Hip Flexors'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 95
+            },
+            {
+                id: 'ex2',
+                name: 'Bird Dogs',
+                category: 'core',
+                difficulty: 'intermediate',
+                description: 'Dynamic core stability exercise that challenges balance and coordination while strengthening the back and abdominal muscles.',
+                sets: 3,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Start on hands and knees in tabletop position',
+                    'Keep your back straight and core engaged',
+                    'Extend your right arm forward and left leg back simultaneously',
+                    'Keep your hips level - don\'t rotate',
+                    'Hold for 3 seconds, then return to start',
+                    'Repeat on opposite side (left arm, right leg)'
+                ],
+                tips: [
+                    'Focus on balance and control rather than speed',
+                    'Keep your hips level throughout the movement',
+                    'Imagine a glass of water on your back - don\'t spill it!',
+                    'Breathe steadily throughout the exercise'
+                ],
+                muscles: ['Core', 'Lower Back', 'Glutes', 'Shoulders'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 88
+            },
+            {
+                id: 'ex3',
+                name: 'Dead Bugs',
+                category: 'core',
+                difficulty: 'intermediate',
+                description: 'Core strengthening exercise that improves coordination and stabilizes the spine.',
+                sets: 3,
+                reps: 12,
+                duration: null,
+                instructions: [
+                    'Lie on your back with arms extended toward ceiling',
+                    'Lift both legs with knees bent at 90 degrees',
+                    'Slowly lower your right arm overhead and extend your left leg',
+                    'Keep your lower back pressed firmly to the floor',
+                    'Return to start position',
+                    'Repeat on opposite side'
+                ],
+                tips: [
+                    'Don\'t let your back arch off the floor',
+                    'Move slowly and controlled',
+                    'Keep your core engaged throughout',
+                    'Exhale as you extend, inhale as you return'
+                ],
+                muscles: ['Abdominals', 'Hip Flexors', 'Obliques'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 82
+            },
+            {
+                id: 'ex4',
+                name: 'Plank Hold',
+                category: 'core',
+                difficulty: 'intermediate',
+                description: 'Isometric core exercise that builds endurance and stability in the entire core region.',
+                sets: 3,
+                reps: null,
+                duration: 30,
+                instructions: [
+                    'Start in push-up position or on forearms',
+                    'Keep your body in a straight line from head to heels',
+                    'Engage your core and squeeze your glutes',
+                    'Don\'t let your hips sag or pike up',
+                    'Hold for prescribed duration',
+                    'Breathe normally throughout'
+                ],
+                tips: [
+                    'Imagine pulling your belly button to your spine',
+                    'Keep your neck neutral - look at the floor',
+                    'If too difficult, drop to knees',
+                    'Start with shorter holds and build up'
+                ],
+                muscles: ['Core', 'Shoulders', 'Glutes', 'Quads'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 92
+            },
+            
+            // Flexibility
+            {
+                id: 'ex5',
+                name: 'Cat-Cow Stretch',
+                category: 'flexibility',
+                difficulty: 'beginner',
+                description: 'Gentle spinal mobility exercise that improves flexibility and relieves back tension.',
+                sets: 2,
+                reps: 15,
+                duration: null,
+                instructions: [
+                    'Start on hands and knees in tabletop position',
+                    'Arch your back downward (cow), lifting head and tailbone',
+                    'Hold for 2 seconds',
+                    'Round your back upward (cat), tucking chin and tailbone',
+                    'Hold for 2 seconds',
+                    'Flow smoothly between positions'
+                ],
+                tips: [
+                    'Move with your breath - inhale on cow, exhale on cat',
+                    'Keep movements slow and controlled',
+                    'Great for morning stiffness',
+                    'Focus on spinal movement, not arm strength'
+                ],
+                muscles: ['Spine', 'Back', 'Abdominals', 'Neck'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 90
+            },
+            {
+                id: 'ex6',
+                name: 'Knee to Chest',
+                category: 'flexibility',
+                difficulty: 'beginner',
+                description: 'Gentle lower back and hip flexor stretch that reduces tension and improves range of motion.',
+                sets: 3,
+                reps: 10,
+                duration: 30,
+                instructions: [
+                    'Lie on your back with both knees bent',
+                    'Bring one knee up toward your chest',
+                    'Hold behind your thigh or knee (not on kneecap)',
+                    'Pull gently for 20-30 seconds',
+                    'You should feel a gentle stretch in your lower back and hip',
+                    'Switch legs and repeat'
+                ],
+                tips: [
+                    'Keep the opposite leg bent or straight, whichever is more comfortable',
+                    'Don\'t pull too hard - stretch should be gentle',
+                    'Relax and breathe into the stretch',
+                    'Can do both knees together for deeper stretch'
+                ],
+                muscles: ['Lower Back', 'Hip Flexors', 'Glutes'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 85
+            },
+            {
+                id: 'ex7',
+                name: 'Standing Hamstring Stretch',
+                category: 'flexibility',
+                difficulty: 'beginner',
+                description: 'Classic hamstring flexibility exercise that improves leg flexibility and reduces lower back strain.',
+                sets: 2,
+                reps: 1,
+                duration: 30,
+                instructions: [
+                    'Stand and place one foot on a low stool or step',
+                    'Keep both legs straight (slight bend is okay)',
+                    'Lean forward from your hips, keeping back straight',
+                    'Reach toward your toes on the elevated leg',
+                    'Hold for 30 seconds',
+                    'Switch legs and repeat'
+                ],
+                tips: [
+                    'Don\'t bounce - hold the stretch steadily',
+                    'Keep your back straight, not rounded',
+                    'Use a chair for balance if needed',
+                    'You should feel the stretch behind your thigh'
+                ],
+                muscles: ['Hamstrings', 'Calves', 'Lower Back'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 78
+            },
+            {
+                id: 'ex8',
+                name: 'Child\'s Pose',
+                category: 'flexibility',
+                difficulty: 'beginner',
+                description: 'Restorative yoga pose that gently stretches the back, hips, and shoulders while promoting relaxation.',
+                sets: 1,
+                reps: 1,
+                duration: 60,
+                instructions: [
+                    'Kneel on the floor with big toes touching',
+                    'Sit back on your heels',
+                    'Lean forward and extend arms straight out',
+                    'Rest your forehead on the floor',
+                    'Relax and breathe deeply',
+                    'Hold for 60 seconds or longer'
+                ],
+                tips: [
+                    'Perfect for stress relief and relaxation',
+                    'Can widen knees if more comfortable',
+                    'Place pillow under forehead if needed',
+                    'Focus on deep, slow breathing'
+                ],
+                muscles: ['Back', 'Shoulders', 'Hips', 'Ankles'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 87
+            },
+
+            // Strength
+            {
+                id: 'ex9',
+                name: 'Wall Push-Ups',
+                category: 'strength',
+                difficulty: 'beginner',
+                description: 'Modified push-up that builds upper body strength with less intensity than floor push-ups.',
+                sets: 3,
+                reps: 12,
+                duration: null,
+                instructions: [
+                    'Stand arm\'s length from a wall',
+                    'Place hands on wall at shoulder height',
+                    'Keep your body straight from head to heels',
+                    'Bend elbows to bring chest toward wall',
+                    'Push back to starting position',
+                    'Repeat for prescribed reps'
+                ],
+                tips: [
+                    'The farther you stand from wall, the harder it gets',
+                    'Keep core engaged throughout',
+                    'Don\'t let your hips sag',
+                    'Exhale as you push away from wall'
+                ],
+                muscles: ['Chest', 'Shoulders', 'Triceps', 'Core'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 75
+            },
+            {
+                id: 'ex10',
+                name: 'Bodyweight Squats',
+                category: 'strength',
+                difficulty: 'beginner',
+                description: 'Fundamental lower body exercise that strengthens legs and improves functional movement.',
+                sets: 3,
+                reps: 15,
+                duration: null,
+                instructions: [
+                    'Stand with feet shoulder-width apart',
+                    'Toes pointing slightly outward',
+                    'Keep chest up and core engaged',
+                    'Bend knees and hips to lower down',
+                    'Go as low as comfortable (ideally thighs parallel to floor)',
+                    'Push through heels to stand back up'
+                ],
+                tips: [
+                    'Imagine sitting back into a chair',
+                    'Keep knees tracking over toes',
+                    'Weight should be in your heels',
+                    'Can hold onto chair for balance'
+                ],
+                muscles: ['Quadriceps', 'Glutes', 'Hamstrings', 'Core'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 93
+            },
+            {
+                id: 'ex11',
+                name: 'Glute Bridges',
+                category: 'strength',
+                difficulty: 'beginner',
+                description: 'Hip extension exercise that strengthens glutes and hamstrings while stabilizing the core.',
+                sets: 3,
+                reps: 12,
+                duration: null,
+                instructions: [
+                    'Lie on your back with knees bent, feet flat',
+                    'Arms at your sides, palms down',
+                    'Engage your core and squeeze glutes',
+                    'Lift hips up until body forms straight line from shoulders to knees',
+                    'Hold for 2 seconds at top',
+                    'Lower back down with control'
+                ],
+                tips: [
+                    'Push through your heels, not toes',
+                    'Don\'t overarch your back',
+                    'Squeeze glutes hard at the top',
+                    'Keep core tight throughout'
+                ],
+                muscles: ['Glutes', 'Hamstrings', 'Core', 'Lower Back'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 86
+            },
+            {
+                id: 'ex12',
+                name: 'Standing Calf Raises',
+                category: 'strength',
+                difficulty: 'beginner',
+                description: 'Ankle strengthening exercise that improves calf strength and ankle stability.',
+                sets: 3,
+                reps: 15,
+                duration: null,
+                instructions: [
+                    'Stand with feet hip-width apart',
+                    'Hold onto chair or wall for balance',
+                    'Rise up onto the balls of your feet',
+                    'Lift heels as high as comfortable',
+                    'Hold for 1 second at top',
+                    'Lower back down with control'
+                ],
+                tips: [
+                    'Keep movement slow and controlled',
+                    'For more challenge, do on edge of step',
+                    'Can do one leg at a time for progression',
+                    'Keep knees straight but not locked'
+                ],
+                muscles: ['Calves', 'Ankles', 'Feet'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 72
+            },
+
+            // Balance
+            {
+                id: 'ex13',
+                name: 'Single Leg Stand',
+                category: 'balance',
+                difficulty: 'beginner',
+                description: 'Basic balance exercise that improves stability and reduces fall risk.',
+                sets: 3,
+                reps: null,
+                duration: 30,
+                instructions: [
+                    'Stand near a wall or sturdy chair for support',
+                    'Lift one foot off the ground',
+                    'Balance on the other leg',
+                    'Hold for 30 seconds',
+                    'Switch legs and repeat',
+                    'Use support only if needed'
+                ],
+                tips: [
+                    'Focus on a fixed point ahead for better balance',
+                    'Start with hand on wall, progress to no support',
+                    'Keep standing knee slightly bent',
+                    'Try closing eyes for advanced challenge'
+                ],
+                muscles: ['Ankles', 'Core', 'Hip Stabilizers'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 68
+            },
+            {
+                id: 'ex14',
+                name: 'Heel-to-Toe Walk',
+                category: 'balance',
+                difficulty: 'intermediate',
+                description: 'Dynamic balance exercise that challenges coordination and stability.',
+                sets: 3,
+                reps: 20,
+                duration: null,
+                instructions: [
+                    'Stand with arms at sides or out for balance',
+                    'Place your heel directly in front of toes of other foot',
+                    'Walk forward in a straight line',
+                    'Each step should be heel-to-toe',
+                    'Take 20 steps forward',
+                    'Turn around and repeat back'
+                ],
+                tips: [
+                    'Imagine walking on a tightrope',
+                    'Keep your gaze forward, not down at feet',
+                    'Walk near a wall for safety if needed',
+                    'Start slowly, speed will come with practice'
+                ],
+                muscles: ['Ankles', 'Core', 'Hip Stabilizers', 'Legs'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 65
+            },
+
+            // Cardio
+            {
+                id: 'ex15',
+                name: 'Marching in Place',
+                category: 'cardio',
+                difficulty: 'beginner',
+                description: 'Low-impact cardiovascular exercise that improves circulation and warms up the body.',
+                sets: 3,
+                reps: null,
+                duration: 60,
+                instructions: [
+                    'Stand with feet hip-width apart',
+                    'Lift one knee up toward chest',
+                    'Lower it and immediately lift the other knee',
+                    'Swing arms naturally opposite to legs',
+                    'Continue alternating for 60 seconds',
+                    'Gradually increase pace as comfortable'
+                ],
+                tips: [
+                    'Keep your core engaged',
+                    'Lift knees as high as comfortable',
+                    'Can start slow and build up speed',
+                    'Add arm movements for more intensity'
+                ],
+                muscles: ['Hip Flexors', 'Core', 'Cardiovascular System'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 70
+            },
+            {
+                id: 'ex16',
+                name: 'Step-Ups',
+                category: 'cardio',
+                difficulty: 'intermediate',
+                description: 'Functional cardio exercise that strengthens legs while elevating heart rate.',
+                sets: 3,
+                reps: 12,
+                duration: null,
+                instructions: [
+                    'Stand in front of a sturdy step or platform',
+                    'Step up with right foot, bringing left foot up',
+                    'Step down with right foot first',
+                    'Repeat, alternating leading leg',
+                    'Use arms for momentum and balance',
+                    'Complete prescribed reps'
+                ],
+                tips: [
+                    'Start with low step height (4-6 inches)',
+                    'Keep entire foot on step - don\'t hang off edge',
+                    'Push through heel of stepping foot',
+                    'Hold dumbbells for added challenge'
+                ],
+                muscles: ['Quadriceps', 'Glutes', 'Hamstrings', 'Calves'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 74
+            },
+
+            // Mobility
+            {
+                id: 'ex17',
+                name: 'Shoulder Circles',
+                category: 'mobility',
+                difficulty: 'beginner',
+                description: 'Simple shoulder mobility exercise that reduces tension and improves range of motion.',
+                sets: 2,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Stand or sit with arms at your sides',
+                    'Lift shoulders up toward ears',
+                    'Roll shoulders back in circular motion',
+                    'Complete 10 circles backward',
+                    'Then reverse: 10 circles forward',
+                    'Keep movements smooth and controlled'
+                ],
+                tips: [
+                    'Keep neck relaxed',
+                    'Make full, large circles',
+                    'Can do both shoulders together or one at a time',
+                    'Great for desk workers'
+                ],
+                muscles: ['Shoulders', 'Upper Back', 'Neck'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 76
+            },
+            {
+                id: 'ex18',
+                name: 'Hip Circles',
+                category: 'mobility',
+                difficulty: 'beginner',
+                description: 'Hip mobility exercise that improves range of motion and reduces lower back tightness.',
+                sets: 2,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Stand with hands on hips',
+                    'Keep feet shoulder-width apart',
+                    'Move hips in large circular motion',
+                    'Complete 10 circles clockwise',
+                    'Then 10 circles counterclockwise',
+                    'Keep upper body relatively still'
+                ],
+                tips: [
+                    'Imagine drawing large circles with your hips',
+                    'Keep knees slightly bent',
+                    'Start small and gradually increase circle size',
+                    'Great warm-up before other exercises'
+                ],
+                muscles: ['Hips', 'Lower Back', 'Core', 'Obliques'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 71
+            },
+
+            // Additional exercises for variety
+            {
+                id: 'ex19',
+                name: 'Wall Angels',
+                category: 'mobility',
+                difficulty: 'beginner',
+                description: 'Shoulder blade and upper back mobility exercise that improves posture.',
+                sets: 3,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Stand with back against wall',
+                    'Press lower back, shoulders, and head against wall',
+                    'Raise arms to shoulder height, elbows bent 90 degrees',
+                    'Slowly slide arms up overhead while maintaining contact with wall',
+                    'Lower back down with control',
+                    'Keep all points touching wall throughout'
+                ],
+                tips: [
+                    'If you can\'t keep everything touching, that\'s okay - work on it',
+                    'Move slowly and controlled',
+                    'Great for reversing desk posture',
+                    'Do daily for best results'
+                ],
+                muscles: ['Shoulders', 'Upper Back', 'Scapula'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 79
+            },
+            {
+                id: 'ex20',
+                name: 'Seated Spinal Twist',
+                category: 'flexibility',
+                difficulty: 'beginner',
+                description: 'Gentle spinal rotation that improves thoracic mobility and relieves back tension.',
+                sets: 2,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Sit in chair with feet flat on floor',
+                    'Sit up tall with good posture',
+                    'Place right hand on left knee',
+                    'Place left hand behind you on chair',
+                    'Gently rotate torso to the left',
+                    'Hold for 5 seconds, then switch sides'
+                ],
+                tips: [
+                    'Keep hips facing forward',
+                    'Rotate from your mid-back, not your neck',
+                    'Don\'t force the stretch',
+                    'Breathe deeply into the stretch'
+                ],
+                muscles: ['Spine', 'Obliques', 'Back'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 73
+            },
+            {
+                id: 'ex21',
+                name: 'Ankle Pumps',
+                category: 'mobility',
+                difficulty: 'beginner',
+                description: 'Ankle mobility exercise that improves circulation and reduces stiffness.',
+                sets: 3,
+                reps: 20,
+                duration: null,
+                instructions: [
+                    'Sit or lie down with legs extended',
+                    'Point toes away from you (plantarflex)',
+                    'Then pull toes toward you (dorsiflex)',
+                    'Alternate smoothly between positions',
+                    'Complete 20 pumps',
+                    'Can do both feet together or alternating'
+                ],
+                tips: [
+                    'Great after sitting for long periods',
+                    'Excellent for preventing deep vein thrombosis',
+                    'Move through full range of motion',
+                    'Can do anytime, anywhere'
+                ],
+                muscles: ['Ankles', 'Calves', 'Shins'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 64
+            },
+            {
+                id: 'ex22',
+                name: 'Side-Lying Leg Lifts',
+                category: 'strength',
+                difficulty: 'beginner',
+                description: 'Hip abductor strengthening exercise that improves lateral hip stability.',
+                sets: 3,
+                reps: 12,
+                duration: null,
+                instructions: [
+                    'Lie on your side with legs stacked',
+                    'Support head with lower arm',
+                    'Keep top leg straight',
+                    'Lift top leg up toward ceiling',
+                    'Hold for 1 second at top',
+                    'Lower with control, repeat'
+                ],
+                tips: [
+                    'Don\'t rotate hips - stay stacked',
+                    'Lift from the hip, not by leaning back',
+                    'Toe should point forward, not up',
+                    'Add ankle weights for progression'
+                ],
+                muscles: ['Hip Abductors', 'Glutes', 'Outer Thigh'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 69
+            },
+            {
+                id: 'ex23',
+                name: 'Prone Arm Lifts (Superman)',
+                category: 'strength',
+                difficulty: 'intermediate',
+                description: 'Back extension exercise that strengthens the posterior chain.',
+                sets: 3,
+                reps: 10,
+                duration: null,
+                instructions: [
+                    'Lie face down with arms extended overhead',
+                    'Keep forehead on floor or small pillow',
+                    'Simultaneously lift arms, chest, and legs off floor',
+                    'Hold for 2-3 seconds',
+                    'Lower back down with control',
+                    'Repeat for prescribed reps'
+                ],
+                tips: [
+                    'Don\'t hyperextend - lift just a few inches',
+                    'Look down to keep neck neutral',
+                    'Squeeze glutes and back muscles',
+                    'Start with just arms or legs if full version too hard'
+                ],
+                muscles: ['Lower Back', 'Glutes', 'Shoulders', 'Hamstrings'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 77
+            },
+            {
+                id: 'ex24',
+                name: 'Seated Row (Resistance Band)',
+                category: 'strength',
+                difficulty: 'intermediate',
+                description: 'Upper back strengthening exercise using resistance band.',
+                sets: 3,
+                reps: 12,
+                duration: null,
+                instructions: [
+                    'Sit with legs extended, band around feet',
+                    'Hold band handles with arms extended',
+                    'Sit up tall with good posture',
+                    'Pull band toward torso, squeezing shoulder blades',
+                    'Keep elbows close to body',
+                    'Return to start with control'
+                ],
+                tips: [
+                    'Lead with elbows, not hands',
+                    'Squeeze shoulder blades together at end',
+                    'Keep chest up throughout',
+                    'Don\'t lean back - stay upright'
+                ],
+                muscles: ['Upper Back', 'Rhomboids', 'Biceps', 'Core'],
+                videoUrl: null,
+                imageUrl: null,
+                popularity: 81
+            }
+        ];
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.addEventListener('DOMContentLoaded', () => {
+            STATE.exercises = EXERCISES;
+            STATE.filteredExercises = EXERCISES;
+            loadBookmarks();
+            renderExercises();
+            updateResultCount();
+        });
+
+        // ============================================
+        // FILTERING
+        // ============================================
+        function filterByCategory(category) {
+            STATE.currentCategory = category;
+            
+            // Update active button
+            document.querySelectorAll('.category-badge').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.category-badge').classList.add('active');
+            
+            filterExercises();
+        }
+
+        function filterExercises() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const difficulty = document.getElementById('difficultyFilter').value;
+            
+            STATE.filteredExercises = STATE.exercises.filter(ex => {
+                // Category filter
+                const matchesCategory = STATE.currentCategory === 'all' || ex.category === STATE.currentCategory;
+                
+                // Search filter
+                const matchesSearch = !searchTerm || 
+                    ex.name.toLowerCase().includes(searchTerm) ||
+                    ex.description.toLowerCase().includes(searchTerm) ||
+                    ex.muscles.some(m => m.toLowerCase().includes(searchTerm));
+                
+                // Difficulty filter
+                const matchesDifficulty = !difficulty || ex.difficulty === difficulty;
+                
+                return matchesCategory && matchesSearch && matchesDifficulty;
+            });
+            
+            renderExercises();
+            updateResultCount();
+        }
+
+        function sortExercises() {
+            const sortBy = document.getElementById('sortFilter').value;
+            
+            STATE.filteredExercises.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'difficulty':
+                        const diffOrder = { beginner: 1, intermediate: 2, advanced: 3 };
+                        return diffOrder[a.difficulty] - diffOrder[b.difficulty];
+                    case 'popular':
+                        return b.popularity - a.popularity;
+                    default:
+                        return 0;
+                }
+            });
+            
+            renderExercises();
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderExercises() {
+            const grid = document.getElementById('exerciseGrid');
+            const noResults = document.getElementById('noResults');
+            
+            if (STATE.filteredExercises.length === 0) {
+                grid.classList.add('hidden');
+                noResults.classList.remove('hidden');
+                return;
+            }
+            
+            grid.classList.remove('hidden');
+            noResults.classList.add('hidden');
+            
+            grid.innerHTML = STATE.filteredExercises.map(ex => createExerciseCard(ex)).join('');
+        }
+
+        function createExerciseCard(exercise) {
+            const difficultyClass = `difficulty-${exercise.difficulty}`;
+            const isBookmarked = STATE.bookmarks.includes(exercise.id);
+            
+            return `
+                <div class="exercise-card bg-white rounded-xl shadow-lg overflow-hidden" onclick='openExerciseDetail(${JSON.stringify(exercise).replace(/'/g, "\\'")})'  >
+                    <div class="video-thumbnail"></div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">${exercise.name}</h3>
+                                <span class="difficulty-badge ${difficultyClass}">
+                                    ${exercise.difficulty.toUpperCase()}
+                                </span>
+                            </div>
+                            <button onclick="event.stopPropagation(); toggleBookmarkCard('${exercise.id}')" class="text-2xl ${isBookmarked ? 'text-yellow-500' : 'text-gray-300'}">
+                                <i class="fas fa-bookmark"></i>
+                            </button>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-2">${exercise.description}</p>
+                        
+                        <div class="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                            ${exercise.sets ? `<span><i class="fas fa-redo text-brand-blue mr-1"></i>${exercise.sets} sets</span>` : ''}
+                            ${exercise.reps ? `<span><i class="fas fa-hashtag text-brand-blue mr-1"></i>${exercise.reps} reps</span>` : ''}
+                            ${exercise.duration ? `<span><i class="fas fa-clock text-brand-blue mr-1"></i>${exercise.duration}s</span>` : ''}
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            ${exercise.muscles.slice(0, 3).map(m => 
+                                `<span class="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">${m}</span>`
+                            ).join('')}
+                            ${exercise.muscles.length > 3 ? `<span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">+${exercise.muscles.length - 3}</span>` : ''}
+                        </div>
+                        
+                        <button class="w-full py-2 bg-brand-blue text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-play mr-2"></i>View Details
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateResultCount() {
+            document.getElementById('resultCount').textContent = STATE.filteredExercises.length;
+        }
+
+        // ============================================
+        // MODAL
+        // ============================================
+        function openExerciseDetail(exercise) {
+            if (typeof exercise === 'string') {
+                exercise = JSON.parse(exercise);
+            }
+            
+            STATE.currentExercise = exercise;
+            
+            // Populate modal
+            document.getElementById('modalTitle').textContent = exercise.name;
+            document.getElementById('modalDescription').textContent = exercise.description;
+            
+            // Meta info
+            const difficultyClass = `difficulty-${exercise.difficulty}`;
+            const metaHTML = `
+                <div class="difficulty-badge ${difficultyClass}">${exercise.difficulty.toUpperCase()}</div>
+                ${exercise.sets ? `<div class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg font-semibold">
+                    <i class="fas fa-redo mr-2"></i>${exercise.sets} Sets
+                </div>` : ''}
+                ${exercise.reps ? `<div class="px-4 py-2 bg-green-50 text-green-700 rounded-lg font-semibold">
+                    <i class="fas fa-hashtag mr-2"></i>${exercise.reps} Reps
+                </div>` : ''}
+                ${exercise.duration ? `<div class="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg font-semibold">
+                    <i class="fas fa-clock mr-2"></i>${exercise.duration}s Hold
+                </div>` : ''}
+            `;
+            document.getElementById('modalMeta').innerHTML = metaHTML;
+            
+            // Instructions
+            const instructionsHTML = exercise.instructions.map((inst, i) => 
+                `<li class="flex gap-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center font-bold">
+                        ${i + 1}
+                    </span>
+                    <span class="pt-1">${inst}</span>
+                </li>`
+            ).join('');
+            document.getElementById('modalInstructions').innerHTML = instructionsHTML;
+            
+            // Tips
+            const tipsHTML = exercise.tips.map(tip => 
+                `<li class="flex gap-2">
+                    <i class="fas fa-check-circle text-yellow-500 mt-1"></i>
+                    <span>${tip}</span>
+                </li>`
+            ).join('');
+            document.getElementById('modalTips').innerHTML = tipsHTML;
+            
+            // Muscles
+            const musclesHTML = exercise.muscles.map(muscle => 
+                `<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                    ${muscle}
+                </span>`
+            ).join('');
+            document.getElementById('modalMuscles').innerHTML = musclesHTML;
+            
+            // Show modal
+            document.getElementById('exerciseModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('exerciseModal').classList.add('hidden');
+            STATE.currentExercise = null;
+        }
+
+        // ============================================
+        // BOOKMARKS
+        // ============================================
+        function loadBookmarks() {
+            const saved = localStorage.getItem('exerciseBookmarks');
+            STATE.bookmarks = saved ? JSON.parse(saved) : [];
+        }
+
+        function saveBookmarks() {
+            localStorage.setItem('exerciseBookmarks', JSON.stringify(STATE.bookmarks));
+        }
+
+        function toggleBookmark() {
+            if (!STATE.currentExercise) return;
+            
+            const id = STATE.currentExercise.id;
+            const index = STATE.bookmarks.indexOf(id);
+            
+            if (index > -1) {
+                STATE.bookmarks.splice(index, 1);
+            } else {
+                STATE.bookmarks.push(id);
+            }
+            
+            saveBookmarks();
+            renderExercises();
+        }
+
+        function toggleBookmarkCard(id) {
+            const index = STATE.bookmarks.indexOf(id);
+            
+            if (index > -1) {
+                STATE.bookmarks.splice(index, 1);
+            } else {
+                STATE.bookmarks.push(id);
+            }
+            
+            saveBookmarks();
+            renderExercises();
+        }
+
+        // ============================================
+        // ACTIONS
+        // ============================================
+        function addToMyProgram() {
+            if (!STATE.currentExercise) return;
+            
+            // In production, would send to API
+            alert(`✅ "${STATE.currentExercise.name}" added to your program!\n\nYou'll see it in your dashboard next time you login.`);
+            closeModal();
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('exerciseModal').addEventListener('click', (e) => {
+            if (e.target.id === 'exerciseModal') closeModal();
+        });
+    </script>
+    
+    <!-- Trainer AI Helper -->
+    <script src="/static/trainer-ai-helper.js"></script>
+    <script>
+        // Set exercise context for AI helper
+        window.addEventListener('load', () => {
+            if (window.trainerAI) {
+                window.trainerAI.setPatientContext({
+                    name: 'Patient',
+                    condition: 'Exercise library browsing'
+                });
+                // Update exercises when viewing details
+                const originalViewExercise = window.viewExercise;
+                window.viewExercise = function(exerciseId) {
+                    originalViewExercise(exerciseId);
+                    const exercise = STATE.exercises.find(ex => ex.id === exerciseId);
+                    if (exercise && window.trainerAI) {
+                        window.trainerAI.setExercises([exercise]);
+                    }
+                };
+            }
+        });
+    </script>
+    <!-- Human Oversight System -->
+    <script src="/static/human-oversight.js"></script>
+</body>
+</html>

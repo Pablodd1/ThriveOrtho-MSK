@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Scribe System Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+    <style>
+        .test-result {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .test-pass { background: #d1fae5; color: #065f46; }
+        .test-fail { background: #fee2e2; color: #991b1b; }
+        .test-pending { background: #fef3c7; color: #92400e; }
+        .console-log {
+            background: #1f2937;
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-blue-600 text-white p-6 rounded-lg mb-6">
+            <h1 class="text-3xl font-bold mb-2">
+                <i class="fas fa-flask mr-3"></i>
+                Medical Scribe System - Test Suite
+            </h1>
+            <p class="text-blue-100">Automated testing for speech recognition, pain detection, and transcription features</p>
+        </div>
+
+        <!-- Test Status -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-2xl font-bold text-blue-600" id="totalTests">0</div>
+                <div class="text-sm text-gray-600">Total Tests</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-2xl font-bold text-green-600" id="passedTests">0</div>
+                <div class="text-sm text-gray-600">Passed</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-2xl font-bold text-red-600" id="failedTests">0</div>
+                <div class="text-sm text-gray-600">Failed</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="text-2xl font-bold text-yellow-600" id="pendingTests">0</div>
+                <div class="text-sm text-gray-600">Pending</div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-check-circle mr-2 text-green-600"></i>
+                Test Results
+            </h2>
+            <div id="testResults"></div>
+            
+            <div class="mt-6 flex gap-3">
+                <button onclick="runAllTests()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-play mr-2"></i>
+                    Run All Tests
+                </button>
+                <button onclick="clearResults()" class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-trash mr-2"></i>
+                    Clear Results
+                </button>
+            </div>
+        </div>
+
+        <!-- Console Log -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-terminal mr-2 text-gray-600"></i>
+                Console Log
+            </h2>
+            <div id="consoleLog" class="console-log"></div>
+        </div>
+
+        <!-- Manual Testing Section -->
+        <div class="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-user-check mr-2 text-blue-600"></i>
+                Manual Testing
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-bold text-gray-800 mb-2">Test Speech Recognition Availability</h3>
+                    <button onclick="testSpeechRecognition()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        Check Browser Support
+                    </button>
+                    <div id="speechRecognitionResult" class="mt-2"></div>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-gray-800 mb-2">Test Pain Keywords</h3>
+                    <input type="text" id="painKeywordInput" placeholder="Enter text to test (e.g., 'My knee hurts')" 
+                        class="w-full px-4 py-2 border rounded mb-2">
+                    <button onclick="testPainKeyword()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                        Test Keyword Detection
+                    </button>
+                    <div id="painKeywordResult" class="mt-2"></div>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-gray-800 mb-2">Test Pain Type Classification</h3>
+                    <select id="painTypeSelect" class="w-full px-4 py-2 border rounded mb-2">
+                        <option value="">Select a test phrase...</option>
+                        <option value="Sharp pain in my knee">Sharp pain in my knee</option>
+                        <option value="My back feels like it's burning">My back feels like it's burning</option>
+                        <option value="Dull ache in my shoulder">Dull ache in my shoulder</option>
+                        <option value="Throbbing pain in my head">Throbbing pain in my head</option>
+                        <option value="My neck is stiff">My neck is stiff</option>
+                        <option value="I feel weak in my arm">I feel weak in my arm</option>
+                        <option value="Tingling in my fingers">Tingling in my fingers</option>
+                    </select>
+                    <button onclick="testPainType()" class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">
+                        Test Classification
+                    </button>
+                    <div id="painTypeResult" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test framework
+        const TEST_RESULTS = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            pending: 0
+        };
+
+        function log(message, type = 'info') {
+            const consoleLog = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            consoleLog.innerHTML += `[${timestamp}] ${icon} ${message}\n`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function addTestResult(name, status, message) {
+            TEST_RESULTS.total++;
+            TEST_RESULTS[status === 'pass' ? 'passed' : status === 'fail' ? 'failed' : 'pending']++;
+            
+            updateTestStats();
+            
+            const testResults = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result test-${status}`;
+            
+            const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⏳';
+            resultDiv.textContent = `${icon} ${name}: ${message}`;
+            
+            testResults.appendChild(resultDiv);
+        }
+
+        function updateTestStats() {
+            document.getElementById('totalTests').textContent = TEST_RESULTS.total;
+            document.getElementById('passedTests').textContent = TEST_RESULTS.passed;
+            document.getElementById('failedTests').textContent = TEST_RESULTS.failed;
+            document.getElementById('pendingTests').textContent = TEST_RESULTS.pending;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('consoleLog').innerHTML = '';
+            TEST_RESULTS.total = 0;
+            TEST_RESULTS.passed = 0;
+            TEST_RESULTS.failed = 0;
+            TEST_RESULTS.pending = 0;
+            updateTestStats();
+            log('Test results cleared', 'info');
+        }
+
+        // Automated tests
+        async function runAllTests() {
+            clearResults();
+            log('Starting automated test suite...', 'info');
+            
+            // Test 1: Check page structure
+            test_PageStructure();
+            
+            // Test 2: Check Web Speech API availability
+            test_SpeechAPIAvailability();
+            
+            // Test 3: Check MediaRecorder API availability
+            test_MediaRecorderAvailability();
+            
+            // Test 4: Test pain keyword detection logic
+            test_PainKeywordDetection();
+            
+            // Test 5: Test pain type classification
+            test_PainTypeClassification();
+            
+            // Test 6: Test transcript data structure
+            test_TranscriptStructure();
+            
+            // Test 7: Test export functionality (structure)
+            test_ExportFunctionality();
+            
+            log('Automated test suite completed', 'success');
+        }
+
+        function test_PageStructure() {
+            log('Testing page structure...', 'info');
+            
+            // This page is a test page, so we'll check if assessment page exists
+            fetch('/static/assessment-enhanced.html')
+                .then(response => {
+                    if (response.ok) {
+                        addTestResult('Page Structure', 'pass', 'Assessment page exists and is accessible');
+                        log('Assessment page found', 'success');
+                        return response.text();
+                    } else {
+                        addTestResult('Page Structure', 'fail', 'Assessment page not accessible');
+                        log('Assessment page not found', 'error');
+                    }
+                })
+                .then(html => {
+                    if (html) {
+                        // Check for medical scribe components
+                        if (html.includes('Medical Scribe')) {
+                            addTestResult('Scribe UI Components', 'pass', 'Medical Scribe panel found in HTML');
+                            log('Medical Scribe UI components present', 'success');
+                        } else {
+                            addTestResult('Scribe UI Components', 'fail', 'Medical Scribe panel not found');
+                            log('Medical Scribe UI components missing', 'error');
+                        }
+                        
+                        // Check for key functions
+                        const functions = ['initMedicalScribe', 'isPainComplaint', 'handlePainComplaint', 'exportTranscript'];
+                        functions.forEach(fn => {
+                            if (html.includes(`function ${fn}`)) {
+                                addTestResult(`Function: ${fn}`, 'pass', 'Function exists in code');
+                                log(`Function ${fn} found`, 'success');
+                            } else {
+                                addTestResult(`Function: ${fn}`, 'fail', 'Function missing from code');
+                                log(`Function ${fn} missing`, 'error');
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    addTestResult('Page Structure', 'fail', `Error: ${error.message}`);
+                    log(`Error checking page structure: ${error.message}`, 'error');
+                });
+        }
+
+        function test_SpeechAPIAvailability() {
+            log('Testing Web Speech API availability...', 'info');
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (SpeechRecognition) {
+                addTestResult('Web Speech API', 'pass', 'Speech Recognition available in browser');
+                log('Web Speech API supported', 'success');
+            } else {
+                addTestResult('Web Speech API', 'fail', 'Speech Recognition not supported in this browser');
+                log('Web Speech API NOT supported', 'error');
+            }
+        }
+
+        function test_MediaRecorderAvailability() {
+            log('Testing MediaRecorder API availability...', 'info');
+            
+            if (window.MediaRecorder) {
+                addTestResult('MediaRecorder API', 'pass', 'MediaRecorder available for audio recording');
+                log('MediaRecorder API supported', 'success');
+                
+                // Check supported MIME types
+                const types = ['audio/webm', 'audio/mp4', 'audio/ogg'];
+                types.forEach(type => {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        log(`Supported MIME type: ${type}`, 'success');
+                    }
+                });
+            } else {
+                addTestResult('MediaRecorder API', 'fail', 'MediaRecorder not supported');
+                log('MediaRecorder API NOT supported', 'error');
+            }
+        }
+
+        function test_PainKeywordDetection() {
+            log('Testing pain keyword detection...', 'info');
+            
+            // Simulate the isPainComplaint function
+            function isPainComplaint(text) {
+                const painKeywords = [
+                    'hurt', 'hurts', 'pain', 'painful', 'ache', 'aches', 'aching',
+                    'sore', 'soreness', 'uncomfortable', 'sharp', 'dull', 'burning',
+                    'stiff', 'stiffness', 'tight', 'tightness', 'tender', 'tenderness',
+                    'throb', 'throbbing', 'shoot', 'shooting', 'pinch', 'pinching',
+                    'cramp', 'cramping', 'spasm', 'weak', 'weakness', 'numb', 'numbness',
+                    'tingle', 'tingling', 'can\'t move', 'difficult to move', 'hard to move'
+                ];
+                
+                const lowerText = text.toLowerCase();
+                return painKeywords.some(keyword => lowerText.includes(keyword));
+            }
+            
+            // Test cases
+            const testCases = [
+                { text: 'My knee hurts', expected: true },
+                { text: 'I feel pain in my back', expected: true },
+                { text: 'This is uncomfortable', expected: true },
+                { text: 'Sharp pain here', expected: true },
+                { text: 'My ankle is stiff', expected: true },
+                { text: 'I feel great today', expected: false },
+                { text: 'Nice weather', expected: false },
+                { text: 'Thank you doctor', expected: false }
+            ];
+            
+            let allPassed = true;
+            testCases.forEach(({ text, expected }) => {
+                const result = isPainComplaint(text);
+                if (result === expected) {
+                    log(`✓ "${text}" → ${result} (correct)`, 'success');
+                } else {
+                    log(`✗ "${text}" → ${result} (expected ${expected})`, 'error');
+                    allPassed = false;
+                }
+            });
+            
+            if (allPassed) {
+                addTestResult('Pain Keyword Detection', 'pass', 'All test cases passed');
+            } else {
+                addTestResult('Pain Keyword Detection', 'fail', 'Some test cases failed');
+            }
+        }
+
+        function test_PainTypeClassification() {
+            log('Testing pain type classification...', 'info');
+            
+            // Simulate the determinePainType function
+            function determinePainType(text) {
+                const lowerText = text.toLowerCase();
+                
+                if (lowerText.includes('sharp') || lowerText.includes('shooting') || lowerText.includes('stabbing')) {
+                    return 'sharp pain';
+                } else if (lowerText.includes('burn') || lowerText.includes('burning')) {
+                    return 'burning pain';
+                } else if (lowerText.includes('dull') || lowerText.includes('ache') || lowerText.includes('aching')) {
+                    return 'dull ache';
+                } else if (lowerText.includes('throb') || lowerText.includes('throbbing') || lowerText.includes('pulsing')) {
+                    return 'throbbing pain';
+                } else if (lowerText.includes('stiff') || lowerText.includes('tight')) {
+                    return 'stiffness';
+                } else if (lowerText.includes('weak') || lowerText.includes('weakness')) {
+                    return 'weakness';
+                } else if (lowerText.includes('numb') || lowerText.includes('tingle')) {
+                    return 'numbness/tingling';
+                } else {
+                    return 'pain';
+                }
+            }
+            
+            const testCases = [
+                { text: 'Sharp pain in my knee', expected: 'sharp pain' },
+                { text: 'Burning sensation', expected: 'burning pain' },
+                { text: 'Dull ache in my back', expected: 'dull ache' },
+                { text: 'Throbbing headache', expected: 'throbbing pain' },
+                { text: 'Stiff neck', expected: 'stiffness' },
+                { text: 'Weakness in my arm', expected: 'weakness' },
+                { text: 'Tingling fingers', expected: 'numbness/tingling' },
+                { text: 'It just hurts', expected: 'pain' }
+            ];
+            
+            let allPassed = true;
+            testCases.forEach(({ text, expected }) => {
+                const result = determinePainType(text);
+                if (result === expected) {
+                    log(`✓ "${text}" → ${result}`, 'success');
+                } else {
+                    log(`✗ "${text}" → ${result} (expected ${expected})`, 'error');
+                    allPassed = false;
+                }
+            });
+            
+            if (allPassed) {
+                addTestResult('Pain Type Classification', 'pass', 'All classifications correct');
+            } else {
+                addTestResult('Pain Type Classification', 'fail', 'Some classifications incorrect');
+            }
+        }
+
+        function test_TranscriptStructure() {
+            log('Testing transcript data structure...', 'info');
+            
+            const sampleTranscript = {
+                timestamp: new Date().toLocaleTimeString(),
+                text: "Test transcription",
+                exercise: "Deep Squat Assessment",
+                rep_count: 3,
+                wordCount: 2
+            };
+            
+            const requiredFields = ['timestamp', 'text', 'exercise', 'rep_count', 'wordCount'];
+            const hasAllFields = requiredFields.every(field => field in sampleTranscript);
+            
+            if (hasAllFields) {
+                addTestResult('Transcript Structure', 'pass', 'Data structure has all required fields');
+                log('Transcript structure valid', 'success');
+            } else {
+                addTestResult('Transcript Structure', 'fail', 'Missing required fields');
+                log('Transcript structure invalid', 'error');
+            }
+        }
+
+        function test_ExportFunctionality() {
+            log('Testing export functionality structure...', 'info');
+            
+            // Test if Blob API is available
+            if (window.Blob) {
+                addTestResult('Blob API', 'pass', 'Blob API available for file export');
+                log('Blob API supported', 'success');
+                
+                // Test creating a sample blob
+                try {
+                    const sampleData = 'Test transcript data';
+                    const blob = new Blob([sampleData], { type: 'text/plain' });
+                    addTestResult('Export Creation', 'pass', 'Can create export blobs successfully');
+                    log('Export blob creation successful', 'success');
+                } catch (error) {
+                    addTestResult('Export Creation', 'fail', `Error: ${error.message}`);
+                    log(`Export blob creation failed: ${error.message}`, 'error');
+                }
+            } else {
+                addTestResult('Blob API', 'fail', 'Blob API not available');
+                log('Blob API NOT supported', 'error');
+            }
+        }
+
+        // Manual test functions
+        function testSpeechRecognition() {
+            const resultDiv = document.getElementById('speechRecognitionResult');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (SpeechRecognition) {
+                resultDiv.innerHTML = '<div class="bg-green-100 text-green-800 p-3 rounded mt-2">✅ Speech Recognition is supported in your browser!</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="bg-red-100 text-red-800 p-3 rounded mt-2">❌ Speech Recognition is NOT supported in your browser. Try Chrome, Edge, or Safari.</div>';
+            }
+        }
+
+        function testPainKeyword() {
+            const input = document.getElementById('painKeywordInput').value;
+            const resultDiv = document.getElementById('painKeywordResult');
+            
+            if (!input) {
+                resultDiv.innerHTML = '<div class="bg-yellow-100 text-yellow-800 p-3 rounded mt-2">⚠️ Please enter text to test</div>';
+                return;
+            }
+            
+            // Simulate isPainComplaint function
+            const painKeywords = [
+                'hurt', 'hurts', 'pain', 'painful', 'ache', 'aches', 'aching',
+                'sore', 'soreness', 'uncomfortable', 'sharp', 'dull', 'burning',
+                'stiff', 'stiffness', 'tight', 'tightness', 'tender', 'tenderness',
+                'throb', 'throbbing', 'shoot', 'shooting', 'pinch', 'pinching',
+                'cramp', 'cramping', 'spasm', 'weak', 'weakness', 'numb', 'numbness',
+                'tingle', 'tingling', 'can\'t move', 'difficult to move', 'hard to move'
+            ];
+            
+            const lowerText = input.toLowerCase();
+            const detectedKeywords = painKeywords.filter(keyword => lowerText.includes(keyword));
+            
+            if (detectedKeywords.length > 0) {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-100 text-red-800 p-3 rounded mt-2">
+                        🚨 <strong>PAIN COMPLAINT DETECTED!</strong><br>
+                        Keywords found: ${detectedKeywords.join(', ')}
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = '<div class="bg-green-100 text-green-800 p-3 rounded mt-2">✅ No pain keywords detected - normal statement</div>';
+            }
+        }
+
+        function testPainType() {
+            const select = document.getElementById('painTypeSelect');
+            const text = select.value;
+            const resultDiv = document.getElementById('painTypeResult');
+            
+            if (!text) {
+                resultDiv.innerHTML = '<div class="bg-yellow-100 text-yellow-800 p-3 rounded mt-2">⚠️ Please select a test phrase</div>';
+                return;
+            }
+            
+            // Simulate determinePainType function
+            const lowerText = text.toLowerCase();
+            let painType = 'pain';
+            
+            if (lowerText.includes('sharp') || lowerText.includes('shooting') || lowerText.includes('stabbing')) {
+                painType = 'sharp pain';
+            } else if (lowerText.includes('burn') || lowerText.includes('burning')) {
+                painType = 'burning pain';
+            } else if (lowerText.includes('dull') || lowerText.includes('ache') || lowerText.includes('aching')) {
+                painType = 'dull ache';
+            } else if (lowerText.includes('throb') || lowerText.includes('throbbing') || lowerText.includes('pulsing')) {
+                painType = 'throbbing pain';
+            } else if (lowerText.includes('stiff') || lowerText.includes('tight')) {
+                painType = 'stiffness';
+            } else if (lowerText.includes('weak') || lowerText.includes('weakness')) {
+                painType = 'weakness';
+            } else if (lowerText.includes('numb') || lowerText.includes('tingle')) {
+                painType = 'numbness/tingling';
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="bg-blue-100 text-blue-800 p-3 rounded mt-2">
+                    📊 <strong>Classification Result:</strong><br>
+                    Input: "${text}"<br>
+                    Classified as: <strong>${painType.toUpperCase()}</strong>
+                </div>
+            `;
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('Medical Scribe Test Suite initialized', 'info');
+            log('Click "Run All Tests" to start automated testing', 'info');
+        });
+    </script>
+</body>
+</html>

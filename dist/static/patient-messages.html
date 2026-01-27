@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-brand-blue text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="history.back()" class="text-white hover:text-brand-green transition">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-comments mr-2 text-brand-green"></i>
+                        Messages
+                    </h1>
+                </div>
+                <button onclick="showNewMessageModal()" 
+                        class="bg-brand-green text-brand-blue px-4 py-2 rounded-lg hover:bg-yellow-500 transition">
+                    <i class="fas fa-plus mr-2"></i>
+                    New Message
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Conversations List -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md">
+                    <div class="p-4 border-b">
+                        <h2 class="font-bold text-gray-800">Conversations</h2>
+                    </div>
+                    <div id="threadsList" class="divide-y max-h-[600px] overflow-y-auto">
+                        <div class="p-4 text-center text-gray-400">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>Loading messages...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Conversation -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md h-[600px] flex flex-col">
+                    <div id="conversationHeader" class="p-4 border-b hidden">
+                        <h3 class="font-bold text-gray-800" id="conversationTitle">Select a conversation</h3>
+                        <p class="text-sm text-gray-500" id="conversationWith"></p>
+                    </div>
+
+                    <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div class="flex items-center justify-center h-full text-gray-400">
+                            <div class="text-center">
+                                <i class="fas fa-comments text-6xl mb-4"></i>
+                                <p>Select a conversation or start a new one</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="replySection" class="p-4 border-t hidden">
+                        <div class="flex space-x-2">
+                            <input type="text" 
+                                   id="replyInput" 
+                                   placeholder="Type your message..."
+                                   class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue"
+                                   onkeypress="if(event.key==='Enter') sendReply()">
+                            <button onclick="sendReply()" 
+                                    class="bg-brand-blue text-white px-6 py-2 rounded-lg hover:bg-blue-900 transition">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Message Modal -->
+    <div id="newMessageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full">
+            <div class="border-b px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-gray-800">New Message</h3>
+                <button onclick="closeNewMessageModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        To: Your Physical Therapist
+                    </label>
+                    <input type="text" 
+                           value="Your Therapist" 
+                           disabled
+                           class="w-full px-4 py-2 border rounded-lg bg-gray-50">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Subject
+                    </label>
+                    <input type="text" 
+                           id="newMessageSubject"
+                           placeholder="What's this about?"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Message
+                    </label>
+                    <textarea id="newMessageText" 
+                              rows="6"
+                              placeholder="Type your message here..."
+                              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue"></textarea>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button onclick="sendNewMessage()" 
+                            class="flex-1 bg-brand-blue text-white px-6 py-3 rounded-lg hover:bg-blue-900 transition">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Send Message
+                    </button>
+                    <button onclick="closeNewMessageModal()" 
+                            class="px-6 py-3 border rounded-lg hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script>
+        let currentPatient = null;
+        let allMessages = [];
+        let threads = {};
+        let currentThread = null;
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = JSON.parse(localStorage.getItem('patientSession') || 'null');
+            if (!session) {
+                window.location.href = '/static/patient-login.html';
+                return;
+            }
+
+            currentPatient = session;
+            loadMessages();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(loadMessages, 30000);
+        });
+
+        // Load all messages
+        async function loadMessages() {
+            try {
+                const response = await axios.get(`/api/patient/${currentPatient.id}/messages`);
+                
+                if (response.data.success) {
+                    allMessages = response.data.messages;
+                    threads = response.data.threads;
+                    displayThreadsList();
+                    
+                    // Reload current thread if viewing one
+                    if (currentThread) {
+                        displayThread(currentThread);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('threadsList').innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p>Failed to load messages</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display threads list
+        function displayThreadsList() {
+            const container = document.getElementById('threadsList');
+            
+            if (Object.keys(threads).length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 text-center text-gray-400">
+                        <i class="fas fa-inbox text-3xl mb-2"></i>
+                        <p>No messages yet</p>
+                        <button onclick="showNewMessageModal()" 
+                                class="mt-3 text-brand-blue hover:underline">
+                            Start a conversation
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort threads by most recent message
+            const sortedThreads = Object.entries(threads).sort((a, b) => {
+                const lastA = a[1][a[1].length - 1].sent_at;
+                const lastB = b[1][b[1].length - 1].sent_at;
+                return new Date(lastB) - new Date(lastA);
+            });
+
+            container.innerHTML = sortedThreads.map(([threadId, messages]) => {
+                const lastMessage = messages[messages.length - 1];
+                const firstMessage = messages[0];
+                const unreadCount = messages.filter(m => m.sender_type === 'therapist' && !m.is_read).length;
+                const isPriority = messages.some(m => m.is_priority);
+
+                return `
+                    <div class="p-4 hover:bg-gray-50 cursor-pointer transition ${currentThread == threadId ? 'bg-blue-50' : ''}"
+                         onclick="selectThread('${threadId}')">
+                        <div class="flex items-start justify-between mb-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-gray-800">
+                                    ${firstMessage.clinician_name}
+                                </span>
+                                ${isPriority ? '<i class="fas fa-exclamation-circle text-red-500"></i>' : ''}
+                            </div>
+                            <span class="text-xs text-gray-500">
+                                ${formatTime(lastMessage.sent_at)}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-800 font-medium mb-1">
+                            ${firstMessage.message_subject}
+                        </p>
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-600 truncate flex-1">
+                                ${lastMessage.sender_type === 'patient' ? 'You: ' : ''}
+                                ${lastMessage.message_text.substring(0, 50)}${lastMessage.message_text.length > 50 ? '...' : ''}
+                            </p>
+                            ${unreadCount > 0 ? `
+                                <span class="ml-2 bg-brand-blue text-white text-xs px-2 py-1 rounded-full">
+                                    ${unreadCount}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select thread to view
+        function selectThread(threadId) {
+            currentThread = threadId;
+            displayThread(threadId);
+            displayThreadsList(); // Refresh to update selection highlight
+        }
+
+        // Display thread messages
+        function displayThread(threadId) {
+            const messages = threads[threadId];
+            if (!messages || messages.length === 0) return;
+
+            const firstMessage = messages[0];
+            
+            // Update header
+            document.getElementById('conversationHeader').classList.remove('hidden');
+            document.getElementById('conversationTitle').textContent = firstMessage.message_subject;
+            document.getElementById('conversationWith').textContent = `Conversation with ${firstMessage.clinician_name}`;
+
+            // Display messages
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = messages.map(msg => {
+                const isPatient = msg.sender_type === 'patient';
+                
+                return `
+                    <div class="flex ${isPatient ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-[80%]">
+                            <div class="flex items-center space-x-2 mb-1 ${isPatient ? 'justify-end' : 'justify-start'}">
+                                <span class="text-xs text-gray-500">
+                                    ${isPatient ? 'You' : msg.clinician_name}
+                                </span>
+                                <span class="text-xs text-gray-400">
+                                    ${formatDateTime(msg.sent_at)}
+                                </span>
+                            </div>
+                            <div class="${isPatient ? 'bg-brand-blue text-white' : 'bg-gray-100 text-gray-800'} 
+                                        px-4 py-3 rounded-lg">
+                                <p class="whitespace-pre-wrap">${msg.message_text}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+
+            // Show reply section
+            document.getElementById('replySection').classList.remove('hidden');
+
+            // Mark unread messages as read
+            markThreadAsRead(messages);
+        }
+
+        // Mark messages as read
+        async function markThreadAsRead(messages) {
+            for (const msg of messages) {
+                if (msg.sender_type === 'therapist' && !msg.is_read) {
+                    try {
+                        await axios.put(`/api/patient/${currentPatient.id}/messages/${msg.id}/read`);
+                        msg.is_read = 1; // Update local state
+                    } catch (error) {
+                        console.error('Error marking message as read:', error);
+                    }
+                }
+            }
+        }
+
+        // Send reply
+        async function sendReply() {
+            const input = document.getElementById('replyInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            if (!currentThread) {
+                alert('Please select a conversation first');
+                return;
+            }
+
+            const threadMessages = threads[currentThread];
+            const parentMessage = threadMessages[threadMessages.length - 1];
+
+            try {
+                const response = await axios.post(`/api/patient/${currentPatient.id}/messages`, {
+                    subject: parentMessage.message_subject,
+                    message: message,
+                    parentMessageId: parentMessage.id
+                });
+
+                if (response.data.success) {
+                    input.value = '';
+                    loadMessages(); // Reload to show new message
+                }
+            } catch (error) {
+                console.error('Error sending reply:', error);
+                alert('Failed to send message. Please try again.');
+            }
+        }
+
+        // Show new message modal
+        function showNewMessageModal() {
+            document.getElementById('newMessageModal').classList.remove('hidden');
+            document.getElementById('newMessageSubject').value = '';
+            document.getElementById('newMessageText').value = '';
+        }
+
+        // Close new message modal
+        function closeNewMessageModal() {
+            document.getElementById('newMessageModal').classList.add('hidden');
+        }
+
+        // Send new message
+        async function sendNewMessage() {
+            const subject = document.getElementById('newMessageSubject').value.trim();
+            const message = document.getElementById('newMessageText').value.trim();
+
+            if (!subject) {
+                alert('Please enter a subject');
+                return;
+            }
+
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            try {
+                const response = await axios.post(`/api/patient/${currentPatient.id}/messages`, {
+                    subject,
+                    message
+                });
+
+                if (response.data.success) {
+                    closeNewMessageModal();
+                    loadMessages();
+                    alert('Message sent successfully!');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message. Please try again.');
+            }
+        }
+
+        // Helper functions
+        function formatTime(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function formatDateTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeNewMessageModal();
+        });
+    </script>
+    
+    <!-- Trainer AI Helper -->
+    <script src="/static/trainer-ai-helper.js"></script>
+</body>
+</html>

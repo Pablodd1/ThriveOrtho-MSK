@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercise Prescription - F-AI bian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-orange': '#FF6B35',
+              'brand-blue': '#004E89'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <header class="bg-gradient-to-r from-brand-blue to-brand-orange text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                <h1 class="text-3xl font-bold">
+                    <i class="fas fa-dumbbell mr-3"></i>
+                    Exercise Prescription
+                </h1>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-8">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Select Exercises from Library</h2>
+                
+                <div id="exerciseLibrary" class="grid md:grid-cols-2 gap-4 mb-8"></div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Program Details</h3>
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Program Name</label>
+                            <input type="text" id="programName" value="Personalized Rehabilitation Program" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Frequency (days/week)</label>
+                            <input type="number" id="frequency" value="5" min="1" max="7" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    
+                    <button onclick="createPrescription()" class="px-8 py-3 bg-gradient-to-r from-brand-orange to-brand-blue text-white rounded-md hover:shadow-lg transition-shadow">
+                        <i class="fas fa-check mr-2"></i>
+                        Create Prescription
+                    </button>
+                </div>
+            </div>
+
+            <div id="statusMessage" class="hidden mt-6 p-4 rounded-md"></div>
+        </main>
+    </div>
+
+    <script>
+        const STATE = {
+            assessmentId: new URLSearchParams(window.location.search).get('assessment_id'),
+            patientId: null,
+            exercises: [],
+            selectedExercises: []
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadAssessmentInfo();
+            await loadExercises();
+        });
+
+        async function loadAssessmentInfo() {
+            try {
+                const response = await fetch(`/api/assessments/${STATE.assessmentId}`);
+                const result = await response.json();
+                if (result.success) {
+                    STATE.patientId = result.data.assessment.patient_id;
+                }
+            } catch (error) {
+                console.error('Failed to load assessment:', error);
+            }
+        }
+
+        async function loadExercises() {
+            try {
+                const response = await fetch('/api/exercises');
+                const result = await response.json();
+                
+                if (result.success) {
+                    STATE.exercises = result.data;
+                    displayExercises(result.data);
+                }
+            } catch (error) {
+                showStatus('Failed to load exercises: ' + error.message, 'error');
+            }
+        }
+
+        function displayExercises(exercises) {
+            const container = document.getElementById('exerciseLibrary');
+            container.innerHTML = exercises.slice(0, 10).map(ex => `
+                <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-start">
+                        <input type="checkbox" id="ex_${ex.id}" class="mt-1 mr-3" onchange="toggleExercise(${ex.id})">
+                        <div class="flex-1">
+                            <label for="ex_${ex.id}" class="font-bold text-gray-800 cursor-pointer">${ex.name}</label>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded">${ex.category}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">${ex.description}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleExercise(exerciseId) {
+            const index = STATE.selectedExercises.indexOf(exerciseId);
+            if (index > -1) {
+                STATE.selectedExercises.splice(index, 1);
+            } else {
+                STATE.selectedExercises.push(exerciseId);
+            }
+        }
+
+        async function createPrescription() {
+            if (STATE.selectedExercises.length === 0) {
+                showStatus('Please select at least one exercise', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Creating prescription...', 'info');
+                
+                // Create prescription
+                const prescriptionResponse = await fetch('/api/prescriptions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: STATE.patientId,
+                        assessment_id: STATE.assessmentId,
+                        program_name: document.getElementById('programName').value,
+                        program_goals: ['Improve mobility', 'Increase strength', 'Enhance balance'],
+                        frequency_per_week: parseInt(document.getElementById('frequency').value),
+                        estimated_duration_minutes: 30,
+                        clinician_notes: 'Based on assessment findings',
+                        patient_instructions: 'Perform exercises as demonstrated'
+                    })
+                });
+                
+                const prescriptionResult = await prescriptionResponse.json();
+                const prescriptionId = prescriptionResult.data.id;
+                
+                // Add exercises to prescription
+                for (const exerciseId of STATE.selectedExercises) {
+                    await fetch('/api/prescribed-exercises', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prescription_id: prescriptionId,
+                            exercise_id: exerciseId,
+                            sets: 3,
+                            reps: 10,
+                            frequency_per_week: parseInt(document.getElementById('frequency').value),
+                            clinical_reason: 'Address identified deficiencies',
+                            target_deficiency: 'Movement limitations'
+                        })
+                    });
+                }
+                
+                showStatus('✅ Prescription created successfully! Redirecting to dashboard...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/static/dashboard.html';
+                }, 2000);
+                
+            } catch (error) {
+                showStatus('Error creating prescription: ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `mt-6 p-4 rounded-md ${
+                type === 'success' ? 'bg-green-100 text-green-700' :
+                type === 'error' ? 'bg-red-100 text-red-700' :
+                'bg-blue-100 text-blue-700'
+            }`;
+            statusDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

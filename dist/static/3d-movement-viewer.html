@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Movement Analysis - Dual View</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Three.js via import map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .view-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+        
+        .view-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        
+        #timeline-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, #3b82f6 0%, #3b82f6 0%, #e5e7eb 0%, #e5e7eb 100%);
+            outline: none;
+        }
+        
+        #timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        #timeline-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary {
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .speed-btn {
+            transition: all 0.2s;
+        }
+        
+        .speed-btn-active {
+            background: #3b82f6 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">
+                            <i class="fas fa-cube text-blue-600 mr-2"></i>
+                            3D Movement Analysis
+                        </h1>
+                        <p class="text-gray-600 mt-2">
+                            Interactive dual-view with full 360° rotation control
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="/static/human-dashboard.html" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold">
+                            <i class="fas fa-arrow-left mr-2"></i>Dashboard
+                        </a>
+                        <button onclick="showHelp()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                            <i class="fas fa-question-circle mr-2"></i>Help
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dual 3D Views -->
+            <div class="grid lg:grid-cols-2 gap-6 mb-6">
+                <!-- Medical Skeleton View -->
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-user-md text-blue-600 mr-2"></i>
+                        Clinical Skeleton View
+                        <span class="ml-auto text-sm font-normal text-gray-600">For Providers</span>
+                    </h2>
+                    <div class="view-container" style="height: 500px;">
+                        <div class="view-label">
+                            <i class="fas fa-stethoscope mr-2"></i>Medical Grade
+                        </div>
+                        <div id="skeleton-view" style="width: 100%; height: 100%;"></div>
+                    </div>
+                    <div class="mt-3 text-sm text-gray-600 text-center">
+                        <i class="fas fa-mouse-pointer mr-1"></i>
+                        Drag to rotate • Scroll to zoom • Right-click to pan
+                    </div>
+                </div>
+
+                <!-- Realistic Avatar View -->
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-user text-green-600 mr-2"></i>
+                        Patient Avatar View
+                        <span class="ml-auto text-sm font-normal text-gray-600">For Education</span>
+                    </h2>
+                    <div class="view-container" style="height: 500px;">
+                        <div class="view-label" style="background: rgba(34, 197, 94, 0.9);">
+                            <i class="fas fa-graduation-cap mr-2"></i>Patient Friendly
+                        </div>
+                        <div id="avatar-view" style="width: 100%; height: 100%;"></div>
+                    </div>
+                    <div class="mt-3 text-sm text-gray-600 text-center">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Same controls • Synchronized playback
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playback Controls -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">
+                    <i class="fas fa-play-circle text-blue-600 mr-2"></i>
+                    Playback Controls
+                </h3>
+                
+                <!-- Play/Pause/Stop -->
+                <div class="flex gap-3 mb-4">
+                    <button onclick="playMovement()" id="play-btn" class="btn-primary px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-lg">
+                        <i class="fas fa-play mr-2"></i>Play
+                    </button>
+                    <button onclick="pauseMovement()" id="pause-btn" class="btn-primary px-8 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold text-lg">
+                        <i class="fas fa-pause mr-2"></i>Pause
+                    </button>
+                    <button onclick="stopMovement()" id="stop-btn" class="btn-primary px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-lg">
+                        <i class="fas fa-stop mr-2"></i>Stop
+                    </button>
+                </div>
+
+                <!-- Timeline Scrubber -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm font-semibold text-gray-700">
+                            <i class="fas fa-clock mr-1"></i>
+                            Timeline
+                        </label>
+                        <span class="text-sm font-semibold text-gray-700">
+                            <span id="current-time">0.0</span>s / <span id="total-time">10.0</span>s
+                        </span>
+                    </div>
+                    <input type="range" id="timeline-slider" min="0" max="300" value="0" 
+                           class="w-full cursor-pointer"
+                           oninput="seekToFrame(parseInt(this.value))">
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0:00</span>
+                        <span id="timeline-end">0:10</span>
+                    </div>
+                </div>
+
+                <!-- Playback Speed -->
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-semibold text-gray-700">
+                        <i class="fas fa-tachometer-alt mr-1"></i>
+                        Speed:
+                    </label>
+                    <button onclick="setSpeed(0.25)" class="speed-btn px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold">
+                        0.25x
+                    </button>
+                    <button onclick="setSpeed(0.5)" class="speed-btn px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold">
+                        0.5x
+                    </button>
+                    <button onclick="setSpeed(1.0)" class="speed-btn speed-btn-active px-4 py-2 rounded-lg font-semibold">
+                        1.0x
+                    </button>
+                    <button onclick="setSpeed(2.0)" class="speed-btn px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold">
+                        2.0x
+                    </button>
+                </div>
+            </div>
+
+            <!-- Camera Presets -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">
+                    <i class="fas fa-camera text-blue-600 mr-2"></i>
+                    Camera Views
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button onclick="viewFromFront()" class="btn-primary px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-user text-2xl mb-2"></i>
+                        <div class="text-sm">Front</div>
+                    </button>
+                    <button onclick="viewFromSide()" class="btn-primary px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-street-view text-2xl mb-2"></i>
+                        <div class="text-sm">Side</div>
+                    </button>
+                    <button onclick="viewFromTop()" class="btn-primary px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-arrow-down text-2xl mb-2"></i>
+                        <div class="text-sm">Top</div>
+                    </button>
+                    <button onclick="viewFromBehind()" class="btn-primary px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-eye-slash text-2xl mb-2"></i>
+                        <div class="text-sm">Behind</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Measurement Display -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">
+                    <i class="fas fa-ruler-combined text-blue-600 mr-2"></i>
+                    Real-Time Measurements
+                </h3>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                        <div class="text-xs font-semibold text-blue-800 mb-1">Left Knee</div>
+                        <div class="text-3xl font-bold text-blue-600" id="left-knee-angle">0°</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                        <div class="text-xs font-semibold text-green-800 mb-1">Right Knee</div>
+                        <div class="text-3xl font-bold text-green-600" id="right-knee-angle">0°</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                        <div class="text-xs font-semibold text-purple-800 mb-1">Left Hip</div>
+                        <div class="text-3xl font-bold text-purple-600" id="left-hip-angle">0°</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                        <div class="text-xs font-semibold text-orange-800 mb-1">Right Hip</div>
+                        <div class="text-3xl font-bold text-orange-600" id="right-hip-angle">0°</div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button onclick="toggleAngles()" class="btn-primary px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-eye mr-2"></i>
+                        <span id="toggle-angles-text">Hide Angle Overlays</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Export & Actions -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">
+                    <i class="fas fa-download text-blue-600 mr-2"></i>
+                    Export & Share
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <button onclick="captureScreenshots()" class="btn-primary px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-camera mr-2"></i>
+                        Screenshots
+                    </button>
+                    <button onclick="exportData()" class="btn-primary px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-file-export mr-2"></i>
+                        Export Data
+                    </button>
+                    <button onclick="shareView()" class="btn-primary px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-share-alt mr-2"></i>
+                        Share Link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Three.js OrbitControls (classic script for compatibility) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Load our 3D renderers -->
+    <script src="/static/3d-skeleton-renderer.js"></script>
+    <script src="/static/3d-avatar-renderer.js"></script>
+    
+    <!-- Main Application Script -->
+    <script>
+        let skeletonRenderer;
+        let avatarRenderer;
+        let currentSpeed = 1.0;
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Initializing 3D Movement Viewer...');
+            
+            // Create renderers
+            const skeletonContainer = document.getElementById('skeleton-view');
+            const avatarContainer = document.getElementById('avatar-view');
+            
+            skeletonRenderer = new SkeletonRenderer3D(skeletonContainer);
+            avatarRenderer = new AvatarRenderer3D(avatarContainer);
+            
+            // Setup frame update callback
+            skeletonRenderer.onFrameUpdate = updateTimeline;
+            avatarRenderer.onFrameUpdate = updateTimeline;
+            
+            // Load demo data (replace with actual API call)
+            await loadDemoRecording();
+            
+            console.log('✅ 3D Movement Viewer ready!');
+        });
+        
+        async function loadDemoRecording() {
+            // Try to load from URL parameter or use demo data
+            const urlParams = new URLParams(window.location.search);
+            const assessmentId = urlParams.get('id');
+            
+            if (assessmentId) {
+                // Load real assessment data
+                try {
+                    const response = await fetch(`/api/get-recorded-movement?id=${assessmentId}`);
+                    const data = await response.json();
+                    
+                    if (data.frames && data.frames.length > 0) {
+                        skeletonRenderer.loadRecording(data.frames);
+                        avatarRenderer.loadRecording(data.frames);
+                        
+                        const duration = data.frames.length / 30;  // Assuming 30 FPS
+                        document.getElementById('total-time').textContent = duration.toFixed(1);
+                        document.getElementById('timeline-end').textContent = `0:${Math.floor(duration).toString().padStart(2, '0')}`;
+                        document.getElementById('timeline-slider').max = data.frames.length - 1;
+                        
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Failed to load assessment:', error);
+                }
+            }
+            
+            // Fallback: Generate demo movement data
+            console.log('⚠️ No assessment ID provided, using demo data');
+            const demoFrames = generateDemoMovement();
+            skeletonRenderer.loadRecording(demoFrames);
+            avatarRenderer.loadRecording(demoFrames);
+            
+            const duration = demoFrames.length / 30;
+            document.getElementById('total-time').textContent = duration.toFixed(1);
+            document.getElementById('timeline-end').textContent = `0:${Math.floor(duration).toString().padStart(2, '0')}`;
+            document.getElementById('timeline-slider').max = demoFrames.length - 1;
+        }
+        
+        function generateDemoMovement() {
+            // Generate simple squat motion demo
+            const frames = [];
+            const numFrames = 180;  // 6 seconds at 30 FPS
+            
+            for (let i = 0; i < numFrames; i++) {
+                const t = i / numFrames;
+                const squatDepth = Math.sin(t * Math.PI * 2) * 0.3;  // Squat down and up
+                
+                const landmarks = createStandingPose(squatDepth);
+                frames.push({ landmarks, timestamp: i * 33 });
+            }
+            
+            return frames;
+        }
+        
+        function createStandingPose(squatDepth = 0) {
+            // Create MediaPipe-style landmarks for a standing pose
+            const baseY = 0.5 - squatDepth;
+            
+            return [
+                // 0: Nose
+                { x: 0.5, y: 0.2, z: 0, visibility: 1.0 },
+                // 1-10: Face (simplified)
+                ...Array(10).fill({ x: 0.5, y: 0.2, z: 0, visibility: 0.8 }),
+                // 11: Left shoulder
+                { x: 0.4, y: 0.35, z: 0, visibility: 1.0 },
+                // 12: Right shoulder
+                { x: 0.6, y: 0.35, z: 0, visibility: 1.0 },
+                // 13: Left elbow
+                { x: 0.35, y: 0.5, z: 0, visibility: 1.0 },
+                // 14: Right elbow
+                { x: 0.65, y: 0.5, z: 0, visibility: 1.0 },
+                // 15: Left wrist
+                { x: 0.32, y: 0.65, z: 0, visibility: 1.0 },
+                // 16: Right wrist
+                { x: 0.68, y: 0.65, z: 0, visibility: 1.0 },
+                // 17-22: Hands (simplified)
+                ...Array(6).fill({ x: 0.5, y: 0.65, z: 0, visibility: 0.8 }),
+                // 23: Left hip
+                { x: 0.45, y: baseY, z: 0, visibility: 1.0 },
+                // 24: Right hip
+                { x: 0.55, y: baseY, z: 0, visibility: 1.0 },
+                // 25: Left knee
+                { x: 0.45, y: baseY + 0.2 + squatDepth, z: 0, visibility: 1.0 },
+                // 26: Right knee
+                { x: 0.55, y: baseY + 0.2 + squatDepth, z: 0, visibility: 1.0 },
+                // 27: Left ankle
+                { x: 0.45, y: baseY + 0.4 + squatDepth * 2, z: 0, visibility: 1.0 },
+                // 28: Right ankle
+                { x: 0.55, y: baseY + 0.4 + squatDepth * 2, z: 0, visibility: 1.0 },
+                // 29-32: Feet
+                { x: 0.45, y: baseY + 0.45 + squatDepth * 2, z: 0, visibility: 1.0 },
+                { x: 0.55, y: baseY + 0.45 + squatDepth * 2, z: 0, visibility: 1.0 },
+                { x: 0.45, y: baseY + 0.45 + squatDepth * 2, z: 0.05, visibility: 1.0 },
+                { x: 0.55, y: baseY + 0.45 + squatDepth * 2, z: 0.05, visibility: 1.0 }
+            ];
+        }
+        
+        // Playback controls
+        function playMovement() {
+            skeletonRenderer.play();
+            avatarRenderer.play();
+        }
+        
+        function pauseMovement() {
+            skeletonRenderer.pause();
+            avatarRenderer.pause();
+        }
+        
+        function stopMovement() {
+            skeletonRenderer.stop();
+            avatarRenderer.stop();
+        }
+        
+        function seekToFrame(frame) {
+            skeletonRenderer.seekToFrame(frame);
+            avatarRenderer.seekToFrame(frame);
+        }
+        
+        function setSpeed(speed) {
+            currentSpeed = speed;
+            skeletonRenderer.setPlaybackSpeed(speed);
+            avatarRenderer.setPlaybackSpeed(speed);
+            
+            // Update UI
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('speed-btn-active');
+                btn.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+            });
+            event.target.classList.add('speed-btn-active');
+            event.target.classList.remove('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+        }
+        
+        // Camera controls
+        function viewFromFront() {
+            skeletonRenderer.viewFromFront();
+            avatarRenderer.viewFromFront();
+        }
+        
+        function viewFromSide() {
+            skeletonRenderer.viewFromSide();
+            avatarRenderer.viewFromSide();
+        }
+        
+        function viewFromTop() {
+            skeletonRenderer.viewFromTop();
+            avatarRenderer.viewFromTop();
+        }
+        
+        function viewFromBehind() {
+            skeletonRenderer.viewFromBehind();
+            avatarRenderer.viewFromBehind();
+        }
+        
+        // Measurements
+        function toggleAngles() {
+            skeletonRenderer.toggleAngleDisplay();
+            const text = document.getElementById('toggle-angles-text');
+            text.textContent = text.textContent.includes('Hide') ? 'Show Angle Overlays' : 'Hide Angle Overlays';
+        }
+        
+        function updateTimeline(currentFrame, totalFrames) {
+            const currentTime = currentFrame / 30;
+            document.getElementById('current-time').textContent = currentTime.toFixed(1);
+            document.getElementById('timeline-slider').value = currentFrame;
+            
+            // Update progress bar background
+            const percentage = (currentFrame / totalFrames) * 100;
+            document.getElementById('timeline-slider').style.background = 
+                `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
+            
+            // Update angle displays
+            const angles = skeletonRenderer.getCurrentAngles();
+            if (angles.leftKnee !== null) {
+                document.getElementById('left-knee-angle').textContent = angles.leftKnee.toFixed(0) + '°';
+            }
+            if (angles.rightKnee !== null) {
+                document.getElementById('right-knee-angle').textContent = angles.rightKnee.toFixed(0) + '°';
+            }
+            if (angles.leftHip !== null) {
+                document.getElementById('left-hip-angle').textContent = angles.leftHip.toFixed(0) + '°';
+            }
+            if (angles.rightHip !== null) {
+                document.getElementById('right-hip-angle').textContent = angles.rightHip.toFixed(0) + '°';
+            }
+        }
+        
+        // Export functions
+        function captureScreenshots() {
+            skeletonRenderer.captureScreenshot();
+            setTimeout(() => avatarRenderer.captureScreenshot(), 500);
+            alert('✅ Screenshots captured!\n\nSkeleton view and avatar view downloaded.');
+        }
+        
+        function exportData() {
+            const data = {
+                frames: skeletonRenderer.recordedFrames,
+                metadata: {
+                    totalFrames: skeletonRenderer.recordedFrames.length,
+                    duration: skeletonRenderer.recordedFrames.length / 30,
+                    exportDate: new Date().toISOString()
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `movement_data_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function shareView() {
+            const url = window.location.href;
+            if (navigator.share) {
+                navigator.share({
+                    title: '3D Movement Analysis',
+                    text: 'Check out this 3D movement analysis',
+                    url: url
+                });
+            } else {
+                navigator.clipboard.writeText(url);
+                alert('✅ Link copied to clipboard!');
+            }
+        }
+        
+        function showHelp() {
+            alert(`3D Movement Analysis - Quick Guide
+
+🎮 CONTROLS:
+• Drag to rotate camera 360°
+• Scroll to zoom in/out
+• Right-click + drag to pan
+
+⏯️ PLAYBACK:
+• Play/Pause/Stop buttons
+• Drag timeline to scrub
+• Speed controls (0.25x to 2.0x)
+
+📷 CAMERA VIEWS:
+• Front: Standard assessment view
+• Side: See sagittal plane
+• Top: Overhead perspective
+• Behind: Posterior analysis
+
+📊 MEASUREMENTS:
+• Real-time joint angles
+• Toggle overlays on skeleton
+• Bilateral comparison
+
+💾 EXPORT:
+• Screenshot both views
+• Export movement data (JSON)
+• Share link with colleagues
+
+💡 TIP: Use side view to spot compensations hidden from front!`);
+        }
+    </script>
+</body>
+</html>

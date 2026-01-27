@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Real-Time Movement Assessment - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+    <!-- MediaPipe Pose -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <!-- Chart.js for real-time graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { overflow-x: hidden; background: #ffffff; }
+        .camera-container { position: relative; width: 100%; height: 100%; }
+        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
+        #canvasElement { position: absolute; width: 100%; height: 100%; border-radius: 8px; }
+        .metrics-panel { 
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+        .graph-container {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .movement-cue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.02); }
+        }
+        .angle-indicator {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Step 1: Camera & Angle Selection -->
+    <div id="setupScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">
+                <i class="fas fa-video mr-2 text-brand-blue"></i>
+                Assessment Setup
+            </h2>
+            
+            <!-- Camera Angle Selection -->
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-700 mb-4">
+                    <i class="fas fa-camera mr-2"></i>
+                    Step 1: Select Camera Angle
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <button onclick="selectAngle('front')" id="btn-front" class="angle-btn border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <div class="text-5xl mb-3">👤</div>
+                        <h4 class="font-bold text-gray-800">Front View</h4>
+                        <p class="text-sm text-gray-600 mt-1">Anterior (0°)</p>
+                    </button>
+                    <button onclick="selectAngle('side')" id="btn-side" class="angle-btn border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <div class="text-5xl mb-3">🔄</div>
+                        <h4 class="font-bold text-gray-800">Side View</h4>
+                        <p class="text-sm text-gray-600 mt-1">Sagittal (90°)</p>
+                    </button>
+                    <button onclick="selectAngle('back')" id="btn-back" class="angle-btn border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <div class="text-5xl mb-3">🔙</div>
+                        <h4 class="font-bold text-gray-800">Back View</h4>
+                        <p class="text-sm text-gray-600 mt-1">Posterior (180°)</p>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Camera Type Selection -->
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-gray-700 mb-4">
+                    <i class="fas fa-device-mobile mr-2"></i>
+                    Step 2: Select Camera Type
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="initCamera('phone')" class="border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <i class="fas fa-mobile-alt text-4xl text-brand-blue mb-3"></i>
+                        <h4 class="font-bold text-gray-800">Phone</h4>
+                    </button>
+                    <button onclick="initCamera('webcam')" class="border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <i class="fas fa-laptop text-4xl text-brand-green mb-3"></i>
+                        <h4 class="font-bold text-gray-800">Laptop</h4>
+                    </button>
+                    <button onclick="initCamera('external')" class="border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <i class="fas fa-camera text-4xl text-brand-blue mb-3"></i>
+                        <h4 class="font-bold text-gray-800">External</h4>
+                    </button>
+                    <button onclick="initCamera('high_quality')" class="border-2 border-gray-200 rounded-lg p-6 hover:border-brand-blue hover:shadow-lg transition-all">
+                        <i class="fas fa-cube text-4xl text-brand-green mb-3"></i>
+                        <h4 class="font-bold text-gray-800">Pro</h4>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="bg-blue-50 border-l-4 border-brand-blue p-4 rounded-lg">
+                <h4 class="font-bold text-gray-800 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Camera Positioning
+                </h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• <strong>Distance:</strong> 8-10 feet from patient</li>
+                    <li>• <strong>Height:</strong> Chest level (not too high or low)</li>
+                    <li>• <strong>Framing:</strong> Full body visible from head to feet</li>
+                    <li>• <strong>Lighting:</strong> Bright, even lighting preferred</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Assessment View -->
+    <div id="assessmentView" class="hidden">
+        <!-- Header -->
+        <div class="bg-brand-blue text-white p-4 shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold">Deep Overhead Squat Assessment</h1>
+                    <p id="patientInfo" class="text-sm opacity-90"></p>
+                    <p class="text-xs opacity-75">
+                        <i class="fas fa-camera mr-1"></i>
+                        <span id="currentAngle">Front View</span> | 
+                        <span id="currentRep">Rep 0/5</span>
+                    </p>
+                </div>
+                <div>
+                    <div id="fmsScore" class="text-center">
+                        <div class="text-3xl font-bold">-</div>
+                        <div class="text-xs">FMS Score</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Assessment Area -->
+        <div class="flex flex-col lg:flex-row" style="height: calc(100vh - 80px);">
+            <!-- Left: Camera Feed (80% width on desktop) -->
+            <div class="w-full lg:w-4/5 bg-black relative" style="height: 60vh; lg:height: 100%;">
+                <div class="camera-container h-full">
+                    <video id="videoElement" autoplay playsinline></video>
+                    <canvas id="canvasElement"></canvas>
+                    
+                    <!-- Real-time angle indicators on body -->
+                    <div id="angleBubbles"></div>
+                    
+                    <!-- Movement Phase Indicator -->
+                    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold" id="movementPhase">Ready</div>
+                            <div class="text-xs" id="movementInstruction">Stand with feet shoulder-width apart</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Rep Counter -->
+                    <div class="absolute top-4 right-4 bg-black/80 text-white px-6 py-4 rounded-lg">
+                        <div class="text-center">
+                            <div class="text-5xl font-bold" id="repCounter">0</div>
+                            <div class="text-sm">of 5 reps</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Live Metrics Panel (20% width on desktop) -->
+            <div class="w-full lg:w-1/5 bg-gray-900 text-white p-4 overflow-y-auto" style="height: 40vh; lg:height: 100%;">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    Live Metrics
+                </h3>
+                
+                <!-- Angle Metrics -->
+                <div class="space-y-3 mb-6">
+                    <div class="metrics-panel">
+                        <div class="metric-label text-blue-400">Hip Flexion</div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="metric-value text-blue-400" id="hipLeft">0°</div>
+                                <div class="text-xs opacity-50">Left</div>
+                            </div>
+                            <div>
+                                <div class="metric-value text-red-400" id="hipRight">0°</div>
+                                <div class="text-xs opacity-50">Right</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-center mt-2 opacity-75">
+                            Symmetry: <span id="hipSymmetry">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-panel">
+                        <div class="metric-label text-green-400">Knee Flexion</div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="metric-value text-green-400" id="kneeLeft">0°</div>
+                                <div class="text-xs opacity-50">Left</div>
+                            </div>
+                            <div>
+                                <div class="metric-value text-red-400" id="kneeRight">0°</div>
+                                <div class="text-xs opacity-50">Right</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-center mt-2 opacity-75">
+                            Symmetry: <span id="kneeSymmetry">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-panel">
+                        <div class="metric-label text-yellow-400">Ankle Dorsiflexion</div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="metric-value text-yellow-400" id="ankleLeft">0°</div>
+                                <div class="text-xs opacity-50">Left</div>
+                            </div>
+                            <div>
+                                <div class="metric-value text-red-400" id="ankleRight">0°</div>
+                                <div class="text-xs opacity-50">Right</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-center mt-2 opacity-75">
+                            Symmetry: <span id="ankleSymmetry">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-panel">
+                        <div class="metric-label text-purple-400">Forward Lean</div>
+                        <div class="metric-value text-purple-400 text-center" id="forwardLean">0°</div>
+                        <div class="text-xs text-center mt-1" id="leanStatus">
+                            <span class="px-2 py-1 bg-green-500 rounded-full text-xs">Normal</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Movement Quality -->
+                <div class="metrics-panel mb-4">
+                    <div class="metric-label">Movement Quality</div>
+                    <div class="w-full bg-gray-700 rounded-full h-4 mt-2">
+                        <div id="qualityBar" class="bg-green-500 h-4 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span id="qualityPercent" class="text-2xl font-bold">0%</span>
+                    </div>
+                </div>
+                
+                <!-- Recording Controls -->
+                <div class="space-y-2">
+                    <button id="recordBtn" onclick="toggleRecording()" 
+                        class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-circle mr-2"></i>
+                        <span id="recordBtnText">Start Assessment</span>
+                    </button>
+                    
+                    <button id="changeAngleBtn" onclick="showAngleSelector()" 
+                        class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        Change Angle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-Time Graphs Section -->
+        <div class="bg-white p-4 border-t-2 border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-area mr-2"></i>
+                Real-Time Biomechanical Analysis
+            </h3>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Graph 1: Joint Angle Timeline -->
+                <div class="graph-container">
+                    <h4 class="text-sm font-bold text-gray-700 mb-2">Joint Angle Timeline</h4>
+                    <canvas id="angleChart" height="200"></canvas>
+                </div>
+                
+                <!-- Graph 2: Bilateral Symmetry -->
+                <div class="graph-container">
+                    <h4 class="text-sm font-bold text-gray-700 mb-2">Bilateral Symmetry Monitor</h4>
+                    <canvas id="symmetryChart" height="200"></canvas>
+                </div>
+                
+                <!-- Graph 3: Movement Velocity -->
+                <div class="graph-container">
+                    <h4 class="text-sm font-bold text-gray-700 mb-2">Movement Velocity</h4>
+                    <canvas id="velocityChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movement Cues -->
+        <div id="movementCueContainer" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 max-w-2xl w-full px-4 hidden">
+            <div class="movement-cue">
+                <span id="movementCueText">Keep chest up and back straight!</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        const STATE = {
+            patientId: null,
+            patientData: null,
+            assessmentId: null,
+            cameraAngle: null,
+            cameraType: null,
+            pose: null,
+            camera: null,
+            isRecording: false,
+            
+            // Movement tracking
+            repCount: 0,
+            targetReps: 5,
+            movementPhase: 'ready', // ready, descending, bottom, ascending
+            skeletonFrames: [],
+            recordingStartTime: null,
+            
+            // Real-time metrics
+            currentAngles: {},
+            angleHistory: [],
+            symmetryHistory: [],
+            velocityHistory: [],
+            maxHistoryLength: 150, // 5 seconds at 30 FPS
+            
+            // FMS Scoring
+            fmsScore: 0,
+            compensationPatterns: [],
+            
+            // Charts
+            angleChart: null,
+            symmetryChart: null,
+            velocityChart: null
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            STATE.patientId = urlParams.get('patient_id') || 'demo_' + Date.now();
+            const isQuickMode = urlParams.get('quick') === 'true';
+            
+            if (isQuickMode) {
+                STATE.patientData = {
+                    first_name: 'Quick',
+                    last_name: 'Assessment',
+                    date_of_birth: '1980-01-01'
+                };
+                document.getElementById('patientInfo').textContent = '⚡ Quick Assessment Mode';
+            }
+            
+            // Wait for MediaPipe libraries
+            waitForMediaPipe();
+        });
+        
+        function waitForMediaPipe() {
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+                attempts++;
+                const hasPose = typeof window.Pose !== 'undefined' || typeof Pose !== 'undefined';
+                
+                if (hasPose || attempts >= 30) {
+                    clearInterval(checkInterval);
+                    if (!hasPose) {
+                        alert('MediaPipe failed to load. Please refresh the page.');
+                    }
+                }
+            }, 500);
+        }
+
+        // ============================================
+        // SETUP: ANGLE & CAMERA SELECTION
+        // ============================================
+        function selectAngle(angle) {
+            STATE.cameraAngle = angle;
+            
+            // Visual feedback
+            document.querySelectorAll('.angle-btn').forEach(btn => {
+                btn.classList.remove('border-brand-blue', 'bg-blue-50');
+                btn.classList.add('border-gray-200');
+            });
+            document.getElementById(`btn-${angle}`).classList.add('border-brand-blue', 'bg-blue-50');
+            
+            console.log(`Camera angle selected: ${angle}`);
+        }
+
+        async function initCamera(type) {
+            if (!STATE.cameraAngle) {
+                alert('Please select camera angle first!');
+                return;
+            }
+            
+            STATE.cameraType = type;
+            
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('assessmentView').classList.remove('hidden');
+            
+            document.getElementById('currentAngle').textContent = 
+                STATE.cameraAngle === 'front' ? 'Front View (0°)' :
+                STATE.cameraAngle === 'side' ? 'Side View (90°)' : 'Back View (180°)';
+            
+            try {
+                await initWebCamera();
+                await initCharts();
+                showStatus('Camera ready! Click "Start Assessment" to begin.', 'success');
+            } catch (error) {
+                showStatus(`Camera error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function initWebCamera() {
+            const video = document.getElementById('videoElement');
+            const canvas = document.getElementById('canvasElement');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: STATE.cameraType === 'phone' ? 'environment' : 'user'
+                    },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = resolve;
+                });
+                await video.play();
+                
+                // Initialize MediaPipe Pose
+                const PoseConstructor = window.Pose || Pose;
+                STATE.pose = new PoseConstructor({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+                });
+                
+                STATE.pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                STATE.pose.onResults(onPoseResults);
+                
+                // Start frame processing
+                const CameraConstructor = window.Camera || Camera;
+                if (CameraConstructor) {
+                    STATE.camera = new CameraConstructor(video, {
+                        onFrame: async () => {
+                            if (STATE.pose && video.readyState === 4) {
+                                await STATE.pose.send({ image: video });
+                            }
+                        },
+                        width: 1280,
+                        height: 720
+                    });
+                    STATE.camera.start();
+                } else {
+                    // Fallback: Manual processing
+                    const processFrame = async () => {
+                        if (STATE.pose && video.readyState === 4) {
+                            await STATE.pose.send({ image: video });
+                        }
+                        requestAnimationFrame(processFrame);
+                    };
+                    processFrame();
+                }
+                
+                console.log('✅ Camera initialized successfully');
+                
+            } catch (error) {
+                throw new Error(`Camera initialization failed: ${error.message}`);
+            }
+        }
+
+        // ============================================
+        // REAL-TIME POSE ANALYSIS
+        // ============================================
+        function onPoseResults(results) {
+            const canvas = document.getElementById('canvasElement');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = results.image.width;
+            canvas.height = results.image.height;
+            
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (results.poseLandmarks) {
+                // Draw skeleton
+                const drawConnectors = window.drawConnectors || window.drawing_utils?.drawConnectors;
+                const drawLandmarks = window.drawLandmarks || window.drawing_utils?.drawLandmarks;
+                const POSE_CONNECTIONS = window.POSE_CONNECTIONS || window.pose?.POSE_CONNECTIONS;
+                
+                if (drawConnectors && POSE_CONNECTIONS) {
+                    drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, 
+                        {color: '#00FF00', lineWidth: 4});
+                }
+                if (drawLandmarks) {
+                    drawLandmarks(ctx, results.poseLandmarks, 
+                        {color: '#FF0000', lineWidth: 2, radius: 6});
+                }
+                
+                // Calculate angles and metrics
+                const angles = calculateAllAngles(results.poseLandmarks);
+                STATE.currentAngles = angles;
+                
+                // Update live metrics display
+                updateLiveMetrics(angles);
+                
+                // Update charts (if recording)
+                if (STATE.isRecording) {
+                    updateCharts(angles);
+                    
+                    // Detect movement phase and reps
+                    detectMovementPhase(angles);
+                    
+                    // Store frame data
+                    STATE.skeletonFrames.push({
+                        timestamp: Date.now() - STATE.recordingStartTime,
+                        landmarks: results.poseLandmarks,
+                        angles: angles
+                    });
+                    
+                    // Detect compensation patterns
+                    detectCompensations(angles, results.poseLandmarks);
+                }
+            }
+            
+            ctx.restore();
+        }
+
+        // ============================================
+        // BIOMECHANICAL CALCULATIONS
+        // ============================================
+        function calculateAllAngles(landmarks) {
+            const angles = {};
+            
+            // Hip Flexion (shoulder-hip-knee angle)
+            angles.hipLeft = calculateAngle(
+                landmarks[11], // Left shoulder
+                landmarks[23], // Left hip
+                landmarks[25]  // Left knee
+            );
+            angles.hipRight = calculateAngle(
+                landmarks[12], landmarks[24], landmarks[26]
+            );
+            
+            // Knee Flexion (hip-knee-ankle angle)
+            angles.kneeLeft = calculateAngle(
+                landmarks[23], // Left hip
+                landmarks[25], // Left knee
+                landmarks[27]  // Left ankle
+            );
+            angles.kneeRight = calculateAngle(
+                landmarks[24], landmarks[26], landmarks[28]
+            );
+            
+            // Ankle Dorsiflexion (knee-ankle-toe angle)
+            angles.ankleLeft = calculateAngle(
+                landmarks[25], // Left knee
+                landmarks[27], // Left ankle
+                landmarks[31]  // Left toe
+            );
+            angles.ankleRight = calculateAngle(
+                landmarks[26], landmarks[28], landmarks[32]
+            );
+            
+            // Shoulder Flexion (hip-shoulder-elbow angle)
+            angles.shoulderLeft = calculateAngle(
+                landmarks[23], // Left hip
+                landmarks[11], // Left shoulder
+                landmarks[13]  // Left elbow
+            );
+            angles.shoulderRight = calculateAngle(
+                landmarks[24], landmarks[12], landmarks[14]
+            );
+            
+            // Forward Lean (vertical line through hips vs shoulder position)
+            angles.forwardLean = calculateForwardLean(landmarks);
+            
+            // Calculate symmetry indices
+            angles.hipSymmetry = calculateSymmetry(angles.hipLeft, angles.hipRight);
+            angles.kneeSymmetry = calculateSymmetry(angles.kneeLeft, angles.kneeRight);
+            angles.ankleSymmetry = calculateSymmetry(angles.ankleLeft, angles.ankleRight);
+            
+            return angles;
+        }
+
+        function calculateAngle(pointA, pointB, pointC) {
+            const radians = Math.atan2(pointC.y - pointB.y, pointC.x - pointB.x) - 
+                            Math.atan2(pointA.y - pointB.y, pointA.x - pointB.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            if (angle > 180.0) angle = 360 - angle;
+            return angle;
+        }
+
+        function calculateForwardLean(landmarks) {
+            const midHip = {
+                x: (landmarks[23].x + landmarks[24].x) / 2,
+                y: (landmarks[23].y + landmarks[24].y) / 2
+            };
+            const midShoulder = {
+                x: (landmarks[11].x + landmarks[12].x) / 2,
+                y: (landmarks[11].y + landmarks[12].y) / 2
+            };
+            
+            // Calculate angle from vertical
+            const dx = midShoulder.x - midHip.x;
+            const dy = midShoulder.y - midHip.y;
+            const angle = Math.abs(Math.atan2(dx, dy) * 180 / Math.PI);
+            
+            return angle;
+        }
+
+        function calculateSymmetry(leftAngle, rightAngle) {
+            const avg = (leftAngle + rightAngle) / 2;
+            if (avg === 0) return 0;
+            return ((leftAngle - rightAngle) / avg) * 100;
+        }
+
+        // ============================================
+        // LIVE METRICS UPDATE
+        // ============================================
+        function updateLiveMetrics(angles) {
+            // Update angle displays
+            document.getElementById('hipLeft').textContent = Math.round(angles.hipLeft) + '°';
+            document.getElementById('hipRight').textContent = Math.round(angles.hipRight) + '°';
+            document.getElementById('hipSymmetry').textContent = Math.abs(angles.hipSymmetry).toFixed(1) + '%';
+            
+            document.getElementById('kneeLeft').textContent = Math.round(angles.kneeLeft) + '°';
+            document.getElementById('kneeRight').textContent = Math.round(angles.kneeRight) + '°';
+            document.getElementById('kneeSymmetry').textContent = Math.abs(angles.kneeSymmetry).toFixed(1) + '%';
+            
+            document.getElementById('ankleLeft').textContent = Math.round(angles.ankleLeft) + '°';
+            document.getElementById('ankleRight').textContent = Math.round(angles.ankleRight) + '°';
+            document.getElementById('ankleSymmetry').textContent = Math.abs(angles.ankleSymmetry).toFixed(1) + '%';
+            
+            document.getElementById('forwardLean').textContent = Math.round(angles.forwardLean) + '°';
+            
+            // Update lean status
+            const leanStatus = document.getElementById('leanStatus');
+            if (angles.forwardLean < 45) {
+                leanStatus.innerHTML = '<span class="px-2 py-1 bg-green-500 rounded-full text-xs">Normal</span>';
+            } else if (angles.forwardLean < 60) {
+                leanStatus.innerHTML = '<span class="px-2 py-1 bg-yellow-500 rounded-full text-xs">Moderate</span>';
+            } else {
+                leanStatus.innerHTML = '<span class="px-2 py-1 bg-red-500 rounded-full text-xs">Excessive</span>';
+            }
+            
+            // Calculate overall quality score
+            let quality = 100;
+            if (Math.abs(angles.hipSymmetry) > 10) quality -= 15;
+            if (Math.abs(angles.kneeSymmetry) > 10) quality -= 15;
+            if (angles.forwardLean > 60) quality -= 20;
+            quality = Math.max(0, quality);
+            
+            document.getElementById('qualityBar').style.width = quality + '%';
+            document.getElementById('qualityPercent').textContent = Math.round(quality) + '%';
+            
+            // Color code quality bar
+            const qualityBar = document.getElementById('qualityBar');
+            if (quality >= 80) {
+                qualityBar.className = 'bg-green-500 h-4 rounded-full transition-all';
+            } else if (quality >= 60) {
+                qualityBar.className = 'bg-yellow-500 h-4 rounded-full transition-all';
+            } else {
+                qualityBar.className = 'bg-red-500 h-4 rounded-full transition-all';
+            }
+        }
+
+        // ============================================
+        // CHART INITIALIZATION & UPDATE
+        // ============================================
+        function initCharts() {
+            // Chart 1: Joint Angle Timeline
+            const angleCtx = document.getElementById('angleChart').getContext('2d');
+            STATE.angleChart = new Chart(angleCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Hip Left',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Hip Right',
+                            data: [],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Knee Left',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Knee Right',
+                            data: [],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 180,
+                            title: { display: true, text: 'Angle (degrees)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+            
+            // Chart 2: Bilateral Symmetry
+            const symmetryCtx = document.getElementById('symmetryChart').getContext('2d');
+            STATE.symmetryChart = new Chart(symmetryCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Hip Symmetry',
+                            data: [],
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Knee Symmetry',
+                            data: [],
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        y: {
+                            min: -30,
+                            max: 30,
+                            title: { display: true, text: 'Symmetry Index (%)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    yMin: 10,
+                                    yMax: 10,
+                                    borderColor: 'rgba(255, 206, 86, 0.5)',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5]
+                                },
+                                line2: {
+                                    type: 'line',
+                                    yMin: -10,
+                                    yMax: -10,
+                                    borderColor: 'rgba(255, 206, 86, 0.5)',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5]
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Chart 3: Movement Velocity
+            const velocityCtx = document.getElementById('velocityChart').getContext('2d');
+            STATE.velocityChart = new Chart(velocityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Angular Velocity',
+                            data: [],
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: 'Velocity (deg/sec)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(angles) {
+            const timestamp = ((Date.now() - STATE.recordingStartTime) / 1000).toFixed(1);
+            
+            // Update angle history
+            STATE.angleHistory.push({
+                time: timestamp,
+                hipLeft: angles.hipLeft,
+                hipRight: angles.hipRight,
+                kneeLeft: angles.kneeLeft,
+                kneeRight: angles.kneeRight
+            });
+            
+            // Calculate velocity (change in angle over time)
+            let velocity = 0;
+            if (STATE.angleHistory.length > 1) {
+                const prev = STATE.angleHistory[STATE.angleHistory.length - 2];
+                const curr = STATE.angleHistory[STATE.angleHistory.length - 1];
+                const dt = parseFloat(curr.time) - parseFloat(prev.time);
+                const dAngle = Math.abs(curr.kneeLeft - prev.kneeLeft);
+                velocity = dt > 0 ? dAngle / dt : 0;
+            }
+            
+            STATE.velocityHistory.push({
+                time: timestamp,
+                velocity: velocity
+            });
+            
+            STATE.symmetryHistory.push({
+                time: timestamp,
+                hipSymmetry: angles.hipSymmetry,
+                kneeSymmetry: angles.kneeSymmetry
+            });
+            
+            // Limit history length
+            if (STATE.angleHistory.length > STATE.maxHistoryLength) {
+                STATE.angleHistory.shift();
+                STATE.velocityHistory.shift();
+                STATE.symmetryHistory.shift();
+            }
+            
+            // Update Chart 1: Angles
+            STATE.angleChart.data.labels = STATE.angleHistory.map(d => d.time);
+            STATE.angleChart.data.datasets[0].data = STATE.angleHistory.map(d => d.hipLeft);
+            STATE.angleChart.data.datasets[1].data = STATE.angleHistory.map(d => d.hipRight);
+            STATE.angleChart.data.datasets[2].data = STATE.angleHistory.map(d => d.kneeLeft);
+            STATE.angleChart.data.datasets[3].data = STATE.angleHistory.map(d => d.kneeRight);
+            STATE.angleChart.update();
+            
+            // Update Chart 2: Symmetry
+            STATE.symmetryChart.data.labels = STATE.symmetryHistory.map(d => d.time);
+            STATE.symmetryChart.data.datasets[0].data = STATE.symmetryHistory.map(d => d.hipSymmetry);
+            STATE.symmetryChart.data.datasets[1].data = STATE.symmetryHistory.map(d => d.kneeSymmetry);
+            STATE.symmetryChart.update();
+            
+            // Update Chart 3: Velocity
+            STATE.velocityChart.data.labels = STATE.velocityHistory.map(d => d.time);
+            STATE.velocityChart.data.datasets[0].data = STATE.velocityHistory.map(d => d.velocity);
+            STATE.velocityChart.update();
+        }
+
+        // ============================================
+        // MOVEMENT PHASE DETECTION & REP COUNTING
+        // ============================================
+        function detectMovementPhase(angles) {
+            const avgKnee = (angles.kneeLeft + angles.kneeRight) / 2;
+            const prevPhase = STATE.movementPhase;
+            
+            // Phase detection based on knee angle
+            if (STATE.movementPhase === 'ready' && avgKnee < 140) {
+                STATE.movementPhase = 'descending';
+                updateMovementDisplay('Descending', 'Lower your body slowly...');
+            } else if (STATE.movementPhase === 'descending' && avgKnee < 100) {
+                STATE.movementPhase = 'bottom';
+                updateMovementDisplay('Bottom Position', 'Hold for 1 second...');
+            } else if (STATE.movementPhase === 'bottom' && avgKnee > 110) {
+                STATE.movementPhase = 'ascending';
+                updateMovementDisplay('Ascending', 'Rise back up smoothly...');
+            } else if (STATE.movementPhase === 'ascending' && avgKnee > 150) {
+                STATE.movementPhase = 'ready';
+                STATE.repCount++;
+                document.getElementById('repCounter').textContent = STATE.repCount;
+                document.getElementById('currentRep').textContent = `Rep ${STATE.repCount}/5`;
+                updateMovementDisplay('Ready', 'Great! Prepare for next rep...');
+                
+                // Check if completed all reps
+                if (STATE.repCount >= STATE.targetReps) {
+                    stopRecording();
+                }
+            }
+        }
+
+        function updateMovementDisplay(phase, instruction) {
+            document.getElementById('movementPhase').textContent = phase;
+            document.getElementById('movementInstruction').textContent = instruction;
+        }
+
+        // ============================================
+        // COMPENSATION PATTERN DETECTION
+        // ============================================
+        function detectCompensations(angles, landmarks) {
+            const compensations = [];
+            
+            // Forward lean > 60°
+            if (angles.forwardLean > 60) {
+                compensations.push({
+                    pattern: 'Excessive Forward Lean',
+                    severity: 'high',
+                    implication: 'Hip mobility limitation or weak glutes'
+                });
+                showMovementCue('Keep chest up! Reduce forward lean.');
+            }
+            
+            // Knee valgus (knees caving in)
+            const kneeAsymmetry = Math.abs(angles.kneeSymmetry);
+            if (kneeAsymmetry > 15) {
+                compensations.push({
+                    pattern: 'Knee Valgus/Varus',
+                    severity: 'high',
+                    implication: 'Hip abductor weakness or knee instability'
+                });
+                showMovementCue('Keep knees aligned over feet!');
+            }
+            
+            // Hip asymmetry
+            if (Math.abs(angles.hipSymmetry) > 10) {
+                compensations.push({
+                    pattern: 'Hip Asymmetry',
+                    severity: 'moderate',
+                    implication: 'Unilateral weakness or pain avoidance'
+                });
+            }
+            
+            STATE.compensationPatterns = compensations;
+        }
+
+        function showMovementCue(text) {
+            const container = document.getElementById('movementCueContainer');
+            const cueText = document.getElementById('movementCueText');
+            cueText.textContent = text;
+            container.classList.remove('hidden');
+            
+            setTimeout(() => {
+                container.classList.add('hidden');
+            }, 3000);
+        }
+
+        // ============================================
+        // RECORDING CONTROLS
+        // ============================================
+        function toggleRecording() {
+            if (STATE.isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            STATE.isRecording = true;
+            STATE.recordingStartTime = Date.now();
+            STATE.repCount = 0;
+            STATE.movementPhase = 'ready';
+            STATE.skeletonFrames = [];
+            STATE.angleHistory = [];
+            STATE.symmetryHistory = [];
+            STATE.velocityHistory = [];
+            STATE.compensationPatterns = [];
+            
+            document.getElementById('recordBtnText').textContent = 'Stop Assessment';
+            document.getElementById('recordBtn').classList.remove('bg-red-600', 'hover:bg-red-700');
+            document.getElementById('recordBtn').classList.add('bg-gray-700', 'hover:bg-gray-800');
+            
+            updateMovementDisplay('Ready', 'Stand with feet shoulder-width apart, arms overhead');
+        }
+
+        async function stopRecording() {
+            STATE.isRecording = false;
+            
+            document.getElementById('recordBtnText').textContent = 'Start Assessment';
+            document.getElementById('recordBtn').classList.remove('bg-gray-700', 'hover:bg-gray-800');
+            document.getElementById('recordBtn').classList.add('bg-red-600', 'hover:bg-red-700');
+            
+            // Calculate FMS score
+            const fmsScore = calculateFMSScore();
+            document.getElementById('fmsScore').innerHTML = `
+                <div class="text-3xl font-bold">${fmsScore}</div>
+                <div class="text-xs">FMS Score</div>
+            `;
+            
+            // Generate report
+            await generateAssessmentReport(fmsScore);
+            
+            showStatus(`✅ Assessment complete! FMS Score: ${fmsScore}/3`, 'success');
+        }
+
+        // ============================================
+        // FMS SCORING ALGORITHM
+        // ============================================
+        function calculateFMSScore() {
+            let score = 3; // Start with perfect score
+            
+            // Check for pain (user-reported - would be tracked separately)
+            // If pain: score = 0 immediately
+            
+            // Check for severe compensations
+            const severeCompensations = STATE.compensationPatterns.filter(c => c.severity === 'high');
+            if (severeCompensations.length > 2) {
+                score = 1; // Unable to complete with acceptable form
+            } else if (severeCompensations.length > 0) {
+                score = 2; // Completes with compensations
+            }
+            
+            // Check rep completion
+            if (STATE.repCount < STATE.targetReps) {
+                score = Math.min(score, 1);
+            }
+            
+            // Check symmetry scores
+            const avgSymmetry = STATE.symmetryHistory.slice(-30).reduce((sum, s) => 
+                sum + Math.abs(s.hipSymmetry) + Math.abs(s.kneeSymmetry), 0) / 
+                (STATE.symmetryHistory.slice(-30).length * 2);
+            
+            if (avgSymmetry > 20) {
+                score = Math.min(score, 1);
+            } else if (avgSymmetry > 10) {
+                score = Math.min(score, 2);
+            }
+            
+            STATE.fmsScore = score;
+            return score;
+        }
+
+        // ============================================
+        // REPORT GENERATION
+        // ============================================
+        async function generateAssessmentReport(fmsScore) {
+            const report = {
+                patient_id: STATE.patientId,
+                assessment_date: new Date().toISOString(),
+                camera_angle: STATE.cameraAngle,
+                test_name: 'Deep Overhead Squat',
+                fms_score: fmsScore,
+                reps_completed: STATE.repCount,
+                target_reps: STATE.targetReps,
+                duration: ((Date.now() - STATE.recordingStartTime) / 1000).toFixed(1),
+                
+                // Biomechanical data
+                joint_angles: {
+                    hip_left: STATE.angleHistory.map(h => h.hipLeft),
+                    hip_right: STATE.angleHistory.map(h => h.hipRight),
+                    knee_left: STATE.angleHistory.map(h => h.kneeLeft),
+                    knee_right: STATE.angleHistory.map(h => h.kneeRight)
+                },
+                
+                // Symmetry data
+                symmetry_indices: {
+                    hip: STATE.symmetryHistory.map(s => s.hipSymmetry),
+                    knee: STATE.symmetryHistory.map(s => s.kneeSymmetry)
+                },
+                
+                // Movement velocity
+                angular_velocity: STATE.velocityHistory.map(v => v.velocity),
+                
+                // Compensation patterns
+                compensations: STATE.compensationPatterns,
+                
+                // Clinical findings
+                clinical_notes: generateClinicalNotes(fmsScore)
+            };
+            
+            // Store in sessionStorage for report viewing
+            sessionStorage.setItem('latestAssessmentReport', JSON.stringify(report));
+            
+            console.log('📊 Assessment Report Generated:', report);
+            
+            // Option to view full report
+            setTimeout(() => {
+                if (confirm('Assessment complete! Would you like to view the detailed report?')) {
+                    window.location.href = `/static/assessment-report.html?timestamp=${Date.now()}`;
+                }
+            }, 1000);
+        }
+
+        function generateClinicalNotes(score) {
+            const notes = [];
+            
+            if (score === 3) {
+                notes.push('Patient demonstrates excellent functional movement capacity.');
+                notes.push('No significant compensations or asymmetries detected.');
+                notes.push('Full range of motion achieved bilaterally.');
+            } else if (score === 2) {
+                notes.push('Patient completes movement with minor compensations.');
+                notes.push('Some asymmetry detected - recommend unilateral strengthening.');
+                if (STATE.compensationPatterns.length > 0) {
+                    notes.push('Compensations: ' + STATE.compensationPatterns.map(c => c.pattern).join(', '));
+                }
+            } else {
+                notes.push('Significant movement dysfunction identified.');
+                notes.push('Unable to complete movement with acceptable form.');
+                notes.push('Recommend: Mobility assessment, pain evaluation, progressive strengthening program.');
+                if (STATE.compensationPatterns.length > 0) {
+                    notes.push('Major issues: ' + STATE.compensationPatterns.map(c => c.pattern).join(', '));
+                }
+            }
+            
+            return notes;
+        }
+
+        // ============================================
+        // ANGLE SELECTOR
+        // ============================================
+        function showAngleSelector() {
+            if (STATE.isRecording) {
+                alert('Stop recording first before changing angle.');
+                return;
+            }
+            
+            const newAngle = prompt('Select new angle:\n1 = Front\n2 = Side\n3 = Back', '1');
+            if (newAngle === '1') {
+                STATE.cameraAngle = 'front';
+                document.getElementById('currentAngle').textContent = 'Front View (0°)';
+            } else if (newAngle === '2') {
+                STATE.cameraAngle = 'side';
+                document.getElementById('currentAngle').textContent = 'Side View (90°)';
+            } else if (newAngle === '3') {
+                STATE.cameraAngle = 'back';
+                document.getElementById('currentAngle').textContent = 'Back View (180°)';
+            }
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function showStatus(message, type) {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            // Could add visual notification here
+        }
+    </script>
+</body>
+</html>

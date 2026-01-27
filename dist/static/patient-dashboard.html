@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Exercise Program - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+    <style>
+        body { 
+            background: #ffffff;
+            min-height: 100vh;
+        }
+        .exercise-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .exercise-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        .exercise-card.completed {
+            background: #ffffff;
+            border-color: #28a745;
+        }
+        .streak-badge {
+            background: #ffffff;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .calendar-day {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .calendar-day.completed {
+            background: #28a745;
+            color: white;
+        }
+        .calendar-day.today {
+            border: 2px solid #003D7A;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-brand-blue to-blue-600 text-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-heartbeat text-3xl"></i>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold">ThriveOrtho</h1>
+                            <p class="text-sm md:text-base text-blue-100">My Exercise Program</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/static/exercise-library.html" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors" title="Browse Exercise Library">
+                        <i class="fas fa-play-circle mr-2"></i>
+                        <span class="hidden md:inline">Library</span>
+                    </a>
+                    <button onclick="logout()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>
+                        <span class="hidden md:inline">Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        
+        <!-- Welcome Card with Patient Info -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                        Welcome back, <span id="patientName">Loading...</span>! 👋
+                    </h2>
+                    <p class="text-gray-600">
+                        <i class="fas fa-user-md mr-2"></i>
+                        Therapist: <span id="therapistName">Loading...</span>
+                    </p>
+                    <p class="text-gray-600 mt-1">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        Program started: <span id="startDate">Loading...</span>
+                    </p>
+                </div>
+                <div class="flex gap-4">
+                    <!-- Streak Badge -->
+                    <div class="streak-badge text-center px-6 py-4 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold text-gray-800" id="streakCount">0</div>
+                        <div class="text-sm font-semibold text-gray-700">Day Streak 🔥</div>
+                    </div>
+                    <!-- Progress Circle -->
+                    <div class="text-center">
+                        <svg class="progress-ring" width="80" height="80">
+                            <circle cx="40" cy="40" r="35" stroke="#e5e7eb" stroke-width="8" fill="none" />
+                            <circle id="progressCircle" cx="40" cy="40" r="35" stroke="#28a745" stroke-width="8" 
+                                    fill="none" stroke-dasharray="220" stroke-dashoffset="220" 
+                                    style="transition: stroke-dashoffset 0.5s ease;" />
+                        </svg>
+                        <div class="text-sm font-semibold text-gray-700 mt-2">Today</div>
+                        <div class="text-xs text-gray-500" id="todayProgress">0/0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Progress Bar -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-xl font-bold text-gray-800">
+                    <i class="fas fa-tasks mr-2 text-brand-blue"></i>
+                    Today's Progress
+                </h3>
+                <span class="text-lg font-semibold text-brand-blue" id="completionPercentage">0%</span>
+            </div>
+            <div class="relative w-full h-6 bg-gray-200 rounded-full overflow-hidden">
+                <div id="progressBar" class="absolute left-0 top-0 h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">
+                <span id="completedCount">0</span> of <span id="totalCount">0</span> exercises completed
+            </p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Progress Photos -->
+            <a href="/static/patient-photos.html" class="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-all group">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center mb-2">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                                <i class="fas fa-camera text-2xl text-purple-600"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-gray-800 group-hover:text-brand-blue transition-colors">Progress Photos</h3>
+                        <p class="text-sm text-gray-600 mt-1">Track your journey visually</p>
+                    </div>
+                    <i class="fas fa-arrow-right text-gray-400 group-hover:text-brand-blue transition-colors"></i>
+                </div>
+            </a>
+
+            <!-- Messages -->
+            <a href="/static/patient-messages.html" class="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-all group relative">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center mb-2">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                                <i class="fas fa-comments text-2xl text-green-600"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-gray-800 group-hover:text-brand-blue transition-colors">Messages</h3>
+                        <p class="text-sm text-gray-600 mt-1">Chat with your therapist</p>
+                        <span id="unreadBadge" class="hidden absolute top-4 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-full">0</span>
+                    </div>
+                    <i class="fas fa-arrow-right text-gray-400 group-hover:text-brand-blue transition-colors"></i>
+                </div>
+            </a>
+
+            <!-- Goals & Appointments -->
+            <a href="/static/patient-goals.html" class="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-all group">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center mb-2">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
+                                <i class="fas fa-bullseye text-2xl text-yellow-600"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-gray-800 group-hover:text-brand-blue transition-colors">My Goals</h3>
+                        <p class="text-sm text-gray-600 mt-1">Track treatment goals</p>
+                    </div>
+                    <i class="fas fa-arrow-right text-gray-400 group-hover:text-brand-blue transition-colors"></i>
+                </div>
+            </a>
+        </div>
+
+        <!-- Exercise List -->
+        <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-dumbbell mr-2 text-brand-blue"></i>
+                My Exercises
+            </h3>
+            <div id="exerciseList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Exercise cards will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Weekly Calendar -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-calendar-week mr-2 text-brand-blue"></i>
+                This Week
+            </h3>
+            <div id="weeklyCalendar" class="flex justify-around gap-2">
+                <!-- Calendar days will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Motivational Message -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white text-center">
+            <i class="fas fa-trophy text-4xl mb-3"></i>
+            <p class="text-xl font-semibold" id="motivationalMessage">Keep up the great work!</p>
+        </div>
+
+    </div>
+
+    <!-- Exercise Detail Modal -->
+    <div id="exerciseModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800" id="modalExerciseName">Exercise Name</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Exercise Image/Video -->
+                <div class="bg-gray-100 rounded-lg aspect-video flex items-center justify-center" id="modalMedia">
+                    <i class="fas fa-video text-6xl text-gray-400"></i>
+                </div>
+                
+                <!-- Exercise Details -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold text-brand-blue" id="modalSets">3</div>
+                        <div class="text-sm text-gray-600">Sets</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold text-green-600" id="modalReps">10</div>
+                        <div class="text-sm text-gray-600">Reps</div>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 mb-3">
+                        <i class="fas fa-list-ol mr-2"></i>Instructions
+                    </h4>
+                    <ol id="modalInstructions" class="space-y-2 text-gray-700">
+                        <!-- Instructions will be inserted here -->
+                    </ol>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                    <h4 class="font-bold text-gray-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>Tips
+                    </h4>
+                    <ul id="modalTips" class="space-y-1 text-sm text-gray-700">
+                        <!-- Tips will be inserted here -->
+                    </ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button onclick="markComplete()" class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all">
+                        <i class="fas fa-check-circle mr-2"></i>Mark Complete
+                    </button>
+                    <button onclick="closeModal()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        const STATE = {
+            patient: null,
+            exercises: [],
+            completedToday: [],
+            streak: 0,
+            currentExercise: null,
+            weekHistory: []
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthentication();
+            await loadPatientData();
+            await loadExercises();
+            renderExercises();
+            updateProgress();
+            renderWeeklyCalendar();
+            updateMotivation();
+        });
+
+        // ============================================
+        // AUTHENTICATION
+        // ============================================
+        function checkAuthentication() {
+            const session = localStorage.getItem('patientSession');
+            if (!session) {
+                window.location.href = '/static/patient-portal.html';
+                return;
+            }
+            
+            try {
+                STATE.patient = JSON.parse(session);
+                const loginTime = new Date(STATE.patient.loginTime);
+                const now = new Date();
+                const hoursSinceLogin = (now - loginTime) / (1000 * 60 * 60);
+                
+                // Session expires after 24 hours
+                if (hoursSinceLogin > 24) {
+                    alert('Your session has expired. Please login again.');
+                    logout();
+                    return;
+                }
+                
+                // Display patient info
+                document.getElementById('patientName').textContent = STATE.patient.name || 'Patient';
+                document.getElementById('therapistName').textContent = STATE.patient.therapist || 'Dr. Smith';
+                document.getElementById('startDate').textContent = formatDate(STATE.patient.programStartDate || new Date().toISOString());
+                
+            } catch (error) {
+                console.error('Session error:', error);
+                logout();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('patientSession');
+            localStorage.removeItem('patientProgress');
+            window.location.href = '/static/patient-portal.html';
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadPatientData() {
+            // Load progress from localStorage
+            const progress = localStorage.getItem('patientProgress');
+            if (progress) {
+                try {
+                    const data = JSON.parse(progress);
+                    STATE.completedToday = data.completedToday || [];
+                    STATE.streak = data.streak || 0;
+                    STATE.weekHistory = data.weekHistory || [];
+                    
+                    // Reset if it's a new day
+                    const lastUpdate = new Date(data.lastUpdate || 0);
+                    const today = new Date();
+                    if (lastUpdate.toDateString() !== today.toDateString()) {
+                        // Check if we maintained the streak
+                        const daysDiff = Math.floor((today - lastUpdate) / (1000 * 60 * 60 * 24));
+                        if (daysDiff === 1 && data.completedToday?.length > 0) {
+                            // Maintained streak!
+                            STATE.streak = data.streak + 1;
+                        } else if (daysDiff > 1) {
+                            // Streak broken
+                            STATE.streak = 0;
+                        }
+                        STATE.completedToday = [];
+                    }
+                } catch (error) {
+                    console.error('Progress loading error:', error);
+                }
+            }
+            
+            // Update streak display
+            document.getElementById('streakCount').textContent = STATE.streak;
+        }
+
+        async function loadExercises() {
+            // In production, this would fetch from API
+            // For now, use demo data
+            STATE.exercises = [
+                {
+                    id: 'ex1',
+                    name: 'Pelvic Tilts',
+                    category: 'Core Stability',
+                    sets: 3,
+                    reps: 10,
+                    frequency: 'Daily',
+                    instructions: [
+                        'Lie on your back with knees bent and feet flat',
+                        'Tighten abdominal muscles',
+                        'Tilt pelvis upward, flattening lower back',
+                        'Hold for 5 seconds, then release',
+                        'Repeat for prescribed reps'
+                    ],
+                    tips: [
+                        'Keep breathing throughout the exercise',
+                        'Don\'t push too hard - gentle movement is key',
+                        'Stop if you feel sharp pain'
+                    ],
+                    videoUrl: null,
+                    imageUrl: null
+                },
+                {
+                    id: 'ex2',
+                    name: 'Bird Dogs',
+                    category: 'Core Stability',
+                    sets: 3,
+                    reps: 10,
+                    frequency: 'Daily',
+                    instructions: [
+                        'Start on hands and knees (tabletop position)',
+                        'Extend right arm forward and left leg back',
+                        'Keep back straight and core engaged',
+                        'Hold for 3 seconds',
+                        'Return to start and switch sides'
+                    ],
+                    tips: [
+                        'Keep hips level throughout the movement',
+                        'Focus on balance, not speed',
+                        'Breathe steadily'
+                    ],
+                    videoUrl: null,
+                    imageUrl: null
+                },
+                {
+                    id: 'ex3',
+                    name: 'Dead Bugs',
+                    category: 'Core Stability',
+                    sets: 3,
+                    reps: 12,
+                    frequency: 'Daily',
+                    instructions: [
+                        'Lie on back with arms extended toward ceiling',
+                        'Lift legs with knees bent at 90 degrees',
+                        'Slowly lower right arm and left leg',
+                        'Keep lower back pressed to floor',
+                        'Return to start and switch sides'
+                    ],
+                    tips: [
+                        'Keep core engaged throughout',
+                        'Don\'t let back arch off the floor',
+                        'Move slowly and controlled'
+                    ],
+                    videoUrl: null,
+                    imageUrl: null
+                },
+                {
+                    id: 'ex4',
+                    name: 'Cat-Cow Stretch',
+                    category: 'Flexibility',
+                    sets: 2,
+                    reps: 15,
+                    frequency: 'Daily',
+                    instructions: [
+                        'Start on hands and knees',
+                        'Arch back downward (cow), lifting head and tailbone',
+                        'Hold for 2 seconds',
+                        'Round back upward (cat), tucking chin and tailbone',
+                        'Hold for 2 seconds, repeat'
+                    ],
+                    tips: [
+                        'Move smoothly between positions',
+                        'Focus on spinal movement',
+                        'Great for morning stiffness'
+                    ],
+                    videoUrl: null,
+                    imageUrl: null
+                },
+                {
+                    id: 'ex5',
+                    name: 'Knee to Chest',
+                    category: 'Flexibility',
+                    sets: 3,
+                    reps: 10,
+                    frequency: 'Daily',
+                    instructions: [
+                        'Lie on back with both knees bent',
+                        'Bring one knee up to chest',
+                        'Hold behind thigh or knee',
+                        'Pull gently for 20-30 seconds',
+                        'Switch legs and repeat'
+                    ],
+                    tips: [
+                        'Keep opposite leg bent or straight as comfortable',
+                        'Don\'t pull too hard',
+                        'You should feel a gentle stretch'
+                    ],
+                    videoUrl: null,
+                    imageUrl: null
+                },
+                {
+                    id: 'ex6',
+                    name: 'Standing Hamstring Stretch',
+                    category: 'Flexibility',
+                    sets: 2,
+                    reps: 1,
+                    frequency: 'Daily',
+                    instructions: [
+                        'Stand with one foot on low stool or step',
+                        'Keep both legs straight',
+                        'Lean forward from hips',
+                        'Reach toward toes on elevated leg',
+                        'Hold for 30 seconds, switch legs'
+                    ],
+                    tips: [
+                        'Don\'t bounce - hold the stretch',
+                        'Keep back straight',
+                        'Use a chair for balance if needed'
+                    ],
+                    videoUrl: null,
+                    imageUrl: null
+                }
+            ];
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function renderExercises() {
+            const container = document.getElementById('exerciseList');
+            container.innerHTML = '';
+            
+            STATE.exercises.forEach(exercise => {
+                const isCompleted = STATE.completedToday.includes(exercise.id);
+                const card = createExerciseCard(exercise, isCompleted);
+                container.appendChild(card);
+            });
+        }
+
+        function createExerciseCard(exercise, isCompleted) {
+            const card = document.createElement('div');
+            card.className = `exercise-card bg-white rounded-xl shadow-lg p-5 border-2 ${isCompleted ? 'completed' : 'border-transparent'}`;
+            card.onclick = () => openExerciseDetail(exercise);
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <h4 class="text-lg font-bold text-gray-800 mb-1">${exercise.name}</h4>
+                        <span class="text-xs font-semibold text-brand-blue bg-blue-50 px-2 py-1 rounded">
+                            ${exercise.category}
+                        </span>
+                    </div>
+                    ${isCompleted ? '<i class="fas fa-check-circle text-3xl text-green-500"></i>' : '<i class="far fa-circle text-3xl text-gray-300"></i>'}
+                </div>
+                
+                <div class="space-y-2 text-sm text-gray-600 mb-4">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-redo text-brand-blue w-5"></i>
+                        <span><strong>${exercise.sets}</strong> sets × <strong>${exercise.reps}</strong> reps</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-calendar-day text-brand-blue w-5"></i>
+                        <span>${exercise.frequency}</span>
+                    </div>
+                </div>
+                
+                <button onclick="event.stopPropagation(); openExerciseDetail(${JSON.stringify(exercise).replace(/"/g, '&quot;')})" 
+                        class="w-full py-2 ${isCompleted ? 'bg-green-100 text-green-700' : 'bg-brand-blue text-white'} rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                    ${isCompleted ? '<i class="fas fa-check mr-2"></i>Completed' : '<i class="fas fa-play mr-2"></i>Start Exercise'}
+                </button>
+            `;
+            
+            return card;
+        }
+
+        function renderWeeklyCalendar() {
+            const container = document.getElementById('weeklyCalendar');
+            container.innerHTML = '';
+            
+            const today = new Date();
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            // Get the start of the week (Sunday)
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startOfWeek);
+                date.setDate(startOfWeek.getDate() + i);
+                
+                const isToday = date.toDateString() === today.toDateString();
+                const isPast = date < today && !isToday;
+                const dateStr = date.toISOString().split('T')[0];
+                const isCompleted = STATE.weekHistory.includes(dateStr) || (isToday && STATE.completedToday.length > 0);
+                
+                const dayDiv = document.createElement('div');
+                dayDiv.className = `calendar-day bg-white ${isCompleted ? 'completed' : ''} ${isToday ? 'today' : ''} ${isPast && !isCompleted ? 'opacity-50' : ''}`;
+                dayDiv.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-xs mb-1">${dayNames[date.getDay()]}</div>
+                        <div class="font-bold">${date.getDate()}</div>
+                        ${isCompleted ? '<i class="fas fa-check text-xs"></i>' : ''}
+                    </div>
+                `;
+                container.appendChild(dayDiv);
+            }
+        }
+
+        // ============================================
+        // PROGRESS TRACKING
+        // ============================================
+        function updateProgress() {
+            const completed = STATE.completedToday.length;
+            const total = STATE.exercises.length;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            // Update displays
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('completionPercentage').textContent = percentage + '%';
+            document.getElementById('todayProgress').textContent = `${completed}/${total}`;
+            
+            // Update progress bar
+            document.getElementById('progressBar').style.width = percentage + '%';
+            
+            // Update progress circle
+            const circumference = 220;
+            const offset = circumference - (percentage / 100 * circumference);
+            document.getElementById('progressCircle').style.strokeDashoffset = offset;
+            
+            // Save progress
+            saveProgress();
+        }
+
+        function saveProgress() {
+            const today = new Date().toISOString().split('T')[0];
+            const data = {
+                completedToday: STATE.completedToday,
+                streak: STATE.streak,
+                weekHistory: STATE.weekHistory,
+                lastUpdate: new Date().toISOString()
+            };
+            
+            // Add today to week history if exercises completed
+            if (STATE.completedToday.length > 0 && !STATE.weekHistory.includes(today)) {
+                STATE.weekHistory.push(today);
+                data.weekHistory = STATE.weekHistory;
+            }
+            
+            localStorage.setItem('patientProgress', JSON.stringify(data));
+        }
+
+        // ============================================
+        // EXERCISE MODAL
+        // ============================================
+        function openExerciseDetail(exercise) {
+            if (typeof exercise === 'string') {
+                exercise = JSON.parse(exercise);
+            }
+            
+            STATE.currentExercise = exercise;
+            
+            // Populate modal
+            document.getElementById('modalExerciseName').textContent = exercise.name;
+            document.getElementById('modalSets').textContent = exercise.sets;
+            document.getElementById('modalReps').textContent = exercise.reps;
+            
+            // Instructions
+            const instructionsList = document.getElementById('modalInstructions');
+            instructionsList.innerHTML = exercise.instructions.map((inst, i) => 
+                `<li class="flex gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 bg-brand-blue text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        ${i + 1}
+                    </span>
+                    <span>${inst}</span>
+                </li>`
+            ).join('');
+            
+            // Tips
+            const tipsList = document.getElementById('modalTips');
+            tipsList.innerHTML = exercise.tips.map(tip => 
+                `<li class="flex gap-2">
+                    <i class="fas fa-check-circle text-yellow-500 mt-1"></i>
+                    <span>${tip}</span>
+                </li>`
+            ).join('');
+            
+            // Show modal
+            document.getElementById('exerciseModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('exerciseModal').classList.add('hidden');
+            STATE.currentExercise = null;
+        }
+
+        function markComplete() {
+            if (!STATE.currentExercise) return;
+            
+            const exerciseId = STATE.currentExercise.id;
+            
+            if (!STATE.completedToday.includes(exerciseId)) {
+                STATE.completedToday.push(exerciseId);
+                
+                // Check if all exercises are completed today
+                if (STATE.completedToday.length === STATE.exercises.length) {
+                    // All done! Increment streak
+                    STATE.streak++;
+                    document.getElementById('streakCount').textContent = STATE.streak;
+                    
+                    // Show celebration
+                    setTimeout(() => {
+                        alert('🎉 Congratulations! You completed all exercises today!\n\nYour streak: ' + STATE.streak + ' days! 🔥');
+                    }, 300);
+                }
+                
+                updateProgress();
+                renderExercises();
+                renderWeeklyCalendar();
+                updateMotivation();
+            }
+            
+            closeModal();
+        }
+
+        // ============================================
+        // UTILITIES
+        // ============================================
+        function updateMotivation() {
+            const messages = [
+                "You're doing amazing! Keep it up! 💪",
+                "Every exercise brings you closer to your goals! 🎯",
+                "Your consistency is impressive! 🌟",
+                "Great work today! Your body thanks you! 🙏",
+                "One step at a time - you've got this! 🚀",
+                "Your dedication is inspiring! ✨",
+                "Progress, not perfection! 🌱"
+            ];
+            
+            const completed = STATE.completedToday.length;
+            const total = STATE.exercises.length;
+            
+            let message;
+            if (completed === total) {
+                message = "🎉 All done for today! You're a champion!";
+            } else if (completed > total / 2) {
+                message = "🔥 Over halfway there! Finish strong!";
+            } else if (completed > 0) {
+                message = "👏 Great start! Keep the momentum going!";
+            } else {
+                message = messages[Math.floor(Math.random() * messages.length)];
+            }
+            
+            document.getElementById('motivationalMessage').textContent = message;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+    
+    <!-- Trainer AI Helper -->
+    <script src="/static/trainer-ai-helper.js"></script>
+    <script>
+        // Set patient context for AI helper once it's loaded
+        window.addEventListener('load', () => {
+            if (window.trainerAI) {
+                window.trainerAI.setPatientContext({
+                    name: STATE.patientName,
+                    age: null, // Could be loaded from patient data
+                    condition: 'Lower back pain recovery' // Could be dynamic
+                });
+                window.trainerAI.setExercises(STATE.exercises);
+            }
+        });
+    </script>
+    <!-- Human Oversight System -->
+    <script src="/static/human-oversight.js"></script>
+</body>
+</html>

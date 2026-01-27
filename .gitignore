@@ -1,32 +1,51 @@
 # Dependencies
 node_modules/
 
-# Build output
-dist/
-
-# Environment variables (contains secrets)
-.dev.vars
-.env
-.env.local
-.env.production
-
-# Wrangler
-.wrangler/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Logs
-*.log
-npm-debug.log*
-
 # Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build
+
+# dotenv environment variables file
+.env
+
+# PM2
+.pm2/
+pids/
+logs/
+*.log
+
+# Backup files
+*.backup
+*.bak
+*.tar.gz
+*.zip
+
+# Large files
+.opencode/
+.config/
+.wrangler/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Body Diagram - Pain Location Marker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .body-diagram-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .body-views {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .body-view {
+            position: relative;
+            text-align: center;
+        }
+        
+        .body-view h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .body-svg-container {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .body-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* Pain point markers */
+        .pain-marker {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            fill: rgba(255, 0, 0, 0.0);
+            stroke: transparent;
+            stroke-width: 2;
+        }
+        
+        .pain-marker:hover {
+            fill: rgba(255, 100, 100, 0.3);
+            stroke: #ff6b6b;
+            transform: scale(1.1);
+        }
+        
+        .pain-marker.active {
+            fill: rgba(255, 0, 0, 0.6);
+            stroke: #cc0000;
+            stroke-width: 3;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        
+        /* Selected pain locations */
+        .selected-locations {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .selected-locations h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .pain-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .pain-chip {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(255,107,107,0.3);
+        }
+        
+        .pain-chip button {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            transition: background 0.2s;
+        }
+        
+        .pain-chip button:hover {
+            background: rgba(255,255,255,0.5);
+        }
+        
+        .empty-state {
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        /* Body silhouette styling - hyperrealistic */
+        .body-part {
+            fill: #ffd4a3;
+            stroke: #cc9966;
+            stroke-width: 1.5;
+            transition: all 0.3s ease;
+        }
+        
+        .body-outline {
+            fill: none;
+            stroke: #996633;
+            stroke-width: 2;
+        }
+        
+        .body-detail {
+            fill: none;
+            stroke: #cc9966;
+            stroke-width: 0.5;
+            opacity: 0.6;
+        }
+        
+        /* Muscle definition */
+        .muscle-definition {
+            fill: none;
+            stroke: #b38866;
+            stroke-width: 0.8;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="body-diagram-container">
+        <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">
+            📍 Pain Location Mapping - Click on body areas to mark pain
+        </h2>
+        
+        <div class="body-views">
+            <!-- Front View -->
+            <div class="body-view">
+                <h3>🔵 Front View (Anterior)</h3>
+                <div class="body-svg-container">
+                    <svg class="body-svg" viewBox="0 0 200 500" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Head -->
+                        <ellipse cx="100" cy="40" rx="30" ry="35" class="body-part"/>
+                        <circle cx="100" cy="40" r="28" class="body-outline"/>
+                        
+                        <!-- Neck -->
+                        <path d="M 85 70 L 85 85 L 115 85 L 115 70 Z" class="body-part"/>
+                        
+                        <!-- Shoulders -->
+                        <ellipse cx="65" cy="100" rx="20" ry="15" class="body-part pain-marker" 
+                            data-location="shoulder_left" data-label="Left Shoulder"/>
+                        <ellipse cx="135" cy="100" rx="20" ry="15" class="body-part pain-marker"
+                            data-location="shoulder_right" data-label="Right Shoulder"/>
+                        
+                        <!-- Torso/Chest -->
+                        <path d="M 65 110 Q 60 150 65 200 L 135 200 Q 140 150 135 110 Z" class="body-part"/>
+                        
+                        <!-- Cervical spine marker -->
+                        <circle cx="100" cy="85" r="12" class="pain-marker" 
+                            data-location="cervical_spine" data-label="Neck/Cervical Spine"/>
+                        
+                        <!-- Thoracic spine marker -->
+                        <circle cx="100" cy="140" r="15" class="pain-marker"
+                            data-location="thoracic_spine" data-label="Mid-back/Thoracic"/>
+                        
+                        <!-- Lumbar spine marker -->
+                        <circle cx="100" cy="200" r="15" class="pain-marker"
+                            data-location="lumbar_spine" data-label="Lower Back/Lumbar"/>
+                        
+                        <!-- Arms -->
+                        <ellipse cx="45" cy="150" rx="8" ry="55" class="body-part pain-marker"
+                            data-location="arm_left" data-label="Left Arm"/>
+                        <ellipse cx="155" cy="150" rx="8" ry="55" class="body-part pain-marker"
+                            data-location="arm_right" data-label="Right Arm"/>
+                        
+                        <!-- Elbows -->
+                        <circle cx="45" cy="180" r="10" class="pain-marker"
+                            data-location="elbow_left" data-label="Left Elbow"/>
+                        <circle cx="155" cy="180" r="10" class="pain-marker"
+                            data-location="elbow_right" data-label="Right Elbow"/>
+                        
+                        <!-- Forearms -->
+                        <ellipse cx="40" cy="230" rx="7" ry="45" class="body-part pain-marker"
+                            data-location="forearm_left" data-label="Left Forearm"/>
+                        <ellipse cx="160" cy="230" rx="7" ry="45" class="body-part pain-marker"
+                            data-location="forearm_right" data-label="Right Forearm"/>
+                        
+                        <!-- Wrists -->
+                        <circle cx="40" cy="270" r="8" class="pain-marker"
+                            data-location="wrist_left" data-label="Left Wrist"/>
+                        <circle cx="160" cy="270" r="8" class="pain-marker"
+                            data-location="wrist_right" data-label="Right Wrist"/>
+                        
+                        <!-- Hands -->
+                        <ellipse cx="38" cy="290" rx="10" ry="15" class="body-part pain-marker"
+                            data-location="hand_left" data-label="Left Hand"/>
+                        <ellipse cx="162" cy="290" rx="10" ry="15" class="body-part pain-marker"
+                            data-location="hand_right" data-label="Right Hand"/>
+                        
+                        <!-- Pelvis/Hips -->
+                        <ellipse cx="80" cy="220" rx="18" ry="25" class="body-part pain-marker"
+                            data-location="hip_left" data-label="Left Hip"/>
+                        <ellipse cx="120" cy="220" rx="18" ry="25" class="body-part pain-marker"
+                            data-location="hip_right" data-label="Right Hip"/>
+                        
+                        <!-- Thighs -->
+                        <ellipse cx="78" cy="290" rx="15" ry="60" class="body-part pain-marker"
+                            data-location="thigh_left" data-label="Left Thigh"/>
+                        <ellipse cx="122" cy="290" rx="15" ry="60" class="body-part pain-marker"
+                            data-location="thigh_right" data-label="Right Thigh"/>
+                        
+                        <!-- Knees -->
+                        <circle cx="78" cy="350" r="14" class="pain-marker"
+                            data-location="knee_left" data-label="Left Knee"/>
+                        <circle cx="122" cy="350" r="14" class="pain-marker"
+                            data-location="knee_right" data-label="Right Knee"/>
+                        
+                        <!-- Lower legs -->
+                        <ellipse cx="78" cy="410" rx="12" ry="55" class="body-part pain-marker"
+                            data-location="shin_left" data-label="Left Shin"/>
+                        <ellipse cx="122" cy="410" rx="12" ry="55" class="body-part pain-marker"
+                            data-location="shin_right" data-label="Right Shin"/>
+                        
+                        <!-- Ankles -->
+                        <circle cx="78" cy="460" r="10" class="pain-marker"
+                            data-location="ankle_left" data-label="Left Ankle"/>
+                        <circle cx="122" cy="460" r="10" class="pain-marker"
+                            data-location="ankle_right" data-label="Right Ankle"/>
+                        
+                        <!-- Feet -->
+                        <ellipse cx="78" cy="485" rx="12" ry="12" class="body-part pain-marker"
+                            data-location="foot_left" data-label="Left Foot"/>
+                        <ellipse cx="122" cy="485" rx="12" ry="12" class="body-part pain-marker"
+                            data-location="foot_right" data-label="Right Foot"/>
+                        
+                        <!-- Muscle definition lines -->
+                        <line x1="85" y1="110" x2="85" y2="190" class="muscle-definition"/>
+                        <line x1="115" y1="110" x2="115" y2="190" class="muscle-definition"/>
+                        <path d="M 90 120 Q 100 125 110 120" class="muscle-definition"/>
+                        <path d="M 90 150 Q 100 155 110 150" class="muscle-definition"/>
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- Back View -->
+            <div class="body-view">
+                <h3>🔴 Back View (Posterior)</h3>
+                <div class="body-svg-container">
+                    <svg class="body-svg" viewBox="0 0 200 500" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Head -->
+                        <ellipse cx="100" cy="40" rx="30" ry="35" class="body-part"/>
+                        
+                        <!-- Neck -->
+                        <path d="M 85 70 L 85 85 L 115 85 L 115 70 Z" class="body-part pain-marker"
+                            data-location="neck_back" data-label="Back of Neck"/>
+                        
+                        <!-- Upper back/shoulders -->
+                        <ellipse cx="65" cy="100" rx="20" ry="15" class="body-part pain-marker"
+                            data-location="shoulder_blade_left" data-label="Left Shoulder Blade"/>
+                        <ellipse cx="135" cy="100" rx="20" ry="15" class="body-part pain-marker"
+                            data-location="shoulder_blade_right" data-label="Right Shoulder Blade"/>
+                        
+                        <!-- Back torso -->
+                        <path d="M 65 110 Q 60 150 65 200 L 135 200 Q 140 150 135 110 Z" class="body-part"/>
+                        
+                        <!-- Spine markers -->
+                        <circle cx="100" cy="120" r="12" class="pain-marker"
+                            data-location="upper_back" data-label="Upper Back"/>
+                        <circle cx="100" cy="160" r="15" class="pain-marker"
+                            data-location="mid_back" data-label="Mid Back"/>
+                        <circle cx="100" cy="200" r="15" class="pain-marker"
+                            data-location="lower_back" data-label="Lower Back"/>
+                        
+                        <!-- Arms (back view) -->
+                        <ellipse cx="45" cy="150" rx="8" ry="55" class="body-part pain-marker"
+                            data-location="tricep_left" data-label="Left Tricep"/>
+                        <ellipse cx="155" cy="150" rx="8" ry="55" class="body-part pain-marker"
+                            data-location="tricep_right" data-label="Right Tricep"/>
+                        
+                        <!-- Forearms (back) -->
+                        <ellipse cx="40" cy="230" rx="7" ry="45" class="body-part pain-marker"
+                            data-location="forearm_back_left" data-label="Left Forearm (back)"/>
+                        <ellipse cx="160" cy="230" rx="7" ry="45" class="body-part pain-marker"
+                            data-location="forearm_back_right" data-label="Right Forearm (back)"/>
+                        
+                        <!-- Sacrum/SI Joint -->
+                        <ellipse cx="100" cy="220" rx="25" ry="20" class="body-part pain-marker"
+                            data-location="sacrum" data-label="Sacrum/SI Joint"/>
+                        
+                        <!-- Glutes -->
+                        <ellipse cx="80" cy="245" rx="20" ry="25" class="body-part pain-marker"
+                            data-location="glute_left" data-label="Left Glute"/>
+                        <ellipse cx="120" cy="245" rx="20" ry="25" class="body-part pain-marker"
+                            data-location="glute_right" data-label="Right Glute"/>
+                        
+                        <!-- Hamstrings -->
+                        <ellipse cx="78" cy="310" rx="14" ry="55" class="body-part pain-marker"
+                            data-location="hamstring_left" data-label="Left Hamstring"/>
+                        <ellipse cx="122" cy="310" rx="14" ry="55" class="body-part pain-marker"
+                            data-location="hamstring_right" data-label="Right Hamstring"/>
+                        
+                        <!-- Calves -->
+                        <ellipse cx="78" cy="410" rx="13" ry="50" class="body-part pain-marker"
+                            data-location="calf_left" data-label="Left Calf"/>
+                        <ellipse cx="122" cy="410" rx="13" ry="50" class="body-part pain-marker"
+                            data-location="calf_right" data-label="Right Calf"/>
+                        
+                        <!-- Achilles -->
+                        <rect x="73" y="455" width="10" height="25" class="pain-marker"
+                            data-location="achilles_left" data-label="Left Achilles"/>
+                        <rect x="117" y="455" width="10" height="25" class="pain-marker"
+                            data-location="achilles_right" data-label="Right Achilles"/>
+                        
+                        <!-- Muscle definition -->
+                        <path d="M 70 120 Q 100 130 130 120" class="muscle-definition"/>
+                        <path d="M 75 160 Q 100 165 125 160" class="muscle-definition"/>
+                        <line x1="100" y1="90" x2="100" y2="210" class="muscle-definition"/>
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- Side View -->
+            <div class="body-view">
+                <h3>🟡 Side View (Lateral)</h3>
+                <div class="body-svg-container">
+                    <svg class="body-svg" viewBox="0 0 200 500" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Head (profile) -->
+                        <ellipse cx="100" cy="40" rx="25" ry="32" class="body-part"/>
+                        <path d="M 115 25 Q 125 40 115 55" class="body-outline"/>
+                        
+                        <!-- Neck (side) -->
+                        <path d="M 95 70 L 95 90 L 105 90 L 108 70 Z" class="body-part pain-marker"
+                            data-location="neck_side" data-label="Neck (side)"/>
+                        
+                        <!-- Shoulder (side) -->
+                        <ellipse cx="95" cy="105" rx="22" ry="18" class="body-part pain-marker"
+                            data-location="shoulder_side" data-label="Shoulder"/>
+                        
+                        <!-- Spine curve (lateral) -->
+                        <path d="M 100 90 Q 95 150 100 200 Q 105 220 100 240" 
+                            class="body-outline" stroke-width="3"/>
+                        
+                        <!-- Torso (side profile) -->
+                        <path d="M 95 110 Q 110 150 105 200 Q 100 220 95 240 L 85 240 Q 88 200 85 150 Q 90 110 95 110 Z" 
+                            class="body-part"/>
+                        
+                        <!-- Arm (side) -->
+                        <ellipse cx="75" cy="150" rx="10" ry="55" class="body-part pain-marker"
+                            data-location="arm_side" data-label="Arm (side)"/>
+                        
+                        <!-- Hip/pelvis (side) -->
+                        <ellipse cx="100" cy="245" rx="25" ry="30" class="body-part pain-marker"
+                            data-location="hip_side" data-label="Hip (side)"/>
+                        
+                        <!-- Thigh (side) -->
+                        <ellipse cx="95" cy="310" rx="18" ry="58" class="body-part pain-marker"
+                            data-location="thigh_side" data-label="Thigh (side)"/>
+                        
+                        <!-- Knee (side) -->
+                        <circle cx="92" cy="360" r="16" class="pain-marker"
+                            data-location="knee_side" data-label="Knee (side)"/>
+                        
+                        <!-- Lower leg (side) -->
+                        <ellipse cx="88" cy="420" rx="14" ry="55" class="body-part pain-marker"
+                            data-location="leg_side" data-label="Lower Leg (side)"/>
+                        
+                        <!-- Foot (side) -->
+                        <ellipse cx="95" cy="485" rx="20" ry="12" class="body-part pain-marker"
+                            data-location="foot_side" data-label="Foot (side)"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Selected Locations Display -->
+        <div class="selected-locations">
+            <h3>📍 Selected Pain Locations (<span id="painCount">0</span>)</h3>
+            <div class="pain-chips" id="painChipsContainer">
+                <div class="empty-state">No pain locations selected. Click on body areas above to mark pain.</div>
+            </div>
+        </div>
+        
+        <!-- Hidden input for form submission -->
+        <input type="hidden" id="painLocationsData" name="pain_locations" value="">
+    </div>
+    
+    <script>
+        // Pain locations tracking
+        const selectedLocations = new Set();
+        
+        // Initialize all pain markers
+        document.addEventListener('DOMContentLoaded', () => {
+            const markers = document.querySelectorAll('.pain-marker');
+            
+            markers.forEach(marker => {
+                marker.addEventListener('click', (e) => {
+                    const location = marker.getAttribute('data-location');
+                    const label = marker.getAttribute('data-label');
+                    
+                    if (selectedLocations.has(location)) {
+                        // Remove location
+                        selectedLocations.delete(location);
+                        marker.classList.remove('active');
+                    } else {
+                        // Add location
+                        selectedLocations.add(location);
+                        marker.classList.add('active');
+                    }
+                    
+                    updateDisplay();
+                });
+            });
+        });
+        
+        function updateDisplay() {
+            const container = document.getElementById('painChipsContainer');
+            const countSpan = document.getElementById('painCount');
+            const hiddenInput = document.getElementById('painLocationsData');
+            
+            countSpan.textContent = selectedLocations.size;
+            
+            if (selectedLocations.size === 0) {
+                container.innerHTML = '<div class="empty-state">No pain locations selected. Click on body areas above to mark pain.</div>';
+                hiddenInput.value = '';
+                return;
+            }
+            
+            container.innerHTML = '';
+            const locationsArray = Array.from(selectedLocations);
+            
+            locationsArray.forEach(location => {
+                const label = getLocationLabel(location);
+                const chip = document.createElement('div');
+                chip.className = 'pain-chip';
+                chip.innerHTML = `
+                    <span>${label}</span>
+                    <button onclick="removeLocation('${location}')">×</button>
+                `;
+                container.appendChild(chip);
+            });
+            
+            // Update hidden input for form submission
+            hiddenInput.value = JSON.stringify(locationsArray);
+        }
+        
+        function getLocationLabel(location) {
+            const markers = document.querySelectorAll(`[data-location="${location}"]`);
+            if (markers.length > 0) {
+                return markers[0].getAttribute('data-label');
+            }
+            return location.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        
+        function removeLocation(location) {
+            selectedLocations.delete(location);
+            
+            // Remove active class from markers
+            const markers = document.querySelectorAll(`[data-location="${location}"]`);
+            markers.forEach(m => m.classList.remove('active'));
+            
+            updateDisplay();
+        }
+        
+        // Export function for parent form
+        function getPainLocations() {
+            return Array.from(selectedLocations);
+        }
+        
+        // Make it available globally
+        window.getPainLocations = getPainLocations;
+    </script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaPipe Landmarks Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .landmark-dot {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .landmark-dot:hover {
+            transform: scale(1.5);
+        }
+        .landmark-label {
+            font-size: 10px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-user text-blue-600 mr-2"></i>
+                MediaPipe Pose - 33 Landmarks
+            </h1>
+            <p class="text-gray-600">Hover over points to see landmark names and IDs</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Visual Diagram -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Visual Map</h2>
+                <svg id="skeleton-svg" viewBox="0 0 400 600" class="w-full border border-gray-300 rounded-lg">
+                    <!-- Will be populated by JavaScript -->
+                </svg>
+            </div>
+
+            <!-- Landmark List -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">All Landmarks</h2>
+                <div class="space-y-1 max-h-[550px] overflow-y-auto">
+                    <div id="landmark-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Landmark Info -->
+        <div id="selected-info" class="hidden mt-6 bg-blue-50 border-l-4 border-blue-600 rounded-lg p-6">
+            <h3 class="text-lg font-bold text-blue-900 mb-2">Selected Landmark</h3>
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div>
+                    <span class="font-semibold">ID:</span> <span id="sel-id"></span>
+                </div>
+                <div>
+                    <span class="font-semibold">Name:</span> <span id="sel-name"></span>
+                </div>
+                <div>
+                    <span class="font-semibold">Category:</span> <span id="sel-category"></span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="font-semibold">Description:</span> <span id="sel-desc"></span>
+            </div>
+        </div>
+
+        <!-- Joint Angles -->
+        <div class="mt-6 bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Key Joint Angles Calculated</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="border border-gray-300 rounded-lg p-4">
+                    <h3 class="font-bold text-gray-900 mb-2">Upper Body</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><strong>Shoulder Flexion:</strong> Points 11-13-23 (Shoulder-Elbow-Hip)</li>
+                        <li><strong>Elbow Flexion:</strong> Points 11-13-15 (Shoulder-Elbow-Wrist)</li>
+                        <li><strong>Shoulder Abduction:</strong> Points 12-11-13 (R_Shoulder-L_Shoulder-L_Elbow)</li>
+                    </ul>
+                </div>
+                <div class="border border-gray-300 rounded-lg p-4">
+                    <h3 class="font-bold text-gray-900 mb-2">Lower Body</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><strong>Hip Flexion:</strong> Points 11-23-25 (Shoulder-Hip-Knee)</li>
+                        <li><strong>Knee Flexion:</strong> Points 23-25-27 (Hip-Knee-Ankle)</li>
+                        <li><strong>Ankle Dorsiflexion:</strong> Points 25-27-31 (Knee-Ankle-Foot)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // MediaPipe Pose Landmarks
+        const landmarks = [
+            // Face & Head (0-10)
+            { id: 0, name: 'NOSE', category: 'Face', x: 200, y: 50, color: '#FF6B6B', desc: 'Nose tip - central facial reference point' },
+            { id: 1, name: 'LEFT_EYE_INNER', category: 'Face', x: 185, y: 45, color: '#FF6B6B', desc: 'Inner corner of left eye' },
+            { id: 2, name: 'LEFT_EYE', category: 'Face', x: 180, y: 45, color: '#FF6B6B', desc: 'Center of left eye' },
+            { id: 3, name: 'LEFT_EYE_OUTER', category: 'Face', x: 175, y: 45, color: '#FF6B6B', desc: 'Outer corner of left eye' },
+            { id: 4, name: 'RIGHT_EYE_INNER', category: 'Face', x: 215, y: 45, color: '#FF6B6B', desc: 'Inner corner of right eye' },
+            { id: 5, name: 'RIGHT_EYE', category: 'Face', x: 220, y: 45, color: '#FF6B6B', desc: 'Center of right eye' },
+            { id: 6, name: 'RIGHT_EYE_OUTER', category: 'Face', x: 225, y: 45, color: '#FF6B6B', desc: 'Outer corner of right eye' },
+            { id: 7, name: 'LEFT_EAR', category: 'Face', x: 165, y: 50, color: '#FF6B6B', desc: 'Left ear tragus' },
+            { id: 8, name: 'RIGHT_EAR', category: 'Face', x: 235, y: 50, color: '#FF6B6B', desc: 'Right ear tragus' },
+            { id: 9, name: 'MOUTH_LEFT', category: 'Face', x: 190, y: 60, color: '#FF6B6B', desc: 'Left corner of mouth' },
+            { id: 10, name: 'MOUTH_RIGHT', category: 'Face', x: 210, y: 60, color: '#FF6B6B', desc: 'Right corner of mouth' },
+            
+            // Upper Body (11-22)
+            { id: 11, name: 'LEFT_SHOULDER', category: 'Upper Body', x: 165, y: 120, color: '#4ECDC4', desc: 'Left shoulder joint (acromion)' },
+            { id: 12, name: 'RIGHT_SHOULDER', category: 'Upper Body', x: 235, y: 120, color: '#4ECDC4', desc: 'Right shoulder joint (acromion)' },
+            { id: 13, name: 'LEFT_ELBOW', category: 'Upper Body', x: 145, y: 200, color: '#4ECDC4', desc: 'Left elbow joint' },
+            { id: 14, name: 'RIGHT_ELBOW', category: 'Upper Body', x: 255, y: 200, color: '#4ECDC4', desc: 'Right elbow joint' },
+            { id: 15, name: 'LEFT_WRIST', category: 'Upper Body', x: 135, y: 270, color: '#4ECDC4', desc: 'Left wrist joint' },
+            { id: 16, name: 'RIGHT_WRIST', category: 'Upper Body', x: 265, y: 270, color: '#4ECDC4', desc: 'Right wrist joint' },
+            { id: 17, name: 'LEFT_PINKY', category: 'Hand', x: 125, y: 290, color: '#FFA07A', desc: 'Left pinky finger base' },
+            { id: 18, name: 'RIGHT_PINKY', category: 'Hand', x: 275, y: 290, color: '#FFA07A', desc: 'Right pinky finger base' },
+            { id: 19, name: 'LEFT_INDEX', category: 'Hand', x: 130, y: 285, color: '#FFA07A', desc: 'Left index finger base' },
+            { id: 20, name: 'RIGHT_INDEX', category: 'Hand', x: 270, y: 285, color: '#FFA07A', desc: 'Right index finger base' },
+            { id: 21, name: 'LEFT_THUMB', category: 'Hand', x: 140, y: 275, color: '#FFA07A', desc: 'Left thumb base' },
+            { id: 22, name: 'RIGHT_THUMB', category: 'Hand', x: 260, y: 275, color: '#FFA07A', desc: 'Right thumb base' },
+            
+            // Lower Body (23-32)
+            { id: 23, name: 'LEFT_HIP', category: 'Lower Body', x: 175, y: 280, color: '#45B7D1', desc: 'Left hip joint (greater trochanter)' },
+            { id: 24, name: 'RIGHT_HIP', category: 'Lower Body', x: 225, y: 280, color: '#45B7D1', desc: 'Right hip joint (greater trochanter)' },
+            { id: 25, name: 'LEFT_KNEE', category: 'Lower Body', x: 170, y: 380, color: '#45B7D1', desc: 'Left knee joint' },
+            { id: 26, name: 'RIGHT_KNEE', category: 'Lower Body', x: 230, y: 380, color: '#45B7D1', desc: 'Right knee joint' },
+            { id: 27, name: 'LEFT_ANKLE', category: 'Lower Body', x: 165, y: 480, color: '#45B7D1', desc: 'Left ankle joint (lateral malleolus)' },
+            { id: 28, name: 'RIGHT_ANKLE', category: 'Lower Body', x: 235, y: 480, color: '#45B7D1', desc: 'Right ankle joint (lateral malleolus)' },
+            { id: 29, name: 'LEFT_HEEL', category: 'Foot', x: 155, y: 510, color: '#98D8C8', desc: 'Left heel (calcaneus)' },
+            { id: 30, name: 'RIGHT_HEEL', category: 'Foot', x: 245, y: 510, color: '#98D8C8', desc: 'Right heel (calcaneus)' },
+            { id: 31, name: 'LEFT_FOOT_INDEX', category: 'Foot', x: 170, y: 520, color: '#98D8C8', desc: 'Left foot index toe' },
+            { id: 32, name: 'RIGHT_FOOT_INDEX', category: 'Foot', x: 230, y: 520, color: '#98D8C8', desc: 'Right foot index toe' }
+        ];
+
+        // Skeleton connections
+        const connections = [
+            // Face
+            [0, 1], [1, 2], [2, 3], [0, 4], [4, 5], [5, 6],
+            [3, 7], [6, 8], [9, 10],
+            
+            // Upper body
+            [11, 12], [11, 13], [13, 15], [15, 17], [15, 19], [15, 21],
+            [12, 14], [14, 16], [16, 18], [16, 20], [16, 22],
+            [11, 23], [12, 24],
+            
+            // Lower body
+            [23, 24], [23, 25], [25, 27], [27, 29], [27, 31],
+            [24, 26], [26, 28], [28, 30], [28, 32]
+        ];
+
+        function drawSkeleton() {
+            const svg = document.getElementById('skeleton-svg');
+            
+            // Draw connections first (behind landmarks)
+            connections.forEach(([a, b]) => {
+                const lmA = landmarks[a];
+                const lmB = landmarks[b];
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', lmA.x);
+                line.setAttribute('y1', lmA.y);
+                line.setAttribute('x2', lmB.x);
+                line.setAttribute('y2', lmB.y);
+                line.setAttribute('stroke', '#CBD5E0');
+                line.setAttribute('stroke-width', '2');
+                svg.appendChild(line);
+            });
+            
+            // Draw landmarks
+            landmarks.forEach(lm => {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.classList.add('landmark-dot');
+                g.setAttribute('data-id', lm.id);
+                
+                // Circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', lm.x);
+                circle.setAttribute('cy', lm.y);
+                circle.setAttribute('r', '6');
+                circle.setAttribute('fill', lm.color);
+                circle.setAttribute('stroke', 'white');
+                circle.setAttribute('stroke-width', '2');
+                
+                // Label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', lm.x);
+                text.setAttribute('y', lm.y - 10);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#374151');
+                text.setAttribute('font-weight', 'bold');
+                text.classList.add('landmark-label');
+                text.textContent = lm.id;
+                
+                g.appendChild(circle);
+                g.appendChild(text);
+                
+                // Click handler
+                g.addEventListener('click', () => selectLandmark(lm));
+                g.addEventListener('mouseenter', () => {
+                    circle.setAttribute('r', '9');
+                    text.setAttribute('font-size', '14');
+                });
+                g.addEventListener('mouseleave', () => {
+                    circle.setAttribute('r', '6');
+                    text.setAttribute('font-size', '10');
+                });
+                
+                svg.appendChild(g);
+            });
+        }
+
+        function createLandmarkList() {
+            const list = document.getElementById('landmark-list');
+            
+            const categories = {
+                'Face': [],
+                'Upper Body': [],
+                'Hand': [],
+                'Lower Body': [],
+                'Foot': []
+            };
+            
+            landmarks.forEach(lm => {
+                categories[lm.category].push(lm);
+            });
+            
+            Object.entries(categories).forEach(([cat, lms]) => {
+                if (lms.length === 0) return;
+                
+                const section = document.createElement('div');
+                section.className = 'mb-4';
+                section.innerHTML = `
+                    <h3 class="font-bold text-gray-900 mb-2 text-sm">${cat} (${lms.length})</h3>
+                    <div class="space-y-1">
+                        ${lms.map(lm => `
+                            <div class="flex items-center text-xs p-2 hover:bg-gray-100 rounded cursor-pointer" onclick="selectLandmark(${JSON.stringify(lm).replace(/"/g, '&quot;')})">
+                                <div class="w-4 h-4 rounded-full mr-2" style="background-color: ${lm.color}"></div>
+                                <span class="font-mono text-gray-500 mr-2">${lm.id.toString().padStart(2, '0')}</span>
+                                <span class="font-semibold">${lm.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                list.appendChild(section);
+            });
+        }
+
+        function selectLandmark(lm) {
+            const info = document.getElementById('selected-info');
+            info.classList.remove('hidden');
+            
+            document.getElementById('sel-id').textContent = lm.id;
+            document.getElementById('sel-name').textContent = lm.name;
+            document.getElementById('sel-category').textContent = lm.category;
+            document.getElementById('sel-desc').textContent = lm.desc;
+            
+            // Highlight on diagram
+            document.querySelectorAll('.landmark-dot').forEach(g => {
+                const circle = g.querySelector('circle');
+                if (parseInt(g.dataset.id) === lm.id) {
+                    circle.setAttribute('r', '10');
+                    circle.setAttribute('stroke-width', '3');
+                } else {
+                    circle.setAttribute('r', '6');
+                    circle.setAttribute('stroke-width', '2');
+                }
+            });
+            
+            // Scroll to view
+            info.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Make selectLandmark global
+        window.selectLandmark = selectLandmark;
+
+        // Initialize
+        drawSkeleton();
+        createLandmarkList();
+    </script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Diagnostic - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-2xl font-bold text-blue-800 mb-4">
+                <i class="fas fa-stethoscope mr-2"></i>
+                Camera System Diagnostic
+            </h1>
+            <p class="text-gray-600 mb-6">This tool will help identify camera access issues</p>
+
+            <!-- Diagnostic Results -->
+            <div id="diagnosticResults" class="space-y-4"></div>
+
+            <!-- Test Buttons -->
+            <div class="mt-6 space-x-4">
+                <button onclick="runFullDiagnostic()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-play mr-2"></i>
+                    Run Full Diagnostic
+                </button>
+                <button onclick="testCameraOnly()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <i class="fas fa-video mr-2"></i>
+                    Test Camera Only
+                </button>
+                <button onclick="testMediaPipe()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    <i class="fas fa-robot mr-2"></i>
+                    Test MediaPipe
+                </button>
+            </div>
+
+            <!-- Video Preview -->
+            <div class="mt-6">
+                <h3 class="font-bold mb-2">Camera Preview:</h3>
+                <div class="relative bg-black rounded-lg overflow-hidden" style="height: 400px;">
+                    <video id="videoElement" autoplay playsinline class="absolute inset-0 w-full h-full object-contain"></video>
+                    <canvas id="canvasElement" class="absolute inset-0 w-full h-full object-contain"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 rounded-lg p-4">
+            <h3 class="font-bold text-blue-800 mb-2">Common Issues & Solutions:</h3>
+            <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li><strong>NotAllowedError:</strong> Click the camera icon in browser address bar and allow camera access</li>
+                <li><strong>NotFoundError:</strong> No camera detected - check if camera is connected/enabled</li>
+                <li><strong>NotReadableError:</strong> Camera in use by another app - close Zoom, Teams, etc.</li>
+                <li><strong>MediaPipe not loading:</strong> Check internet connection, try refreshing page</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- MediaPipe Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+    <script>
+        const results = {
+            browser: null,
+            mediaDevices: null,
+            camera: null,
+            mediaPipe: null,
+            mediaPipeCamera: null,
+            mediaPipeDrawing: null
+        };
+
+        function addResult(test, status, message, details = '') {
+            const container = document.getElementById('diagnosticResults');
+            const icon = status === 'pass' ? 'fa-check-circle text-green-600' : 
+                        status === 'fail' ? 'fa-times-circle text-red-600' : 
+                        'fa-exclamation-triangle text-yellow-600';
+            
+            const div = document.createElement('div');
+            div.className = 'border rounded-lg p-4';
+            div.innerHTML = `
+                <div class="flex items-start">
+                    <i class="fas ${icon} text-2xl mr-3 mt-1"></i>
+                    <div class="flex-1">
+                        <h4 class="font-bold">${test}</h4>
+                        <p class="text-gray-600">${message}</p>
+                        ${details ? `<pre class="mt-2 text-xs bg-gray-100 p-2 rounded overflow-x-auto">${details}</pre>` : ''}
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function runFullDiagnostic() {
+            document.getElementById('diagnosticResults').innerHTML = '';
+            
+            console.log('🔍 Starting full diagnostic...');
+            
+            // Test 1: Browser Compatibility
+            addResult(
+                '1. Browser Compatibility',
+                'pass',
+                `Browser: ${navigator.userAgent.split(' ').slice(-2).join(' ')}`
+            );
+
+            // Test 2: MediaDevices API
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                results.mediaDevices = true;
+                addResult(
+                    '2. MediaDevices API',
+                    'pass',
+                    'getUserMedia is supported'
+                );
+            } else {
+                results.mediaDevices = false;
+                addResult(
+                    '2. MediaDevices API',
+                    'fail',
+                    'getUserMedia not supported. Try using Chrome, Firefox, or Edge.',
+                    'This browser may be too old or does not support camera access.'
+                );
+                return;
+            }
+
+            // Test 3: Enumerate Devices
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                
+                if (videoDevices.length > 0) {
+                    addResult(
+                        '3. Camera Detection',
+                        'pass',
+                        `Found ${videoDevices.length} camera(s)`,
+                        videoDevices.map(d => `${d.label || 'Camera'} (${d.deviceId.substring(0, 20)}...)`).join('\n')
+                    );
+                } else {
+                    addResult(
+                        '3. Camera Detection',
+                        'fail',
+                        'No cameras detected',
+                        'Please connect a camera or check if it\'s enabled in device settings.'
+                    );
+                    return;
+                }
+            } catch (error) {
+                addResult(
+                    '3. Camera Detection',
+                    'fail',
+                    'Failed to enumerate devices',
+                    error.message
+                );
+            }
+
+            // Test 4: Camera Access
+            await testCameraOnly();
+
+            // Test 5: MediaPipe Libraries
+            await testMediaPipe();
+        }
+
+        async function testCameraOnly() {
+            const video = document.getElementById('videoElement');
+            
+            try {
+                console.log('📹 Testing camera access...');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                
+                console.log('✅ Camera access granted');
+                results.camera = true;
+                
+                video.srcObject = stream;
+                await video.play();
+                
+                addResult(
+                    '4. Camera Access',
+                    'pass',
+                    'Camera stream active',
+                    `Resolution: ${video.videoWidth}x${video.videoHeight}`
+                );
+                
+            } catch (error) {
+                console.error('❌ Camera access failed:', error);
+                results.camera = false;
+                
+                let message = 'Camera access failed';
+                let details = error.message;
+                
+                if (error.name === 'NotAllowedError') {
+                    message = 'Camera permission denied';
+                    details = 'Please click the camera icon in your browser address bar and allow camera access, then refresh.';
+                } else if (error.name === 'NotFoundError') {
+                    message = 'No camera found';
+                    details = 'Please connect a camera or check if it\'s enabled in system settings.';
+                } else if (error.name === 'NotReadableError') {
+                    message = 'Camera is in use';
+                    details = 'Please close other applications (Zoom, Teams, Skype, etc.) that might be using the camera.';
+                }
+                
+                addResult('4. Camera Access', 'fail', message, details);
+            }
+        }
+
+        async function testMediaPipe() {
+            console.log('🤖 Testing MediaPipe libraries...');
+            
+            // Test Pose
+            if (typeof Pose !== 'undefined' || typeof window.Pose !== 'undefined') {
+                results.mediaPipe = true;
+                addResult(
+                    '5. MediaPipe Pose',
+                    'pass',
+                    'Pose detection library loaded successfully'
+                );
+            } else {
+                results.mediaPipe = false;
+                addResult(
+                    '5. MediaPipe Pose',
+                    'fail',
+                    'Pose detection library not loaded',
+                    'Check internet connection and try refreshing. CDN may be blocked.'
+                );
+                return;
+            }
+
+            // Test Camera Utils
+            if (typeof Camera !== 'undefined' || typeof window.Camera !== 'undefined') {
+                results.mediaPipeCamera = true;
+                addResult(
+                    '6. MediaPipe Camera Utils',
+                    'pass',
+                    'Camera utilities loaded'
+                );
+            } else {
+                results.mediaPipeCamera = false;
+                addResult(
+                    '6. MediaPipe Camera Utils',
+                    'warn',
+                    'Camera utilities not loaded (optional)',
+                    'Will use fallback frame processing. Functionality not affected.'
+                );
+            }
+
+            // Test Drawing Utils
+            if (typeof drawConnectors !== 'undefined' || typeof window.drawConnectors !== 'undefined') {
+                results.mediaPipeDrawing = true;
+                addResult(
+                    '7. MediaPipe Drawing Utils',
+                    'pass',
+                    'Drawing utilities loaded'
+                );
+            } else {
+                results.mediaPipeDrawing = false;
+                addResult(
+                    '7. MediaPipe Drawing Utils',
+                    'warn',
+                    'Drawing utilities not loaded (optional)',
+                    'Will use fallback drawing. Skeleton will still be visible.'
+                );
+            }
+
+            // Test full MediaPipe initialization
+            if (results.camera && results.mediaPipe) {
+                try {
+                    console.log('🧪 Initializing MediaPipe Pose...');
+                    const PoseConstructor = window.Pose || Pose;
+                    const pose = new PoseConstructor({
+                        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+                    });
+                    
+                    pose.setOptions({
+                        modelComplexity: 1,
+                        smoothLandmarks: true,
+                        enableSegmentation: false,
+                        minDetectionConfidence: 0.5,
+                        minTrackingConfidence: 0.5
+                    });
+                    
+                    let detectionReceived = false;
+                    
+                    pose.onResults((results) => {
+                        if (!detectionReceived && results.poseLandmarks) {
+                            detectionReceived = true;
+                            const canvas = document.getElementById('canvasElement');
+                            const ctx = canvas.getContext('2d');
+                            
+                            canvas.width = results.image.width;
+                            canvas.height = results.image.height;
+                            
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Draw skeleton
+                            if (results.poseLandmarks) {
+                                // Draw simple dots
+                                results.poseLandmarks.forEach(landmark => {
+                                    ctx.beginPath();
+                                    ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 5, 0, 2 * Math.PI);
+                                    ctx.fillStyle = '#00FF00';
+                                    ctx.fill();
+                                });
+                            }
+                            
+                            addResult(
+                                '8. Pose Detection Test',
+                                'pass',
+                                `Detected ${results.poseLandmarks.length} body landmarks`,
+                                'Skeleton visible on canvas above!'
+                            );
+                        }
+                    });
+                    
+                    const video = document.getElementById('videoElement');
+                    
+                    // Process a few frames
+                    let frameCount = 0;
+                    const processFrame = async () => {
+                        if (video.readyState === 4 && frameCount < 10) {
+                            await pose.send({ image: video });
+                            frameCount++;
+                            setTimeout(processFrame, 100);
+                        } else if (frameCount >= 10 && !detectionReceived) {
+                            addResult(
+                                '8. Pose Detection Test',
+                                'warn',
+                                'No pose detected in 10 frames',
+                                'Try moving in front of the camera. Make sure your full body is visible.'
+                            );
+                        }
+                    };
+                    
+                    processFrame();
+                    
+                } catch (error) {
+                    addResult(
+                        '8. Pose Detection Test',
+                        'fail',
+                        'Failed to initialize pose detection',
+                        error.message
+                    );
+                }
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Camera Diagnostic Tool Ready');
+            addResult(
+                'Diagnostic Tool Ready',
+                'pass',
+                'Click "Run Full Diagnostic" to start testing',
+                'Or use individual test buttons below'
+            );
+        });
+    </script>
+</body>
+</html>

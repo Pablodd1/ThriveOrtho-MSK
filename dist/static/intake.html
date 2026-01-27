@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Intake - ThriveOrtho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0066CC',
+              'brand-green': '#00C851'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/glassmorphism.css" rel="stylesheet">
+    <link href="/static/modern-design.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-brand-blue text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-4 md:py-6">
+                <a href="/" class="text-white hover:text-gray-200 text-sm md:text-base">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Home
+                </a>
+                <h1 class="text-xl md:text-3xl font-bold mt-3 md:mt-4">
+                    <i class="fas fa-user-plus mr-2 md:mr-3"></i>
+                    Patient Intake Form
+                </h1>
+                <p class="text-sm text-white/90 mt-1">Optional - Skip to start quick assessment</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+            <div class="bg-white rounded-lg shadow-lg p-6 md:p-10">
+                <form id="intakeForm">
+                    <!-- Demographics -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-user mr-2 text-brand-blue"></i>
+                            Demographics
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                                <input type="text" name="first_name" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                                <input type="text" name="last_name" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                                <input type="date" name="date_of_birth" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                                <select name="gender" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                    <option value="prefer_not_to_say">Prefer not to say</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" name="email" class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                                <input type="tel" name="phone" required class="glass-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-home mr-2 text-brand-blue"></i>
+                            Address
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
+                                <input type="text" name="address_line1" required class="glass-input w-full">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                                <input type="text" name="address_line2" class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                                <input type="text" name="city" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                                <input type="text" name="state" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ZIP Code *</label>
+                                <input type="text" name="zip_code" required class="glass-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-orange pb-2">
+                            <i class="fas fa-phone-alt mr-2 text-brand-orange"></i>
+                            Emergency Contact
+                        </h2>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                                <input type="text" name="emergency_contact_name" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                                <input type="tel" name="emergency_contact_phone" required class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                                <input type="text" name="emergency_contact_relationship" required placeholder="e.g., Spouse, Child" class="glass-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Information -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-notes-medical mr-2 text-brand-blue"></i>
+                            Medical Information
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Primary Physician</label>
+                                <input type="text" name="primary_physician" class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
+                                <input type="text" name="insurance_provider" class="glass-input w-full">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Insurance Policy Number</label>
+                                <input type="text" name="insurance_policy_number" class="glass-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assessment Context -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-orange pb-2">
+                            <i class="fas fa-clipboard-list mr-2 text-brand-orange"></i>
+                            Assessment Context
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Assessment Reason *</label>
+                                <select name="assessment_reason" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="post_surgery">Post-Surgery Rehabilitation</option>
+                                    <option value="fall_prevention">Fall Prevention</option>
+                                    <option value="chronic_pain">Chronic Pain Management</option>
+                                    <option value="mobility_decline">Mobility Decline</option>
+                                    <option value="balance_issues">Balance Issues</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Activity Level *</label>
+                                <select name="activity_level" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="sedentary">Sedentary</option>
+                                    <option value="light">Light Activity</option>
+                                    <option value="moderate">Moderate Activity</option>
+                                    <option value="active">Active</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Chief Complaint *</label>
+                                <textarea name="chief_complaint" required rows="3" class="glass-textarea w-full"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Pain Scale (0-10) *</label>
+                                <input type="number" name="pain_scale" required min="0" max="10" value="0" class="glass-input w-full">
+                                <p class="text-xs text-gray-500 mt-1">0 = No pain, 10 = Worst pain</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History of Present Illness (HPI) -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-green pb-2">
+                            <i class="fas fa-history mr-2 text-brand-green"></i>
+                            History of Present Illness (HPI)
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Onset *</label>
+                                <select name="onset" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="sudden">Sudden (acute)</option>
+                                    <option value="gradual">Gradual (insidious)</option>
+                                    <option value="traumatic">Traumatic event</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Duration of Symptoms *</label>
+                                <select name="symptom_duration" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="<1week">Less than 1 week</option>
+                                    <option value="1-4weeks">1-4 weeks</option>
+                                    <option value="1-3months">1-3 months</option>
+                                    <option value="3-6months">3-6 months</option>
+                                    <option value=">6months">More than 6 months</option>
+                                    <option value=">1year">More than 1 year</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mechanism of Injury</label>
+                                <input type="text" name="mechanism_injury" placeholder="e.g., Fall, lifting, sports" class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Previous Episodes? *</label>
+                                <select name="previous_episodes" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="no">No, first occurrence</option>
+                                    <option value="yes_similar">Yes, similar symptoms</option>
+                                    <option value="yes_worse">Yes, but worse now</option>
+                                    <option value="yes_better">Yes, but improved</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Aggravating Factors *</label>
+                                <textarea name="aggravating_factors" required rows="2" placeholder="What makes symptoms worse? (e.g., walking, sitting, bending)" class="glass-textarea w-full"></textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Relieving Factors *</label>
+                                <textarea name="relieving_factors" required rows="2" placeholder="What makes symptoms better? (e.g., rest, medication, position)" class="glass-textarea w-full"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Musculoskeletal (MSK) Assessment -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-bone mr-2 text-brand-blue"></i>
+                            Musculoskeletal Assessment
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Pain Location with Interactive Body Diagram -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Primary Pain Location(s) *</label>
+                                <p class="text-xs text-gray-500 mb-3">
+                                    <i class="fas fa-hand-pointer mr-1"></i>
+                                    Click on the body diagram below to mark pain locations. Click again to remove.
+                                </p>
+                                
+                                <!-- Embedded Body Diagram -->
+                                <iframe 
+                                    src="/static/body-diagram.html" 
+                                    id="bodyDiagramFrame"
+                                    style="width: 100%; height: 700px; border: 2px solid #e5e7eb; border-radius: 12px; background: white;"
+                                    title="Interactive Body Diagram for Pain Location Marking">
+                                </iframe>
+                                
+                                <!-- Hidden input to store selected pain locations -->
+                                <input type="hidden" name="pain_locations" id="painLocationsInput" value="">
+                            </div>
+
+                            <!-- Pain Quality -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Pain Quality (check all that apply) *</label>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="sharp" class="mr-2">
+                                        <span class="text-sm">Sharp</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="dull_aching" class="mr-2">
+                                        <span class="text-sm">Dull/Aching</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="burning" class="mr-2">
+                                        <span class="text-sm">Burning</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="stabbing" class="mr-2">
+                                        <span class="text-sm">Stabbing</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="throbbing" class="mr-2">
+                                        <span class="text-sm">Throbbing</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="tingling" class="mr-2">
+                                        <span class="text-sm">Tingling</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="numbness" class="mr-2">
+                                        <span class="text-sm">Numbness</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="pain_quality[]" value="stiffness" class="mr-2">
+                                        <span class="text-sm">Stiffness</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Radiation Pattern -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Does pain radiate? *</label>
+                                <select name="pain_radiates" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="no">No radiation</option>
+                                    <option value="down_arm">Down arm</option>
+                                    <option value="down_leg">Down leg</option>
+                                    <option value="across_back">Across back</option>
+                                    <option value="other">Other pattern</option>
+                                </select>
+                            </div>
+
+                            <!-- Range of Motion -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Range of Motion *</label>
+                                <select name="rom_status" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="full">Full and painless</option>
+                                    <option value="limited_pain">Limited by pain</option>
+                                    <option value="limited_stiffness">Limited by stiffness</option>
+                                    <option value="severely_limited">Severely limited</option>
+                                </select>
+                            </div>
+
+                            <!-- Weakness -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Muscle Weakness? *</label>
+                                <select name="muscle_weakness" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="none">No weakness noted</option>
+                                    <option value="mild">Mild weakness</option>
+                                    <option value="moderate">Moderate weakness</option>
+                                    <option value="severe">Severe weakness</option>
+                                    <option value="bilateral">Bilateral weakness</option>
+                                </select>
+                            </div>
+
+                            <!-- Swelling/Inflammation -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Swelling Present? *</label>
+                                <select name="swelling" required class="glass-select w-full">
+                                    <option value="">Select...</option>
+                                    <option value="none">No swelling</option>
+                                    <option value="mild">Mild swelling</option>
+                                    <option value="moderate">Moderate swelling</option>
+                                    <option value="severe">Severe swelling</option>
+                                </select>
+                            </div>
+
+                            <!-- Functional Limitations -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Functional Limitations *</label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="walking" class="mr-2">
+                                        <span class="text-sm">Walking</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="stairs" class="mr-2">
+                                        <span class="text-sm">Stairs</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="sitting" class="mr-2">
+                                        <span class="text-sm">Prolonged Sitting</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="standing" class="mr-2">
+                                        <span class="text-sm">Standing</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="reaching_overhead" class="mr-2">
+                                        <span class="text-sm">Reaching Overhead</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="lifting" class="mr-2">
+                                        <span class="text-sm">Lifting</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="bending" class="mr-2">
+                                        <span class="text-sm">Bending</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="sleeping" class="mr-2">
+                                        <span class="text-sm">Sleep</span>
+                                    </label>
+                                    <label class="flex items-center glass-light p-2 rounded cursor-pointer hover:bg-blue-50">
+                                        <input type="checkbox" name="limitations[]" value="adls" class="mr-2">
+                                        <span class="text-sm">Daily Activities</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Prior Treatment -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Prior Treatment Attempted</label>
+                                <textarea name="prior_treatment" rows="2" placeholder="e.g., Physical therapy, injections, medications, chiropractic" class="glass-textarea w-full"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Height & Weight -->
+                    <div class="mb-6 md:mb-8">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-weight mr-2 text-brand-blue"></i>
+                            Physical Measurements
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Height (cm) *</label>
+                                <input type="number" name="height_cm" required min="100" max="250" step="0.1" class="glass-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg) *</label>
+                                <input type="number" name="weight_kg" required min="30" max="300" step="0.1" class="glass-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consent Forms -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-brand-blue pb-2">
+                            <i class="fas fa-file-signature mr-2 text-brand-blue"></i>
+                            Consent & Acknowledgment
+                        </h2>
+                        
+                        <!-- Important Notice -->
+                        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded">
+                            <div class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mr-3 mt-1"></i>
+                                <div>
+                                    <h3 class="font-bold text-gray-900 mb-2">Human Healthcare Professional Priority</h3>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        <strong>Your licensed healthcare professional (doctor, physical therapist, or coach) is the primary decision-maker for all aspects of your care.</strong> 
+                                        This platform uses AI technology to assist and enhance assessments, but <strong>all AI-generated content must be reviewed and approved by a qualified human healthcare professional</strong> before being used in your treatment. 
+                                        You have the right to consult with your healthcare provider at any time and to decline AI-assisted services if you prefer traditional methods only.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- HIPAA Consent -->
+                        <div class="border-2 border-gray-200 rounded-lg p-6 mb-4">
+                            <div class="flex items-start mb-3">
+                                <input type="checkbox" id="consentHIPAA" name="consent_hipaa" required 
+                                       class="mt-1 h-5 w-5 text-brand-blue rounded focus:ring-brand-blue">
+                                <label for="consentHIPAA" class="ml-3 flex-1">
+                                    <span class="font-bold text-gray-900 block mb-2">
+                                        <i class="fas fa-shield-alt text-blue-600 mr-2"></i>
+                                        HIPAA Privacy & Data Protection Consent *
+                                    </span>
+                                    <div class="text-sm text-gray-700 space-y-2">
+                                        <p>I acknowledge that I have received and reviewed the Notice of Privacy Practices, which explains how my health information may be used and disclosed. I consent to:</p>
+                                        <ul class="list-disc ml-5 space-y-1">
+                                            <li>Collection and storage of my personal health information</li>
+                                            <li>Use of my data for treatment, payment, and healthcare operations</li>
+                                            <li>Electronic storage and transmission of my health records</li>
+                                            <li>Sharing of information with my designated healthcare providers</li>
+                                        </ul>
+                                        <p class="font-semibold mt-2">I understand that I may revoke this consent at any time in writing.</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Treatment Consent -->
+                        <div class="border-2 border-gray-200 rounded-lg p-6 mb-4">
+                            <div class="flex items-start mb-3">
+                                <input type="checkbox" id="consentTreatment" name="consent_treatment" required 
+                                       class="mt-1 h-5 w-5 text-brand-blue rounded focus:ring-brand-blue">
+                                <label for="consentTreatment" class="ml-3 flex-1">
+                                    <span class="font-bold text-gray-900 block mb-2">
+                                        <i class="fas fa-heartbeat text-red-600 mr-2"></i>
+                                        Informed Consent for Physical Therapy Treatment *
+                                    </span>
+                                    <div class="text-sm text-gray-700 space-y-2">
+                                        <p>I consent to physical therapy evaluation and treatment by a <strong>licensed physical therapist or qualified healthcare professional</strong>. I understand that:</p>
+                                        <ul class="list-disc ml-5 space-y-1">
+                                            <li><strong>A licensed healthcare professional will review all assessments</strong> before treatment decisions are made</li>
+                                            <li>Treatment may include exercise, manual therapy, and physical modalities</li>
+                                            <li>I have the right to refuse any treatment or procedure</li>
+                                            <li>I should inform my therapist of any pain, discomfort, or changes in my condition</li>
+                                            <li><strong>I will consult my doctor/therapist before making any changes to my treatment plan</strong></li>
+                                        </ul>
+                                        <p class="font-semibold mt-2 text-red-700">I understand that I should stop exercises immediately and contact my healthcare provider if I experience severe pain, dizziness, or unusual symptoms.</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Technology Consent -->
+                        <div class="border-2 border-purple-200 rounded-lg p-6 mb-4 bg-purple-50">
+                            <div class="flex items-start mb-3">
+                                <input type="checkbox" id="consentAI" name="consent_ai" required 
+                                       class="mt-1 h-5 w-5 text-purple-600 rounded focus:ring-purple-600">
+                                <label for="consentAI" class="ml-3 flex-1">
+                                    <span class="font-bold text-gray-900 block mb-2">
+                                        <i class="fas fa-robot text-purple-600 mr-2"></i>
+                                        AI-Assisted Technology Consent *
+                                    </span>
+                                    <div class="text-sm text-gray-700 space-y-2">
+                                        <p><strong class="text-purple-900">IMPORTANT: AI is an assistive tool only. All clinical decisions are made by your licensed healthcare professional.</strong></p>
+                                        <p>I consent to the use of AI-assisted technology for:</p>
+                                        <ul class="list-disc ml-5 space-y-1">
+                                            <li>Motion capture and biomechanical analysis</li>
+                                            <li>Movement pattern assessment and exercise form evaluation</li>
+                                            <li>Generation of preliminary assessment reports <strong>(subject to professional review)</strong></li>
+                                            <li>Exercise recommendations <strong>(subject to professional approval)</strong></li>
+                                            <li>Educational content and patient engagement tools</li>
+                                        </ul>
+                                        <p class="font-semibold mt-2 bg-purple-100 p-3 rounded border-l-4 border-purple-600">
+                                            <i class="fas fa-user-md mr-2"></i>
+                                            I understand that:
+                                        </p>
+                                        <ul class="list-disc ml-5 space-y-1 mt-2">
+                                            <li><strong>ALL AI-generated content will be reviewed by a licensed healthcare professional</strong></li>
+                                            <li>AI recommendations are suggestions only and do not replace professional judgment</li>
+                                            <li>I have the right to request human-only assessment without AI assistance</li>
+                                            <li>I can ask questions about how AI is used in my care at any time</li>
+                                            <li><strong>My healthcare provider has final authority over all treatment decisions</strong></li>
+                                        </ul>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Liability Waiver -->
+                        <div class="border-2 border-gray-200 rounded-lg p-6 mb-4">
+                            <div class="flex items-start mb-3">
+                                <input type="checkbox" id="consentLiability" name="consent_liability" required 
+                                       class="mt-1 h-5 w-5 text-brand-blue rounded focus:ring-brand-blue">
+                                <label for="consentLiability" class="ml-3 flex-1">
+                                    <span class="font-bold text-gray-900 block mb-2">
+                                        <i class="fas fa-exclamation-circle text-orange-600 mr-2"></i>
+                                        Assumption of Risk & Liability Waiver *
+                                    </span>
+                                    <div class="text-sm text-gray-700 space-y-2">
+                                        <p>I acknowledge that physical therapy and exercise programs involve inherent risks, including but not limited to:</p>
+                                        <ul class="list-disc ml-5 space-y-1">
+                                            <li>Muscle soreness, strains, or sprains</li>
+                                            <li>Cardiovascular stress or exacerbation of existing conditions</li>
+                                            <li>Risk of falls or injury during exercises</li>
+                                            <li>Possibility that symptoms may temporarily worsen</li>
+                                        </ul>
+                                        <p class="font-semibold mt-2">I certify that:</p>
+                                        <ul class="list-disc ml-5 space-y-1">
+                                            <li>I have disclosed all relevant medical conditions to my healthcare provider</li>
+                                            <li>I will follow all safety instructions provided by my therapist</li>
+                                            <li>I will immediately report any adverse reactions or increased pain</li>
+                                            <li><strong>I understand that I should consult my doctor/therapist before making any decisions based on AI-generated recommendations</strong></li>
+                                        </ul>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Digital Signature -->
+                        <div class="border-2 border-brand-blue rounded-lg p-6 bg-blue-50">
+                            <h3 class="font-bold text-gray-900 mb-4">
+                                <i class="fas fa-pen-fancy text-brand-blue mr-2"></i>
+                                Digital Signature *
+                            </h3>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Type your full legal name to sign electronically:
+                                </label>
+                                <input type="text" id="digitalSignature" name="digital_signature" required 
+                                       placeholder="Type your full name"
+                                       class="glass-input w-full border-2 border-brand-blue">
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Today's Date:
+                                </label>
+                                <input type="date" id="signatureDate" name="signature_date" required 
+                                       class="glass-input w-full border-2 border-brand-blue">
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded border-2 border-gray-300">
+                                <p class="text-sm text-gray-700">
+                                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                                    <strong>By typing your name and date above, you are electronically signing this consent form.</strong> 
+                                    This signature has the same legal effect as a handwritten signature and indicates that you have read, 
+                                    understood, and agree to all the terms stated in this consent form.
+                                </p>
+                            </div>
+                            
+                            <div class="mt-4 bg-green-50 p-4 rounded border-l-4 border-green-600">
+                                <p class="text-sm text-gray-700">
+                                    <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                                    <strong>Professional Oversight:</strong> I understand that a licensed healthcare professional will review all AI-generated assessments and recommendations before they are used in my care, and that I have the right to consult with my doctor/therapist at any time regarding my treatment.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div id="statusMessage" class="mb-4 p-4 rounded-md hidden"></div>
+
+                    <!-- Submit Buttons -->
+                    <div class="flex flex-col md:flex-row justify-between gap-3">
+                        <a href="/static/dashboard.html" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-center font-semibold">
+                            <i class="fas fa-bolt mr-2"></i>
+                            Skip to Quick Assessment
+                        </a>
+                        <div class="flex gap-3">
+                            <a href="/" class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold">
+                                Cancel
+                            </a>
+                            <button type="submit" class="px-6 py-3 bg-brand-blue text-white rounded-lg hover:bg-blue-900 transition-colors font-semibold">
+                                <i class="fas fa-save mr-2"></i>
+                                Save & Continue
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('intakeForm');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Auto-fill today's date for signature
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('signatureDate').value = today;
+        });
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `mb-4 p-4 rounded-md ${
+                type === 'success' ? 'bg-green-100 text-green-700' :
+                type === 'error' ? 'bg-red-100 text-red-700' :
+                'bg-blue-100 text-blue-700'
+            }`;
+            statusMessage.classList.remove('hidden');
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Extract pain locations from body diagram iframe
+            try {
+                const iframe = document.getElementById('bodyDiagramFrame');
+                const iframeWindow = iframe.contentWindow;
+                if (iframeWindow && typeof iframeWindow.getPainLocations === 'function') {
+                    const painLocations = iframeWindow.getPainLocations();
+                    document.getElementById('painLocationsInput').value = JSON.stringify(painLocations);
+                }
+            } catch (error) {
+                console.warn('Could not extract pain locations from iframe:', error);
+            }
+            
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+
+            // Convert numeric fields
+            data.pain_scale = parseInt(data.pain_scale);
+            data.height_cm = parseFloat(data.height_cm);
+            data.weight_kg = parseFloat(data.weight_kg);
+
+            // Parse pain locations JSON
+            if (data.pain_locations) {
+                try {
+                    data.pain_locations = JSON.parse(data.pain_locations);
+                } catch (e) {
+                    data.pain_locations = [];
+                }
+            } else {
+                data.pain_locations = [];
+            }
+
+            // Initialize JSON fields
+            data.medical_history = {};
+            data.current_medications = [];
+            data.allergies = [];
+
+            try {
+                showStatus('Creating patient record...', 'info');
+                
+                const response = await fetch('/api/patients', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('✅ Patient created successfully! Redirecting to assessment...', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/static/assessment-enhanced.html?patient_id=${result.data.id}`;
+                    }, 1500);
+                } else {
+                    showStatus('❌ Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Network error: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

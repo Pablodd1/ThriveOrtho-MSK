@@ -4061,6 +4061,9 @@ app.get('/api/video/sessions', async (c) => {
   }
 })
 
+// Include advanced AI APIs
+import './ai-advanced-api'
+
 // Comprehensive Medical Reasoning API (MedLM-style)
 app.post('/api/ai/medical-reasoning', async (c) => {
   try {

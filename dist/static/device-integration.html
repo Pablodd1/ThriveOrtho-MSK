@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Integration - F-AI bian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-green': '#059669',
+              'brand-blue': '#004E89'
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .device-card {
+            transition: all 0.3s;
+            border: 2px solid #e5e7eb;
+        }
+        .device-card:hover {
+            border-color: #059669;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(5, 150, 105, 0.2);
+        }
+        .device-card.active {
+            border-color: #059669;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+        .drop-zone {
+            border: 3px dashed #d1d5db;
+            transition: all 0.3s;
+        }
+        .drop-zone.dragover {
+            border-color: #059669;
+            background: #f0fdf4;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-green-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <a href="/static/human-dashboard.html" class="text-brand-green hover:text-green-700 font-semibold">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+                    </a>
+                    <div class="h-8 w-px bg-gray-300"></div>
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        <i class="fas fa-plug text-brand-green mr-2"></i>
+                        Device Integration Hub
+                    </h1>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Intro Section -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg mb-8">
+            <h2 class="text-xl font-bold text-blue-900 mb-2">
+                <i class="fas fa-info-circle mr-2"></i>
+                Import 3D Motion Capture Data
+            </h2>
+            <p class="text-gray-700 mb-4">
+                Import assessment data from third-party devices like Kinetisense, Vicon, OptiTrack, and other 3D motion analysis systems. 
+                The system automatically detects the device type and converts data to F-AI bian standard format.
+            </p>
+            <div class="grid md:grid-cols-3 gap-4 mt-4">
+                <div class="bg-white p-3 rounded-lg">
+                    <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                    <span class="font-semibold">Auto-Detection</span>
+                </div>
+                <div class="bg-white p-3 rounded-lg">
+                    <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                    <span class="font-semibold">Format Conversion</span>
+                </div>
+                <div class="bg-white p-3 rounded-lg">
+                    <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                    <span class="font-semibold">Data Validation</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supported Devices -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-video text-purple-600 mr-2"></i>
+                Supported Devices
+            </h2>
+            <div class="grid md:grid-cols-4 gap-6">
+                <!-- Kinetisense -->
+                <div class="device-card bg-white rounded-xl p-6 cursor-pointer" onclick="selectDevice('kinetisense')">
+                    <div class="flex flex-col items-center text-center">
+                        <i class="fas fa-cube text-5xl text-purple-600 mb-4"></i>
+                        <h3 class="font-bold text-lg text-gray-900 mb-2">Kinetisense</h3>
+                        <p class="text-sm text-gray-600 mb-3">Markerless 3D Motion Capture</p>
+                        <div class="flex gap-2 flex-wrap justify-center">
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">CSV</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">JSON</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">XML</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vicon -->
+                <div class="device-card bg-white rounded-xl p-6 cursor-pointer" onclick="selectDevice('vicon')">
+                    <div class="flex flex-col items-center text-center">
+                        <i class="fas fa-circle text-5xl text-blue-600 mb-4"></i>
+                        <h3 class="font-bold text-lg text-gray-900 mb-2">Vicon</h3>
+                        <p class="text-sm text-gray-600 mb-3">Marker-Based 3D Capture</p>
+                        <div class="flex gap-2 flex-wrap justify-center">
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">C3D</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">CSV</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">JSON</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OptiTrack -->
+                <div class="device-card bg-white rounded-xl p-6 cursor-pointer" onclick="selectDevice('optitrack')">
+                    <div class="flex flex-col items-center text-center">
+                        <i class="fas fa-dot-circle text-5xl text-green-600 mb-4"></i>
+                        <h3 class="font-bold text-lg text-gray-900 mb-2">OptiTrack</h3>
+                        <p class="text-sm text-gray-600 mb-3">High-Speed Motion Capture</p>
+                        <div class="flex gap-2 flex-wrap justify-center">
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">BVH</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">CSV</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">FBX</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generic -->
+                <div class="device-card bg-white rounded-xl p-6 cursor-pointer" onclick="selectDevice('generic_3d')">
+                    <div class="flex flex-col items-center text-center">
+                        <i class="fas fa-cogs text-5xl text-gray-600 mb-4"></i>
+                        <h3 class="font-bold text-lg text-gray-900 mb-2">Generic 3D</h3>
+                        <p class="text-sm text-gray-600 mb-3">Other Motion Capture Systems</p>
+                        <div class="flex gap-2 flex-wrap justify-center">
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">CSV</span>
+                            <span class="px-2 py-1 bg-gray-100 text-xs rounded">JSON</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="bg-white rounded-xl p-8 shadow-lg mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-upload text-brand-green mr-2"></i>
+                Import Data File
+            </h2>
+            
+            <div id="dropZone" class="drop-zone rounded-xl p-12 text-center mb-6">
+                <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-700 mb-2">Drag & Drop File Here</h3>
+                <p class="text-gray-600 mb-4">or click to browse</p>
+                <input type="file" id="fileInput" accept=".csv,.json,.xml,.c3d,.bvh,.fbx" class="hidden">
+                <button onclick="document.getElementById('fileInput').click()" 
+                        class="px-6 py-3 bg-brand-green text-white rounded-lg hover:bg-green-700 font-semibold">
+                    <i class="fas fa-folder-open mr-2"></i>
+                    Browse Files
+                </button>
+                <p class="text-sm text-gray-500 mt-4">
+                    Supported formats: CSV, JSON, XML, C3D, BVH, FBX
+                </p>
+            </div>
+
+            <!-- Device Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Device Type (Auto-detected)
+                </label>
+                <select id="deviceTypeSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green">
+                    <option value="auto_detect">Auto-Detect Device Type</option>
+                    <option value="kinetisense">Kinetisense 3D</option>
+                    <option value="vicon">Vicon Motion Capture</option>
+                    <option value="optitrack">OptiTrack</option>
+                    <option value="generic_3d">Generic 3D System</option>
+                </select>
+            </div>
+
+            <!-- Import Button -->
+            <button id="importBtn" 
+                    onclick="processImport()" 
+                    class="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                <i class="fas fa-download mr-2"></i>
+                Import and Process Data
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <!-- Success Message -->
+            <div id="successMessage" class="bg-green-50 border-l-4 border-green-500 p-6 rounded-lg mb-6">
+                <h3 class="font-bold text-green-900 mb-2">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Import Successful!
+                </h3>
+                <p id="successDetails" class="text-gray-700"></p>
+            </div>
+
+            <!-- Data Preview -->
+            <div class="bg-white rounded-xl p-6 shadow-lg mb-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Data Preview
+                </h3>
+                <div id="dataPreview" class="overflow-x-auto"></div>
+            </div>
+
+            <!-- Validation Warnings -->
+            <div id="warningsSection" class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg mb-6 hidden">
+                <h3 class="font-bold text-yellow-900 mb-2">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Validation Warnings
+                </h3>
+                <ul id="warningsList" class="text-gray-700 space-y-1"></ul>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-4">
+                <button onclick="createAssessment()" 
+                        class="flex-1 px-6 py-3 bg-brand-green text-white rounded-lg hover:bg-green-700 font-semibold">
+                    <i class="fas fa-file-medical mr-2"></i>
+                    Create Assessment from Import
+                </button>
+                <button onclick="downloadJSON()" 
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+                    <i class="fas fa-download mr-2"></i>
+                    Download JSON
+                </button>
+                <button onclick="resetImport()" 
+                        class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold">
+                    <i class="fas fa-redo mr-2"></i>
+                    Import Another
+                </button>
+            </div>
+        </div>
+
+        <!-- Import History -->
+        <div id="historySection" class="bg-white rounded-xl p-6 shadow-lg hidden">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-history mr-2"></i>
+                Import History
+            </h3>
+            <div id="historyList"></div>
+        </div>
+    </main>
+
+    <!-- Load required modules -->
+    <script src="/static/device-data-parser.js"></script>
+    <script src="/static/biomechanical-analyzer.js"></script>
+    <script src="/static/device-integration-hub.js"></script>
+    <script>
+        const hub = new DeviceIntegrationHub();
+        let selectedDevice = 'auto_detect';
+        let selectedFile = null;
+        let importedData = null;
+
+        // Setup drag and drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            document.getElementById('importBtn').disabled = false;
+            
+            // Update drop zone UI
+            dropZone.innerHTML = `
+                <i class="fas fa-file-alt text-6xl text-brand-green mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-700 mb-2">${file.name}</h3>
+                <p class="text-gray-600">${(file.size / 1024).toFixed(2)} KB</p>
+                <button onclick="document.getElementById('fileInput').click()" 
+                        class="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Change File
+                </button>
+            `;
+        }
+
+        function selectDevice(deviceType) {
+            selectedDevice = deviceType;
+            document.getElementById('deviceTypeSelect').value = deviceType;
+            
+            // Update UI
+            document.querySelectorAll('.device-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        async function processImport() {
+            if (!selectedFile) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const importBtn = document.getElementById('importBtn');
+            importBtn.disabled = true;
+            importBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+
+            try {
+                const deviceType = document.getElementById('deviceTypeSelect').value;
+                const result = await hub.importDeviceData(selectedFile, deviceType);
+
+                if (result.success) {
+                    importedData = result;
+                    showResults(result);
+                } else {
+                    alert('Import failed: ' + result.error);
+                    importBtn.disabled = false;
+                    importBtn.innerHTML = '<i class="fas fa-download mr-2"></i> Import and Process Data';
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                importBtn.disabled = false;
+                importBtn.innerHTML = '<i class="fas fa-download mr-2"></i> Import and Process Data';
+            }
+        }
+
+        function showResults(result) {
+            // Show results section
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            // Update success message
+            document.getElementById('successDetails').textContent = 
+                `Imported ${result.dataPoints} frames from ${result.deviceName}`;
+
+            // Show data preview
+            showDataPreview(result.data);
+
+            // Show warnings if any
+            if (result.warnings && result.warnings.length > 0) {
+                const warningsSection = document.getElementById('warningsSection');
+                const warningsList = document.getElementById('warningsList');
+                
+                warningsSection.classList.remove('hidden');
+                warningsList.innerHTML = result.warnings.map(w => 
+                    `<li><i class="fas fa-${w.severity === 'error' ? 'times-circle text-red-600' : 'exclamation-triangle text-yellow-600'} mr-2"></i>${w.message}</li>`
+                ).join('');
+            }
+
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showDataPreview(data) {
+            const preview = document.getElementById('dataPreview');
+            
+            const summary = data.summary;
+            const firstFrame = data.frames[0];
+            
+            preview.innerHTML = `
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-2">Metadata</h4>
+                        <table class="w-full text-sm">
+                            <tr class="border-b">
+                                <td class="py-2 font-semibold">Device:</td>
+                                <td class="py-2">${data.metadata.device}</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-2 font-semibold">Frame Count:</td>
+                                <td class="py-2">${data.metadata.frameCount}</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-2 font-semibold">Duration:</td>
+                                <td class="py-2">${(data.metadata.frameCount / 30).toFixed(2)}s @ 30 FPS</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-2">Average Joint Angles</h4>
+                        <table class="w-full text-sm">
+                            ${Object.entries(summary.avgAngles || {}).slice(0, 6).map(([joint, angle]) => `
+                                <tr class="border-b">
+                                    <td class="py-2 font-semibold">${joint.replace(/_/g, ' ')}:</td>
+                                    <td class="py-2">${angle.toFixed(1)}°</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function createAssessment() {
+            if (!importedData || !importedData.analysis) {
+                alert('No analysis data available');
+                return;
+            }
+
+            // Show loading
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Assessment...';
+
+            try {
+                // Get patient info (would normally come from patient selection)
+                const patientInfo = {
+                    id: 'demo_patient',
+                    name: prompt('Enter patient name:', 'Demo Patient'),
+                    age: parseInt(prompt('Enter patient age:', '45')),
+                    gender: prompt('Enter patient gender (M/F):', 'M')
+                };
+
+                if (!patientInfo.name) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-file-medical mr-2"></i> Create Assessment from Import';
+                    return;
+                }
+
+                // Create assessment
+                const result = await hub.createAssessmentFromImport(importedData, patientInfo);
+
+                if (result.success) {
+                    alert('Assessment created successfully! Redirecting to dashboard...');
+                    window.location.href = '/static/human-dashboard.html';
+                } else {
+                    throw new Error(result.error);
+                }
+
+            } catch (error) {
+                console.error('Assessment creation error:', error);
+                alert('Failed to create assessment: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-medical mr-2"></i> Create Assessment from Import';
+            }
+        }
+
+        function downloadJSON() {
+            if (!importedData) return;
+            
+            const dataStr = JSON.stringify(importedData.data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `imported_data_${Date.now()}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        function resetImport() {
+            selectedFile = null;
+            importedData = null;
+            
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('importBtn').innerHTML = '<i class="fas fa-download mr-2"></i> Import and Process Data';
+            
+            // Reset drop zone
+            dropZone.innerHTML = `
+                <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-700 mb-2">Drag & Drop File Here</h3>
+                <p class="text-gray-600 mb-4">or click to browse</p>
+                <button onclick="document.getElementById('fileInput').click()" 
+                        class="px-6 py-3 bg-brand-green text-white rounded-lg hover:bg-green-700 font-semibold">
+                    <i class="fas fa-folder-open mr-2"></i>
+                    Browse Files
+                </button>
+                <p class="text-sm text-gray-500 mt-4">
+                    Supported formats: CSV, JSON, XML, C3D, BVH, FBX
+                </p>
+            `;
+            
+            fileInput.value = '';
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
