@@ -1254,6 +1254,13 @@ app.get('/api/errors', async (c) => {
 // Stores assessment results with persistent history
 // ============================================================================
 
+// Cache for red flag counts
+const redFlagCountCache = {
+  data: null as any,
+  timestamp: 0,
+  ttl: 30000 // 30 seconds
+};
+
 // Log assessment results to D1
 app.post('/api/assessment/log', async (c) => {
   try {
@@ -1307,6 +1314,9 @@ app.post('/api/assessment/log', async (c) => {
         
         // Insert red flags if any
         const redFlags = body.redFlags || [];
+        if (redFlags.length > 0) {
+          redFlagCountCache.data = null; // Invalidate cache
+        }
         for (const flag of redFlags) {
           await db.prepare(`
             INSERT INTO msk_red_flags (
@@ -1496,6 +1506,7 @@ app.post('/api/red-flag', async (c) => {
           body.exerciseName || null,
           body.keyword || null
         ).run();
+        redFlagCountCache.data = null; // Invalidate cache
       } catch (dbErr) {
         console.error('[RED FLAG] D1 insert failed:', dbErr);
       }
@@ -1527,9 +1538,19 @@ app.get('/api/red-flags', async (c) => {
       
       const result = await db.prepare(query).all();
       
-      const countResult = await db.prepare(
-        'SELECT COUNT(*) as total, SUM(CASE WHEN acknowledged = 0 THEN 1 ELSE 0 END) as unack FROM msk_red_flags'
-      ).first();
+      let countResult;
+      const now = Date.now();
+
+      // Use cache for count if available and fresh
+      if (redFlagCountCache.data && (now - redFlagCountCache.timestamp < redFlagCountCache.ttl)) {
+        countResult = redFlagCountCache.data;
+      } else {
+        countResult = await db.prepare(
+          'SELECT COUNT(*) as total, SUM(CASE WHEN acknowledged = 0 THEN 1 ELSE 0 END) as unack FROM msk_red_flags'
+        ).first();
+        redFlagCountCache.data = countResult;
+        redFlagCountCache.timestamp = now;
+      }
       
       return c.json({
         count: countResult?.total || 0,
@@ -1563,6 +1584,7 @@ app.post('/api/red-flag/:id/acknowledge', async (c) => {
         id
       ).run();
       
+      redFlagCountCache.data = null; // Invalidate cache
       return c.json({ success: true });
     }
     
