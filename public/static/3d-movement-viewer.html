@@ -11,6 +11,9 @@
     <!-- FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     
+    <!-- Three.js (Global) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+
     <!-- Three.js via import map -->
     <script type="importmap">
     {
@@ -312,7 +315,7 @@
     </div>
 
     <!-- Load Three.js OrbitControls (classic script for compatibility) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
     
     <!-- Load our 3D renderers -->
     <script src="/static/3d-skeleton-renderer.js"></script>
@@ -347,7 +350,7 @@
         
         async function loadDemoRecording() {
             // Try to load from URL parameter or use demo data
-            const urlParams = new URLParams(window.location.search);
+            const urlParams = new URLSearchParams(window.location.search);
             const assessmentId = urlParams.get('id');
             
             if (assessmentId) {
