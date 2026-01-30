@@ -30,10 +30,42 @@ class AvatarRenderer3D {
         // Model loading state
         this.isModelLoaded = false;
         
+        // IK Solver
+        this.ikSolver = null;
+        this.ikHelper = null;
+
         this.init();
     }
     
+    async loadIKLibrary() {
+        if (typeof THREE !== 'undefined' && typeof THREE.CCDIKSolver !== 'undefined') {
+            console.log('✅ THREE.CCDIKSolver already loaded');
+            return;
+        }
+
+        return new Promise((resolve, reject) => {
+            console.log('🔄 Loading THREE.CCDIKSolver...');
+            const script = document.createElement('script');
+            // Use specific version to match Three.js version if possible, or 0.147.0 as safe fallback
+            // Note: This relies on the global THREE object being available
+            script.src = 'https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/animation/CCDIKSolver.js';
+            script.onload = () => {
+                console.log('✅ THREE.CCDIKSolver loaded');
+                resolve();
+            };
+            script.onerror = (e) => {
+                console.warn('⚠️ Failed to load THREE.CCDIKSolver. Falling back to simplified IK.');
+                // Don't reject, just resolve so initialization continues
+                resolve();
+            };
+            document.head.appendChild(script);
+        });
+    }
+
     async init() {
+        // Load IK library early
+        await this.loadIKLibrary();
+
         // Check if Three.js is loaded
         if (typeof THREE === 'undefined') {
             console.error('Three.js not loaded!');
@@ -271,6 +303,9 @@ class AvatarRenderer3D {
                         this.mixer = new THREE.AnimationMixer(this.avatar);
                     }
                     
+                    // Setup IK
+                    this.setupIKSolver();
+
                     console.log('✅ Mixamo model loaded successfully');
                     resolve();
                 },
@@ -314,6 +349,84 @@ class AvatarRenderer3D {
             }
         });
     }
+
+    setupIKSolver() {
+        if (typeof THREE.CCDIKSolver === 'undefined') {
+            return;
+        }
+
+        // Find the skinned mesh
+        let skinnedMesh = null;
+        this.avatar.traverse((obj) => {
+            if (obj.isSkinnedMesh && !skinnedMesh) {
+                skinnedMesh = obj;
+            }
+        });
+
+        if (!skinnedMesh || !skinnedMesh.skeleton) {
+            console.warn('⚠️ No SkinnedMesh/Skeleton found for IK setup');
+            return;
+        }
+
+        const skeleton = skinnedMesh.skeleton;
+        const bones = skeleton.bones;
+
+        // Helper to find bone index by our internal name
+        const getIndex = (name) => {
+            const bone = this.bones[name];
+            return bone ? bones.indexOf(bone) : -1;
+        };
+
+        // Create target bones and add to skeleton
+        this.ikTargets = {};
+        const iks = [];
+
+        const createChain = (effectorName, linksNames, targetName) => {
+            const effectorIdx = getIndex(effectorName);
+            if (effectorIdx === -1) return;
+
+            // Create target bone
+            const targetBone = new THREE.Bone();
+            targetBone.name = targetName;
+            this.scene.add(targetBone); // Add to scene for world-space positioning
+            bones.push(targetBone);
+            const targetIdx = bones.length - 1;
+
+            this.ikTargets[effectorName] = targetBone;
+
+            // Create links
+            const links = [];
+            for (const linkName of linksNames) {
+                const linkIdx = getIndex(linkName);
+                if (linkIdx !== -1) {
+                    links.push({
+                        index: linkIdx
+                        // Note: Constraints (rotationMin/Max) can be added here for better realism
+                    });
+                }
+            }
+
+            iks.push({
+                target: targetIdx,
+                effector: effectorIdx,
+                links: links
+            });
+        };
+
+        // Define chains
+        // Arms: Forearm -> UpperArm
+        createChain('leftHand', ['leftForearm', 'leftUpperArm'], 'ik_target_left_hand');
+        createChain('rightHand', ['rightForearm', 'rightUpperArm'], 'ik_target_right_hand');
+
+        // Legs: Shin -> Thigh
+        createChain('leftFoot', ['leftShin', 'leftThigh'], 'ik_target_left_foot');
+        createChain('rightFoot', ['rightShin', 'rightThigh'], 'ik_target_right_foot');
+
+        if (iks.length > 0) {
+            this.ikSolver = new THREE.CCDIKSolver(skinnedMesh, iks);
+            console.log(`✅ IK System initialized with ${iks.length} chains`);
+        }
+    }
     
     mediaPipeToWorld(landmark) {
         // Convert MediaPipe coordinates to 3D world space
@@ -329,9 +442,6 @@ class AvatarRenderer3D {
             return;
         }
         
-        // Simplified IK: Position body parts based on MediaPipe landmarks
-        // For production, use proper IK library like THREE-IK
-        
         // Get key landmark positions
         const nose = mediaPipeLandmarks[0];
         const leftShoulder = mediaPipeLandmarks[11];
@@ -346,6 +456,39 @@ class AvatarRenderer3D {
         const rightKnee = mediaPipeLandmarks[26];
         const leftAnkle = mediaPipeLandmarks[27];
         const rightAnkle = mediaPipeLandmarks[28];
+
+        // --- IK Solver Path (for Mixamo/SkinnedMesh) ---
+        if (this.ikSolver && this.ikTargets) {
+            // Update Pelvis (Root)
+            // Note: We only set position for the root of the skeleton.
+            // Child bones (limbs) are handled by IK and hierarchy.
+            if (leftHip && rightHip && this.bones.pelvis) {
+                const leftHipPos = this.mediaPipeToWorld(leftHip);
+                const rightHipPos = this.mediaPipeToWorld(rightHip);
+                const pelvisPos = new THREE.Vector3().addVectors(leftHipPos, rightHipPos).multiplyScalar(0.5);
+                this.bones.pelvis.position.copy(pelvisPos);
+            }
+
+            // Update IK Targets
+            if (leftWrist && this.ikTargets.leftHand) {
+                this.ikTargets.leftHand.position.copy(this.mediaPipeToWorld(leftWrist));
+            }
+            if (rightWrist && this.ikTargets.rightHand) {
+                this.ikTargets.rightHand.position.copy(this.mediaPipeToWorld(rightWrist));
+            }
+            if (leftAnkle && this.ikTargets.leftFoot) {
+                this.ikTargets.leftFoot.position.copy(this.mediaPipeToWorld(leftAnkle));
+            }
+            if (rightAnkle && this.ikTargets.rightFoot) {
+                this.ikTargets.rightFoot.position.copy(this.mediaPipeToWorld(rightAnkle));
+            }
+
+            // Update Solver
+            this.ikSolver.update();
+            return;
+        }
+
+        // --- Simplified Path (for Default Avatar) ---
         
         // Update head position
         if (nose && this.bones.head) {
