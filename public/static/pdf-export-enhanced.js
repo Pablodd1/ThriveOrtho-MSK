@@ -366,16 +366,209 @@ class MedicalPDFExporter {
         this.currentY += this.lineHeight * planLines.length;
     }
     
+    async generateChartImage(type, data, options = {}) {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js library not loaded');
+            return null;
+        }
+
+        // Create a temporary canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 400;
+        canvas.style.display = 'none';
+        document.body.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+
+        // Basic configuration
+        const config = {
+            type: type,
+            data: data,
+            options: {
+                animation: false, // Important for immediate capturing
+                responsive: false,
+                devicePixelRatio: 2,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: options.title || '',
+                        font: {
+                            size: 18
+                        }
+                    }
+                },
+                ...options
+            }
+        };
+
+        let chart = null;
+        try {
+            chart = new Chart(ctx, config);
+
+            // Wait a tick to ensure rendering is complete
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            const dataUrl = canvas.toDataURL('image/png');
+            return dataUrl;
+        } catch (e) {
+            console.error('Error generating chart:', e);
+            return null;
+        } finally {
+            if (chart) chart.destroy();
+            document.body.removeChild(canvas);
+        }
+    }
+
     async addGraphsPage() {
-        // This would capture canvas elements and add them to PDF
-        // For now, add a placeholder page
         this.addNewPage();
         this.addSectionTitle('Biomechanical Graphs & Visualizations', '📈');
         
+        // Check if assessment data is available in window.STATE
+        const assessmentData = window.STATE?.assessmentData;
+        if (!assessmentData || !assessmentData.tests || assessmentData.tests.length === 0) {
+            this.doc.setFontSize(10);
+            this.doc.text('No movement data available for visualization.', this.margin + 5, this.currentY);
+            return;
+        }
+
+        // Prepare Data
+        const labels = assessmentData.tests.map((t, i) => `${i + 1}. ${t.test_name}`);
+        const romScores = [];
+        const formScores = [];
+        const balanceScores = [];
+
+        assessmentData.tests.forEach(test => {
+            let data = {};
+            try {
+                data = test.skeleton_data ? JSON.parse(test.skeleton_data) : {};
+            } catch (e) {
+                console.warn('Failed to parse skeleton data for test:', test.test_name);
+            }
+            const analysis = data.analysis || {};
+            romScores.push(analysis.rom_score || 0);
+            formScores.push(analysis.form_quality || 0);
+            balanceScores.push(analysis.balance_score || 0);
+        });
+
+        // 1. Movement Quality Metrics (Bar Chart)
+        const metricsData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'ROM Score',
+                    data: romScores,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Form Quality',
+                    data: formScores,
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Balance Score',
+                    data: balanceScores,
+                    backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        const metricsChartImg = await this.generateChartImage('bar', metricsData, {
+            title: 'Movement Quality Metrics by Exercise',
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Score (%)'
+                    }
+                }
+            }
+        });
+
+        if (metricsChartImg) {
+            this.currentY += 10;
+            // Add image to PDF (format, x, y, width, height)
+            const imgWidth = 170;
+            const imgHeight = 85;
+            this.doc.addImage(metricsChartImg, 'PNG', this.margin, this.currentY, imgWidth, imgHeight);
+            this.currentY += imgHeight + 10;
+        }
+
+        // 2. Spider/Radar Chart for Overall Average
+        // Calculate averages
+        const avgRom = romScores.reduce((a, b) => a + b, 0) / (romScores.length || 1);
+        const avgForm = formScores.reduce((a, b) => a + b, 0) / (formScores.length || 1);
+        const avgBalance = balanceScores.reduce((a, b) => a + b, 0) / (balanceScores.length || 1);
+
+        const radarData = {
+            labels: ['Range of Motion', 'Form Quality', 'Balance & Stability'],
+            datasets: [{
+                label: 'Patient Average',
+                data: [avgRom, avgForm, avgBalance],
+                fill: true,
+                backgroundColor: 'rgba(0, 102, 204, 0.2)',
+                borderColor: 'rgb(0, 102, 204)',
+                pointBackgroundColor: 'rgb(0, 102, 204)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgb(0, 102, 204)'
+            }, {
+                label: 'Healthy Baseline',
+                data: [85, 85, 85], // Hypothetical baseline
+                fill: true,
+                backgroundColor: 'rgba(200, 200, 200, 0.2)',
+                borderColor: 'rgb(200, 200, 200)',
+                borderDash: [5, 5],
+                pointBackgroundColor: 'rgb(200, 200, 200)',
+                pointBorderColor: '#fff'
+            }]
+        };
+
+        const radarChartImg = await this.generateChartImage('radar', radarData, {
+            title: 'Overall Biomechanical Profile',
+            scales: {
+                r: {
+                    angleLines: {
+                        display: false
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            }
+        });
+
+        if (radarChartImg) {
+            // Check if we need a new page
+            if (this.currentY + 100 > this.pageHeight) {
+                this.addNewPage();
+            }
+
+            const imgWidth = 100;
+            const imgHeight = 100;
+            const xPos = (this.pageWidth - imgWidth) / 2; // Center horizontally
+
+            this.doc.addImage(radarChartImg, 'PNG', xPos, this.currentY, imgWidth, imgHeight);
+            this.currentY += imgHeight + 10;
+        }
+
         this.doc.setFontSize(10);
-        this.doc.text('Note: Graphs and visualizations are best viewed in the web report.', this.margin + 5, this.currentY);
-        this.currentY += this.lineHeight;
-        this.doc.text('Please refer to the online assessment report for interactive charts.', this.margin + 5, this.currentY);
+        this.doc.text('These visualizations represent the quantitative analysis of movement patterns.', this.margin + 5, this.currentY);
     }
     
     addClinicalRecommendations(patientData, assessmentData) {
