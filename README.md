@@ -40,6 +40,9 @@
 |------|-----|-------------|
 | **Login** | `/login` | Role selection |
 | **Doctor Dashboard** | `/doctor` | Main provider interface |
+| **Admin Dashboard** | `/admin` | **System stats & management** |
+| **Patient Portal** | `/patient` | **Patient exercises & progress** |
+| **Coach Portal** | `/coach` | **Client management** |
 | **MSK Assessment** | `/doctor/joints` | **YOLO11 real-time tracking** |
 | **Voice Intake** | `/doctor/intake` | **AI pain flag detection** |
 | **Medical Notes** | `/doctor/notes` | **Generate clinical notes** |
@@ -556,8 +559,8 @@ This platform is a clinical decision support tool designed to assist licensed he
 
 ---
 
-**Version**: 10.1 Enterprise Edition  
-**Last Updated**: January 2026  
+**Version**: 10.2 Enterprise Edition  
+**Last Updated**: January 30, 2026  
 **Lines of Code**: 7,200+  
 **API Endpoints**: 65+  
 **Database Tables**: 27  
