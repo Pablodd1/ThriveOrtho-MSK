@@ -1,0 +1,1 @@
+## 2026-02-01 - Accessible Icon Buttons\n**Learning:** Found multiple icon-only buttons (link styled as button, and native buttons) lacking `aria-label`, making them inaccessible to screen readers.\n**Action:** Always inspect icon-only interactive elements for `aria-label` or `title`. For dynamic state buttons (like recording toggles), ensure the label is updated via JavaScript.
