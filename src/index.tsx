@@ -973,6 +973,24 @@ body {
 .category-tab:hover { background: var(--gray-200); }
 .category-tab.active { background: var(--accent); color: white; }
 
+/* Accessibility */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 1000;
+  padding: 12px 20px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 6px 0;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+}
+
 /* Utilities */
 .flex { display: flex; }
 .items-center { align-items: center; }
@@ -1007,7 +1025,10 @@ const html = (content: string, title = 'Thrive Ortho EHR') => `
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" rel="stylesheet">
   <style>${styles}</style>
 </head>
-<body>${content}</body>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  ${content}
+</body>
 </html>
 `
 
@@ -4794,7 +4815,7 @@ app.get('/doctor', (c) => {
     <div class="layout">
       ${sidebar('doctor', 'dashboard')}
       
-      <main class="main">
+      <main class="main" id="main-content">
         <div class="header">
           <div>
             <h1 class="title">Dashboard</h1>
@@ -6999,7 +7020,7 @@ app.get('/doctor/intake', (c) => {
     <div class="layout">
       ${sidebar('doctor', 'intake')}
       
-      <main class="main">
+      <main class="main" id="main-content">
         <div class="header">
           <div>
             <h1 class="title">Voice Medical Intake</h1>
@@ -7305,7 +7326,7 @@ app.get('/doctor/notes', (c) => {
     <div class="layout">
       ${sidebar('doctor', 'notes')}
       
-      <main class="main">
+      <main class="main" id="main-content">
         <div class="header">
           <div>
             <h1 class="title">Medical Note</h1>
@@ -7416,7 +7437,7 @@ app.get('/patient', (c) => {
     <div class="layout">
       ${sidebar('patient', 'dashboard')}
       
-      <main class="main">
+      <main class="main" id="main-content">
         <div class="header">
           <div>
             <h1 class="title">Welcome, Marcus</h1>
@@ -7492,7 +7513,7 @@ app.get('/coach', (c) => {
     <div class="layout">
       ${sidebar('coach', 'dashboard')}
       
-      <main class="main">
+      <main class="main" id="main-content">
         <div class="header">
           <div>
             <h1 class="title">Coach Dashboard</h1>
@@ -7553,7 +7574,7 @@ app.get('/admin', (c) => {
     <div class="layout">
       ${sidebar('admin', 'dashboard')}
       
-      <main class="main">
+      <main class="main" id="main-content">
         <div class="header">
           <div>
             <h1 class="title">Admin Dashboard</h1>
