@@ -842,6 +842,7 @@ body {
 }
 
 .role-btn:hover { border-color: var(--accent); }
+.role-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .role-btn.selected { border-color: var(--accent); background: var(--accent-light); }
 .role-btn i { font-size: 18px; color: var(--accent); margin-bottom: 6px; display: block; }
 .role-btn span { font-weight: 600; font-size: 11px; color: var(--gray-800); }
@@ -4548,7 +4549,8 @@ app.get('/api/video/sessions', async (c) => {
 })
 
 // Include advanced AI APIs
-import './ai-advanced-api'
+import { registerAiRoutes } from './ai-advanced-api'
+registerAiRoutes(app)
 
 // Comprehensive Medical Reasoning API (MedLM-style)
 app.post('/api/ai/medical-reasoning', async (c) => {
@@ -4744,26 +4746,26 @@ app.get('/login', (c) => {
         </div>
         
         <div class="role-grid">
-          <button class="role-btn" onclick="selectRole('patient')">
+          <button class="role-btn" aria-pressed="false" onclick="selectRole(this, 'patient')">
             <i class="fas fa-user"></i>
             <span>Patient</span>
           </button>
-          <button class="role-btn selected" onclick="selectRole('doctor')">
+          <button class="role-btn selected" aria-pressed="true" onclick="selectRole(this, 'doctor')">
             <i class="fas fa-user-md"></i>
             <span>Doctor</span>
           </button>
-          <button class="role-btn" onclick="selectRole('coach')">
+          <button class="role-btn" aria-pressed="false" onclick="selectRole(this, 'coach')">
             <i class="fas fa-clipboard-user"></i>
             <span>Coach</span>
           </button>
-          <button class="role-btn" onclick="selectRole('admin')">
+          <button class="role-btn" aria-pressed="false" onclick="selectRole(this, 'admin')">
             <i class="fas fa-gear"></i>
             <span>Admin</span>
           </button>
         </div>
         
-        <button class="btn btn-primary btn-lg" style="width: 100%;" onclick="login()">
-          Skip Login (Demo) <i class="fas fa-arrow-right" style="margin-left: 4px;"></i>
+        <button id="loginBtn" class="btn btn-primary btn-lg" style="width: 100%;" onclick="login()">
+          Login as Doctor <i class="fas fa-arrow-right" style="margin-left: 4px;"></i>
         </button>
         
         <div class="text-center text-muted text-sm" style="margin-top: 14px;">
@@ -4774,10 +4776,18 @@ app.get('/login', (c) => {
     
     <script>
       let role = 'doctor';
-      function selectRole(r) {
+      function selectRole(el, r) {
         role = r;
-        document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
-        event.currentTarget.classList.add('selected');
+        document.querySelectorAll('.role-btn').forEach(b => {
+          b.classList.remove('selected');
+          b.setAttribute('aria-pressed', 'false');
+        });
+        el.classList.add('selected');
+        el.setAttribute('aria-pressed', 'true');
+
+        const loginBtn = document.getElementById('loginBtn');
+        const roleName = r.charAt(0).toUpperCase() + r.slice(1);
+        loginBtn.innerHTML = 'Login as ' + roleName + ' <i class="fas fa-arrow-right" style="margin-left: 4px;"></i>';
       }
       function login() { location.href = '/' + role; }
     </script>
