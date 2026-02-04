@@ -8,6 +8,10 @@
 // NEW AI ENDPOINTS - Advanced Pose Estimation & Analysis
 // ============================================================================
 
+import { Hono } from 'hono';
+
+export const registerAiRoutes = (app: Hono<any>) => {
+
 /**
  * YOLO11 Pose Estimation Endpoint
  * Enhanced pose detection with ±1.8° accuracy
@@ -499,6 +503,8 @@ app.post('/api/ai/select-model', async (c) => {
     }, 500);
   }
 });
+
+};
 
 // ============================================================================
 // HELPER FUNCTIONS - Implementation Details
