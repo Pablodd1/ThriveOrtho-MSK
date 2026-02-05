@@ -1054,7 +1054,7 @@ const sidebar = (role: string, active: string) => {
       <nav class="nav">
         <div class="nav-label">Navigation</div>
         ${navs[role]?.map(item => `
-          <a class="nav-item ${active === item.id ? 'active' : ''}" href="${item.href}">
+          <a class="nav-item ${active === item.id ? 'active' : ''}" href="${item.href}" ${active === item.id ? 'aria-current="page"' : ''}>
             <i class="fas ${item.icon}"></i>
             <span>${item.label}</span>
           </a>
@@ -4840,7 +4840,7 @@ app.get('/doctor', (c) => {
                 <td>Knee, Hip, Gait</td>
                 <td><span style="font-weight: 700; color: var(--error);">10</span>/21</td>
                 <td><span class="badge badge-danger">High Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P001" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P001" class="btn btn-sm btn-primary" aria-label="Start full body scan for Marcus Williams"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">PC</div><div><strong>Patricia Chen</strong><div class="text-muted text-sm">61 y/o F</div></div></div></td>
@@ -4848,7 +4848,7 @@ app.get('/doctor', (c) => {
                 <td>Balance, Feet, Gait</td>
                 <td><span style="font-weight: 700; color: var(--error);">11</span>/21</td>
                 <td><span class="badge badge-danger">High Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P002" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P002" class="btn btn-sm btn-primary" aria-label="Start full body scan for Patricia Chen"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">JR</div><div><strong>James Rodriguez</strong><div class="text-muted text-sm">58 y/o M</div></div></div></td>
@@ -4856,7 +4856,7 @@ app.get('/doctor', (c) => {
                 <td>Knee ROM, Quad</td>
                 <td><span style="font-weight: 700; color: var(--error);">9</span>/21</td>
                 <td><span class="badge badge-warning">Pre-Surgery</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P003" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P003" class="btn btn-sm btn-primary" aria-label="Start full body scan for James Rodriguez"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">LT</div><div><strong>Linda Thompson</strong><div class="text-muted text-sm">67 y/o F</div></div></div></td>
@@ -4864,7 +4864,7 @@ app.get('/doctor', (c) => {
                 <td>Hip ROM, Gait, Balance</td>
                 <td><span style="font-weight: 700; color: var(--warning);">13</span>/21</td>
                 <td><span class="badge badge-info">Rehab</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P004" class="btn btn-sm btn-primary"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P004" class="btn btn-sm btn-primary" aria-label="Start full body scan for Linda Thompson"><i class="fas fa-bone"></i></a></td>
               </tr>
               <tr>
                 <td><div class="flex items-center gap-1"><div class="avatar">DP</div><div><strong>David Park</strong><div class="text-muted text-sm">45 y/o M</div></div></div></td>
@@ -4872,7 +4872,7 @@ app.get('/doctor', (c) => {
                 <td>Full Body, FMS</td>
                 <td><span style="font-weight: 700; color: var(--success);">17</span>/21</td>
                 <td><span class="badge badge-success">Low Risk</span></td>
-                <td class="text-right"><a href="/doctor/joints?patient=P005" class="btn btn-sm btn-ghost"><i class="fas fa-bone"></i></a></td>
+                <td class="text-right"><a href="/doctor/joints?patient=P005" class="btn btn-sm btn-ghost" aria-label="Start full body scan for David Park"><i class="fas fa-bone"></i></a></td>
               </tr>
             </tbody>
           </table>
@@ -7320,7 +7320,7 @@ app.get('/doctor/notes', (c) => {
         <div class="card">
           <div class="card-header">
             <span class="card-title"><i class="fas fa-file-medical text-accent" style="margin-right: 6px;"></i>Generated Note</span>
-            <button class="btn btn-sm btn-secondary" onclick="regenerateNote()"><i class="fas fa-sync"></i></button>
+            <button class="btn btn-sm btn-secondary" onclick="regenerateNote()" aria-label="Regenerate Note"><i class="fas fa-sync"></i></button>
           </div>
           <div class="card-body">
             <div class="medical-note" id="medicalNote">Loading...</div>
