@@ -1,3 +1,4 @@
+export default function registerAiRoutes(app: any) {
 /**
  * Advanced AI Backend API Integration
  * New endpoints for YOLO11, Quantum, Predictive, and Federated Learning
@@ -1080,4 +1081,4 @@ async function performQuantumBiomechanicalAnalysis(poseResults, patientData, cli
 
 /**
 * Perform comprehensive predictive analysis
-*/
+*/}
