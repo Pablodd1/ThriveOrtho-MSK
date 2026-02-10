@@ -129,101 +129,34 @@ class AvatarRenderer3D {
     }
     
     async loadDefaultAvatar() {
-        // Create a simple humanoid figure as placeholder
-        // In production, replace with actual GLB model from Mixamo or ReadyPlayerMe
+        const modelURL = '/static/models/avatar.glb';
         
-        const bodyMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x8B7355,
-            roughness: 0.7,
-            metalness: 0.1
+        try {
+            await this.loadGLTFLoader();
+            await this.loadMixamoModel(modelURL);
+            console.log('✅ Default avatar loaded (GLB)');
+        } catch (error) {
+            console.error('Failed to load default avatar:', error);
+        }
+    }
+
+    async loadGLTFLoader() {
+        if (typeof THREE.GLTFLoader !== 'undefined') return;
+        
+        console.log('📦 Loading GLTFLoader...');
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js';
+            script.onload = () => {
+                console.log('✅ GLTFLoader loaded');
+                resolve();
+            };
+            script.onerror = (e) => {
+                console.error('❌ Failed to load GLTFLoader', e);
+                reject(e);
+            };
+            document.head.appendChild(script);
         });
-        
-        // Head
-        const headGeometry = new THREE.SphereGeometry(0.12, 16, 16);
-        const head = new THREE.Mesh(headGeometry, bodyMaterial);
-        head.position.set(0, 1.65, 0);
-        head.castShadow = true;
-        
-        // Torso
-        const torsoGeometry = new THREE.CylinderGeometry(0.15, 0.18, 0.6, 16);
-        const torso = new THREE.Mesh(torsoGeometry, bodyMaterial);
-        torso.position.set(0, 1.2, 0);
-        torso.castShadow = true;
-        
-        // Left upper arm
-        const armGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 12);
-        const leftUpperArm = new THREE.Mesh(armGeometry, bodyMaterial);
-        leftUpperArm.position.set(-0.25, 1.35, 0);
-        leftUpperArm.castShadow = true;
-        
-        // Left forearm
-        const leftForearm = new THREE.Mesh(armGeometry, bodyMaterial);
-        leftForearm.position.set(-0.25, 1.0, 0);
-        leftForearm.castShadow = true;
-        
-        // Right upper arm
-        const rightUpperArm = new THREE.Mesh(armGeometry, bodyMaterial);
-        rightUpperArm.position.set(0.25, 1.35, 0);
-        rightUpperArm.castShadow = true;
-        
-        // Right forearm
-        const rightForearm = new THREE.Mesh(armGeometry, bodyMaterial);
-        rightForearm.position.set(0.25, 1.0, 0);
-        rightForearm.castShadow = true;
-        
-        // Pelvis
-        const pelvisGeometry = new THREE.CylinderGeometry(0.18, 0.16, 0.2, 16);
-        const pelvis = new THREE.Mesh(pelvisGeometry, bodyMaterial);
-        pelvis.position.set(0, 0.85, 0);
-        pelvis.castShadow = true;
-        
-        // Left thigh
-        const legGeometry = new THREE.CylinderGeometry(0.06, 0.05, 0.45, 12);
-        const leftThigh = new THREE.Mesh(legGeometry, bodyMaterial);
-        leftThigh.position.set(-0.1, 0.53, 0);
-        leftThigh.castShadow = true;
-        
-        // Left shin
-        const leftShin = new THREE.Mesh(legGeometry, bodyMaterial);
-        leftShin.position.set(-0.1, 0.23, 0);
-        leftShin.castShadow = true;
-        
-        // Right thigh
-        const rightThigh = new THREE.Mesh(legGeometry, bodyMaterial);
-        rightThigh.position.set(0.1, 0.53, 0);
-        rightThigh.castShadow = true;
-        
-        // Right shin
-        const rightShin = new THREE.Mesh(legGeometry, bodyMaterial);
-        rightShin.position.set(0.1, 0.23, 0);
-        rightShin.castShadow = true;
-        
-        // Create avatar group
-        this.avatar = new THREE.Group();
-        this.avatar.add(head, torso, 
-                       leftUpperArm, leftForearm, rightUpperArm, rightForearm,
-                       pelvis, leftThigh, leftShin, rightThigh, rightShin);
-        
-        // Store references to body parts for IK
-        this.bones = {
-            head: head,
-            torso: torso,
-            leftUpperArm: leftUpperArm,
-            leftForearm: leftForearm,
-            rightUpperArm: rightUpperArm,
-            rightForearm: rightForearm,
-            pelvis: pelvis,
-            leftThigh: leftThigh,
-            leftShin: leftShin,
-            rightThigh: rightThigh,
-            rightShin: rightShin
-        };
-        
-        this.scene.add(this.avatar);
-        this.isModelLoaded = true;
-        
-        console.log('✅ Default avatar loaded (placeholder)');
-        console.log('💡 To use a realistic model, load GLB from Mixamo or ReadyPlayerMe');
     }
     
     async loadMixamoModel(modelURL) {
