@@ -20,7 +20,7 @@ class MedicalPDFExporter {
         this.doc = new jsPDF();
         
         // Page 1: Cover Page
-        this.addCoverPage(patientData, assessmentData);
+        await this.addCoverPage(patientData, assessmentData);
         
         // Page 2: Patient Demographics & BMI
         this.addNewPage();
@@ -54,19 +54,32 @@ class MedicalPDFExporter {
         this.doc.save(fileName);
     }
     
-    addCoverPage(patientData, assessmentData) {
-        // Logo area (placeholder)
-        this.doc.setFillColor(0, 102, 204);
-        this.doc.rect(0, 0, this.pageWidth, 60, 'F');
+    async addCoverPage(patientData, assessmentData) {
+        // Logo area
+        try {
+            const logoData = await this.loadImage('/static/logo.svg');
+
+            // Logo dimensions in PDF units (mm)
+            // Original SVG is 240x60. Aspect ratio 4:1.
+            const logoWidth = 120;
+            const logoHeight = 30; // 4:1
+            const x = (this.pageWidth - logoWidth) / 2;
+            const y = 10;
+
+            this.doc.addImage(logoData, 'PNG', x, y, logoWidth, logoHeight);
+        } catch (e) {
+            console.error('Could not load logo, falling back to text', e);
+            this.doc.setTextColor(0, 102, 204);
+            this.doc.setFontSize(32);
+            this.doc.setFont(undefined, 'bold');
+            this.doc.text('ThriveOrtho', this.pageWidth / 2, 25, { align: 'center' });
+        }
         
         // Title
-        this.doc.setTextColor(255, 255, 255);
-        this.doc.setFontSize(32);
-        this.doc.setFont(undefined, 'bold');
-        this.doc.text('ThriveOrtho', this.pageWidth / 2, 25, { align: 'center' });
-        
+        this.doc.setTextColor(0, 102, 204); // Brand Blue
         this.doc.setFontSize(18);
-        this.doc.text('Physical Therapy Assessment Report', this.pageWidth / 2, 40, { align: 'center' });
+        this.doc.setFont(undefined, 'bold');
+        this.doc.text('Physical Therapy Assessment Report', this.pageWidth / 2, 45, { align: 'center' });
         
         // Patient Name
         this.currentY = 80;
@@ -411,6 +424,29 @@ class MedicalPDFExporter {
         this.doc.text('Date', this.margin + 100, this.currentY);
     }
     
+    async loadImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                // Use higher resolution for PDF (4x scale)
+                const scale = 4;
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(scale, scale);
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = (e) => {
+                console.error("Failed to load image", url, e);
+                reject(e);
+            };
+            img.src = url;
+        });
+    }
+
     addPageNumbers() {
         const totalPages = this.currentPage;
         for (let i = 1; i <= totalPages; i++) {
