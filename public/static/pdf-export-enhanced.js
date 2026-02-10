@@ -19,8 +19,16 @@ class MedicalPDFExporter {
         const { jsPDF } = window.jspdf;
         this.doc = new jsPDF();
         
+        // Load logo
+        let logoData = null;
+        try {
+            logoData = await this.loadImage('/static/logo.svg');
+        } catch (e) {
+            console.warn('Failed to load logo:', e);
+        }
+
         // Page 1: Cover Page
-        this.addCoverPage(patientData, assessmentData);
+        this.addCoverPage(patientData, assessmentData, logoData);
         
         // Page 2: Patient Demographics & BMI
         this.addNewPage();
@@ -54,19 +62,34 @@ class MedicalPDFExporter {
         this.doc.save(fileName);
     }
     
-    addCoverPage(patientData, assessmentData) {
-        // Logo area (placeholder)
-        this.doc.setFillColor(0, 102, 204);
-        this.doc.rect(0, 0, this.pageWidth, 60, 'F');
-        
-        // Title
-        this.doc.setTextColor(255, 255, 255);
-        this.doc.setFontSize(32);
-        this.doc.setFont(undefined, 'bold');
-        this.doc.text('ThriveOrtho', this.pageWidth / 2, 25, { align: 'center' });
-        
-        this.doc.setFontSize(18);
-        this.doc.text('Physical Therapy Assessment Report', this.pageWidth / 2, 40, { align: 'center' });
+    addCoverPage(patientData, assessmentData, logoData) {
+        if (logoData) {
+            // Add logo centered
+            const logoWidth = 80;
+            const logoHeight = 20;
+            const x = (this.pageWidth - logoWidth) / 2;
+            const y = 10;
+            this.doc.addImage(logoData, 'PNG', x, y, logoWidth, logoHeight);
+
+            // Subtitle
+            this.doc.setTextColor(0, 102, 204);
+            this.doc.setFontSize(18);
+            this.doc.setFont(undefined, 'bold');
+            this.doc.text('Physical Therapy Assessment Report', this.pageWidth / 2, 40, { align: 'center' });
+        } else {
+            // Logo area (placeholder)
+            this.doc.setFillColor(0, 102, 204);
+            this.doc.rect(0, 0, this.pageWidth, 60, 'F');
+
+            // Title
+            this.doc.setTextColor(255, 255, 255);
+            this.doc.setFontSize(32);
+            this.doc.setFont(undefined, 'bold');
+            this.doc.text('ThriveOrtho', this.pageWidth / 2, 25, { align: 'center' });
+
+            this.doc.setFontSize(18);
+            this.doc.text('Physical Therapy Assessment Report', this.pageWidth / 2, 40, { align: 'center' });
+        }
         
         // Patient Name
         this.currentY = 80;
@@ -495,6 +518,23 @@ class MedicalPDFExporter {
         if (age > 65 && avgBalance < 60) return 'High risk - recommend fall prevention program';
         if (avgBalance < 70) return 'Moderate risk';
         return 'Low risk';
+    }
+
+    loadImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
     }
 }
 
