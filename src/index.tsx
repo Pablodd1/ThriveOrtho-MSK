@@ -1307,22 +1307,29 @@ app.post('/api/assessment/log', async (c) => {
         
         // Insert red flags if any
         const redFlags = body.redFlags || [];
-        for (const flag of redFlags) {
-          await db.prepare(`
+        if (redFlags.length > 0) {
+          const statements = redFlags.map((flag) =>
+            db
+              .prepare(
+                `
             INSERT INTO msk_red_flags (
               id, assessment_id, patient_id, flag_type, severity,
               context, exercise_name, detected_keyword
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(
-            generateUUID(),
-            assessmentId,
-            body.patientId || null,
-            flag.type || 'other',
-            flag.severity || 'medium',
-            flag.context || '',
-            flag.exercise || null,
-            flag.keyword || null
-          ).run();
+          `
+              )
+              .bind(
+                generateUUID(),
+                assessmentId,
+                body.patientId || null,
+                flag.type || 'other',
+                flag.severity || 'medium',
+                flag.context || '',
+                flag.exercise || null,
+                flag.keyword || null
+              )
+          );
+          await db.batch(statements);
         }
         
         return c.json({ 
