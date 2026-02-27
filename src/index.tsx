@@ -1387,6 +1387,10 @@ app.get('/api/assessment/:id', async (c) => {
   }
 })
 
+// Cache for assessment count
+let assessmentCountCache: { count: number, timestamp: number } | null = null;
+const CACHE_TTL = 60 * 1000; // 1 minute
+
 // Get recent assessments from D1
 app.get('/api/assessments', async (c) => {
   try {
@@ -1416,11 +1420,20 @@ app.get('/api/assessments', async (c) => {
       
       const result = await db.prepare(query).bind(...bindings).all();
       
-      // Get total count
-      const countResult = await db.prepare('SELECT COUNT(*) as total FROM msk_assessments').first();
+      // Get total count (cached)
+      let count = 0;
+      const now = Date.now();
+
+      if (assessmentCountCache && (now - assessmentCountCache.timestamp < CACHE_TTL)) {
+        count = assessmentCountCache.count;
+      } else {
+        const countResult = await db.prepare('SELECT COUNT(*) as total FROM msk_assessments').first();
+        count = countResult?.total || 0;
+        assessmentCountCache = { count, timestamp: now };
+      }
       
       return c.json({
-        count: countResult?.total || 0,
+        count: count || 0,
         assessments: result.results || []
       });
     }
