@@ -129,8 +129,18 @@ class AvatarRenderer3D {
     }
     
     async loadDefaultAvatar() {
-        // Create a simple humanoid figure as placeholder
-        // In production, replace with actual GLB model from Mixamo or ReadyPlayerMe
+        // Try to load realistic model first
+        try {
+            // Using a standard robust model from Three.js examples (Mixamo rig compatible)
+            const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/models/gltf/Xbot.glb';
+            await this.loadMixamoModel(modelUrl);
+            console.log('✅ Realistic avatar loaded (Xbot)');
+            return;
+        } catch (error) {
+            console.warn('⚠️ Could not load realistic model, falling back to placeholder:', error);
+        }
+
+        // Fallback: Create a simple humanoid figure as placeholder
         
         const bodyMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x8B7355,
@@ -222,8 +232,8 @@ class AvatarRenderer3D {
         this.scene.add(this.avatar);
         this.isModelLoaded = true;
         
-        console.log('✅ Default avatar loaded (placeholder)');
-        console.log('💡 To use a realistic model, load GLB from Mixamo or ReadyPlayerMe');
+        console.log('✅ Default avatar loaded (fallback placeholder)');
+        console.log('💡 To use a realistic model, ensure GLTFLoader is loaded and network is accessible');
     }
     
     async loadMixamoModel(modelURL) {

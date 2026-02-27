@@ -11,12 +11,15 @@
     <!-- FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     
+    <!-- Load Three.js (Global) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+
     <!-- Three.js via import map -->
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+            "three": "https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.147.0/examples/jsm/"
         }
     }
     </script>
@@ -312,7 +315,8 @@
     </div>
 
     <!-- Load Three.js OrbitControls (classic script for compatibility) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
     
     <!-- Load our 3D renderers -->
     <script src="/static/3d-skeleton-renderer.js"></script>
