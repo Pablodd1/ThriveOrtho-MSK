@@ -1175,6 +1175,14 @@ function generateUUID(): string {
   });
 }
 
+// Helper: SHA-256 for caching
+async function sha256(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Public API route for frontend error logging - D1 Storage
 app.post('/api/log-error', async (c) => {
   try {
@@ -2116,6 +2124,22 @@ Return ONLY valid JSON with ALL joints:
   "confidence": 0.0-1.0
 }` : `Analyze ${movement} movement. Return JSON with relevant joint angles, score 0-3, compensations, and recommendations.`
 
+    // Check cache
+    const db = c.env?.DB
+    const cacheKey = await sha256(prompt + (imageBase64 || ''))
+
+    if (db) {
+      try {
+        const cached = await db.prepare('SELECT response FROM gemini_cache WHERE hash = ?').bind(cacheKey).first()
+        if (cached?.response) {
+          const analysis = JSON.parse(cached.response as string)
+          return c.json({ success: true, analysis, cached: true })
+        }
+      } catch (e) {
+        // Cache miss or error
+      }
+    }
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2137,6 +2161,24 @@ Return ONLY valid JSON with ALL joints:
       const jsonMatch = text.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const analysis = JSON.parse(jsonMatch[0])
+
+        // Cache result
+        if (db) {
+          try {
+            const saveCache = db.prepare('INSERT INTO gemini_cache (id, hash, prompt, response) VALUES (?, ?, ?, ?)')
+              .bind(generateUUID(), cacheKey, prompt.substring(0, 500), JSON.stringify(analysis))
+              .run()
+
+            try {
+              c.executionCtx.waitUntil(saveCache)
+            } catch {
+              await saveCache
+            }
+          } catch (e) {
+            console.error('Failed to cache Gemini response', e)
+          }
+        }
+
         return c.json({ success: true, analysis })
       }
     }
