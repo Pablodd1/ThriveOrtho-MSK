@@ -2130,7 +2130,7 @@ Return ONLY valid JSON with ALL joints:
       })
     })
     
-    const data = await response.json()
+    const data: any = await response.json()
     
     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
       const text = data.candidates[0].content.parts[0].text
@@ -2197,7 +2197,7 @@ Return JSON:
         })
       })
       
-      const data = await response.json()
+      const data: any = await response.json()
       if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
         const jsonMatch = data.candidates[0].content.parts[0].text.match(/\{[\s\S]*\}/)
         if (jsonMatch) aiAnalysis = JSON.parse(jsonMatch[0])
@@ -2833,7 +2833,7 @@ app.post('/api/ai/clinical-report', async (c) => {
           })
         })
         
-        const data = await response.json()
+        const data: any = await response.json()
         if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
           const text = data.candidates[0].content.parts[0].text
           const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -3938,7 +3938,7 @@ async function sendTwilioSMS(
       body: formData.toString(),
     })
     
-    const data = await response.json()
+    const data: any = await response.json()
     
     if (response.ok) {
       return { success: true, messageId: data.sid }
@@ -3978,7 +3978,7 @@ async function sendResendEmail(
       }),
     })
     
-    const data = await response.json()
+    const data: any = await response.json()
     
     if (response.ok) {
       return { success: true, emailId: data.id }
@@ -4283,7 +4283,7 @@ app.post('/api/video/upload', async (c) => {
     if (contentType.includes('multipart/form-data')) {
       const formData = await c.req.formData()
       const sessionId = formData.get('sessionId') as string
-      const file = formData.get('video') as File
+      const file = formData.get('video') as unknown as File
       
       if (!sessionId || !file) {
         return c.json({ success: false, error: 'Missing sessionId or video file' })
@@ -4592,7 +4592,7 @@ app.post('/api/ai/medical-reasoning', async (c) => {
           })
         })
         
-        const data = await response.json()
+        const data: any = await response.json()
         if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
           const text = data.candidates[0].content.parts[0].text
           const jsonMatch = text.match(/\{[\s\S]*\}/)
