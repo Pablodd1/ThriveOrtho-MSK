@@ -4886,24 +4886,24 @@ app.get('/doctor', (c) => {
           <div class="card-body">
             <ul class="task-list">
               <li class="task-item">
-                <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-priority high" role="img" aria-label="High Priority"></div>
+                <div class="task-check" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark task 'Pre-op knee eval - James Rodriguez' as complete" onclick="toggleTask(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleTask(this); }"><i class="fas fa-check"></i></div>
                 <div class="task-content">
                   <div class="task-title">Pre-op knee eval - James Rodriguez</div>
                   <div class="task-meta">Due: Today • TKA scheduled 01/15</div>
                 </div>
               </li>
               <li class="task-item">
-                <div class="task-priority high"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-priority high" role="img" aria-label="High Priority"></div>
+                <div class="task-check" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark task 'Fall risk assessment - Patricia Chen' as complete" onclick="toggleTask(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleTask(this); }"><i class="fas fa-check"></i></div>
                 <div class="task-content">
                   <div class="task-title">Fall risk assessment - Patricia Chen</div>
                   <div class="task-meta">Due: Today • Diabetic neuropathy</div>
                 </div>
               </li>
               <li class="task-item">
-                <div class="task-priority medium"></div>
-                <div class="task-check" onclick="toggleTask(this)"><i class="fas fa-check"></i></div>
+                <div class="task-priority medium" role="img" aria-label="Medium Priority"></div>
+                <div class="task-check" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark task 'Post-op hip progress - Linda Thompson' as complete" onclick="toggleTask(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleTask(this); }"><i class="fas fa-check"></i></div>
                 <div class="task-content">
                   <div class="task-title">Post-op hip progress - Linda Thompson</div>
                   <div class="task-meta">Due: Today • 4 weeks post THR</div>
@@ -4921,6 +4921,8 @@ app.get('/doctor', (c) => {
       function toggleTask(el) {
         el.classList.toggle('done');
         el.closest('.task-item').classList.toggle('completed');
+        const isChecked = el.classList.contains('done');
+        el.setAttribute('aria-checked', isChecked);
       }
     </script>
   `, 'Dashboard - Thrive Ortho EHR'))
